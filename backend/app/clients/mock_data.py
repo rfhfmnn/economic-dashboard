@@ -1,0 +1,296 @@
+"""Synthetic fallback data and mock response generators for BCRA and financial services."""
+
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
+    {
+        "idVariable": 1,
+        "cdSerie": 246,
+        "descripcion": "Reservas Internacionales del BCRA (en millones de USD)",
+        "categoria": "Monetario",
+        "unidad": "Millones de USD",
+        "fecha": "2026-03-20",
+        "valor": 28450.0,
+    },
+    {
+        "idVariable": 4,
+        "cdSerie": 272,
+        "descripcion": "Tipo de Cambio Minorista ($ por USD)",
+        "categoria": "Cambiario",
+        "unidad": "ARS/USD",
+        "fecha": "2026-03-20",
+        "valor": 1085.50,
+    },
+    {
+        "idVariable": 5,
+        "cdSerie": 273,
+        "descripcion": "Tipo de Cambio Mayorista Com. A 3500 ($ por USD)",
+        "categoria": "Cambiario",
+        "unidad": "ARS/USD",
+        "fecha": "2026-03-20",
+        "valor": 1055.25,
+    },
+    {
+        "idVariable": 6,
+        "cdSerie": 7927,
+        "descripcion": "Tasa de Política Monetaria (TNA %)",
+        "categoria": "Tasas",
+        "unidad": "%",
+        "fecha": "2026-03-20",
+        "valor": 32.0,
+    },
+    {
+        "idVariable": 7,
+        "cdSerie": 7935,
+        "descripcion": "BADLAR en pesos de bancos privados (TNA %)",
+        "categoria": "Tasas",
+        "unidad": "%",
+        "fecha": "2026-03-20",
+        "valor": 36.5,
+    },
+    {
+        "idVariable": 27,
+        "cdSerie": 250,
+        "descripcion": "Base Monetaria - Total (en millones de pesos)",
+        "categoria": "Monetario",
+        "unidad": "Millones de ARS",
+        "fecha": "2026-03-20",
+        "valor": 24500000.0,
+    },
+    {
+        "idVariable": 30,
+        "cdSerie": 3538,
+        "descripcion": "CER (Base 2.2.2002=1)",
+        "categoria": "Precios",
+        "unidad": "Índice",
+        "fecha": "2026-03-20",
+        "valor": 485.12,
+    },
+    {
+        "idVariable": 31,
+        "cdSerie": 7913,
+        "descripcion": "Unidad de Valor Adquisitivo (UVA) (en pesos)",
+        "categoria": "Precios",
+        "unidad": "ARS",
+        "fecha": "2026-03-20",
+        "valor": 1240.35,
+    },
+]
+
+
+def generate_mock_history(
+    id_variable: int,
+    base_value: float,
+    days: int = 180,
+    desde: Optional[str] = None,
+    hasta: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Generates synthetic daily time series data ending at current date."""
+    end_dt = datetime.strptime(hasta, "%Y-%m-%d") if hasta else datetime(2026, 3, 20)
+    start_dt = (
+        datetime.strptime(desde, "%Y-%m-%d")
+        if desde
+        else end_dt - timedelta(days=days)
+    )
+
+    results: List[Dict[str, Any]] = []
+    current = start_dt
+    day_idx = 0
+
+    while current <= end_dt:
+        # Generate stable pseudo-realistic slight drift
+        factor = 1.0 + (day_idx * 0.0008) + ((day_idx % 7) * 0.0003)
+        val = round(base_value * factor, 2)
+        results.append(
+            {
+                "idVariable": id_variable,
+                "fecha": current.strftime("%Y-%m-%d"),
+                "valor": val,
+            }
+        )
+        current += timedelta(days=1)
+        day_idx += 1
+
+    return results
+
+
+def get_mock_variable_series(
+    id_variable: int, desde: Optional[str] = None, hasta: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Returns mock historical series for any requested variable."""
+    base_map = {
+        1: 27500.0,
+        4: 1010.0,
+        5: 990.0,
+        6: 35.0,
+        7: 38.0,
+        27: 21000000.0,
+        30: 450.0,
+        31: 1150.0,
+    }
+    base_val = base_map.get(id_variable, 100.0)
+    return generate_mock_history(id_variable, base_val, days=120, desde=desde, hasta=hasta)
+
+
+# Synthetic 24-month period generator helper
+def _generate_24m_periods(
+    base_situation: int,
+    entities: List[Dict[str, Any]],
+    degrade_recent: bool = False,
+) -> List[Dict[str, Any]]:
+    """Generates 24 historical periods (YYYYMM) for credit matrix."""
+    periods: List[Dict[str, Any]] = []
+    base_date = datetime(2026, 2, 1)
+
+    for i in range(24):
+        # Go backwards month by month
+        year = base_date.year - ((base_date.month - 1 - i) // 12 * -1 if (base_date.month - 1 - i) < 0 else 0)
+        # Proper month calculation:
+        total_months = base_date.year * 12 + (base_date.month - 1) - i
+        p_year = total_months // 12
+        p_month = (total_months % 12) + 1
+        period_str = f"{p_year}{p_month:02d}"
+
+        period_entities = []
+        for ent in entities:
+            sit = base_situation
+            # If degrade_recent is requested: recent 6 months have worse situation
+            if degrade_recent and i < 6:
+                sit = min(6, base_situation + 2)
+            period_entities.append(
+                {
+                    "entidad": ent["entidad"],
+                    "situacion": sit,
+                    "monto": round(ent["monto"] * (1.0 - (i * 0.015)), 1),
+                    "diasAtraso": 0 if sit == 1 else (sit * 30),
+                    "refinanciaciones": ent.get("refinanciaciones", False),
+                    "recategorizacionObligatoria": ent.get("recategorizacionObligatoria", False),
+                    "situacionJuridica": ent.get("situacionJuridica", False),
+                    "procesoJudicial": ent.get("procesoJudicial", False),
+                }
+            )
+
+        periods.append({"periodo": period_str, "entidades": period_entities})
+
+    return periods
+
+
+# Specific Mock Profiles for Central de Deudores
+MOCK_DEUDORES: Dict[str, Dict[str, Any]] = {
+    # 1. Normal Borrower (Situación 1, Bank Exposure)
+    "20301234567": {
+        "status": 200,
+        "results": {
+            "identificacion": "20301234567",
+            "denominacion": "DISTRIBUIDORA DEL SUR S.A.",
+            "periodos": _generate_24m_periods(
+                base_situation=1,
+                entities=[
+                    {"entidad": "BANCO DE GALICIA Y BUENOS AIRES S.A.U.", "monto": 45200.0},
+                    {"entidad": "BANCO SANTANDER ARGENTINA S.A.", "monto": 18500.0},
+                ],
+                degrade_recent=False,
+            ),
+        },
+    },
+    # 2. High-Risk / Distressed Borrower (Situación 4, Non-Bank Fintech concentration, degradation)
+    "30712345678": {
+        "status": 200,
+        "results": {
+            "identificacion": "30712345678",
+            "denominacion": "LOGISTICA RIOPLATENSE S.R.L.",
+            "periodos": _generate_24m_periods(
+                base_situation=2,
+                entities=[
+                    {"entidad": "BANCO MACRO S.A.", "monto": 12000.0},
+                    {"entidad": "FINTECH CREDITO AGIL S.A. (PSP)", "monto": 85000.0},
+                    {"entidad": "FIDEICOMISO FINANCIERO EXPRESS", "monto": 45000.0},
+                ],
+                degrade_recent=True,
+            ),
+        },
+    },
+    # 3. Clean Borrower (No Debt Registered)
+    "27409876543": {
+        "status": 200,
+        "results": {
+            "identificacion": "27409876543",
+            "denominacion": "ALVAREZ LUCIA MARIANA",
+            "periodos": [],
+        },
+    },
+}
+
+MOCK_CHEQUES: Dict[str, Dict[str, Any]] = {
+    "30712345678": {
+        "status": 200,
+        "results": {
+            "identificacion": "30712345678",
+            "denominacion": "LOGISTICA RIOPLATENSE S.R.L.",
+            "causales": [
+                {
+                    "causal": "Sin fondos suficientes",
+                    "entidad": "BANCO MACRO S.A.",
+                    "numeroCheque": 98124501,
+                    "fechaRechazo": "2026-02-14",
+                    "monto": 4200000.0,
+                    "fechaPago": None,
+                    "fechaPagoMulta": None,
+                    "estadoMulta": "Impaga",
+                    "procesoJudicial": False,
+                },
+                {
+                    "causal": "Sin fondos suficientes",
+                    "entidad": "BANCO MACRO S.A.",
+                    "numeroCheque": 98124502,
+                    "fechaRechazo": "2026-02-28",
+                    "monto": 2750000.0,
+                    "fechaPago": None,
+                    "fechaPagoMulta": None,
+                    "estadoMulta": "Impaga",
+                    "procesoJudicial": False,
+                },
+            ],
+        },
+    },
+}
+
+
+def get_mock_deudas(cuit: str) -> Dict[str, Any]:
+    """Return mock Central de Deudores response for any CUIT."""
+    clean_cuit = str(cuit).replace("-", "").strip()
+    if clean_cuit in MOCK_DEUDORES:
+        return MOCK_DEUDORES[clean_cuit]
+
+    # Dynamic default profile for any other valid CUIT
+    return {
+        "status": 200,
+        "results": {
+            "identificacion": clean_cuit,
+            "denominacion": f"CONTRIBUYENTE {clean_cuit}",
+            "periodos": _generate_24m_periods(
+                base_situation=1,
+                entities=[
+                    {"entidad": "BANCO DE LA NACION ARGENTINA", "monto": 35000.0},
+                ],
+                degrade_recent=False,
+            ),
+        },
+    }
+
+
+def get_mock_cheques_rechazados(cuit: str) -> Dict[str, Any]:
+    """Return mock Cheques Rechazados response for any CUIT."""
+    clean_cuit = str(cuit).replace("-", "").strip()
+    if clean_cuit in MOCK_CHEQUES:
+        return MOCK_CHEQUES[clean_cuit]
+
+    return {
+        "status": 200,
+        "results": {
+            "identificacion": clean_cuit,
+            "denominacion": f"CONTRIBUYENTE {clean_cuit}",
+            "causales": [],
+        },
+    }
