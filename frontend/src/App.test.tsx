@@ -52,7 +52,7 @@ describe('App Shell & Navigation', () => {
     // Switch to Screener
     const screenerTab = screen.getByRole('button', { name: /Central de Deudores/i })
     fireEvent.click(screenerTab)
-    expect(screen.getByText(/Single CUIT Screener/i)).toBeDefined()
+    expect(screen.getByText(/Vectores de Prueba/i)).toBeDefined()
 
     // Switch to Batch
     const batchTab = screen.getByRole('button', { name: /Portafolio Batch/i })

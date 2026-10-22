@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Header } from './components/layout/Header'
 import { Navbar } from './components/layout/Navbar'
 import { MacroView } from './components/macro/MacroView'
+import { ScreenerView } from './components/risk/ScreenerView'
 import type { TabType } from './types'
 
 export function App() {
@@ -19,16 +20,7 @@ export function App() {
       <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
         {activeTab === 'macro' && <MacroView />}
 
-        {activeTab === 'screener' && (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
-              <h2 className="text-lg font-semibold text-slate-100">Central de Deudores — Single CUIT Screener</h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Consulta de historial crediticio de 24 meses, clasificación de deudores (Situación 1 a 6) y banderas de alerta temprana.
-              </p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'screener' && <ScreenerView />}
 
         {activeTab === 'batch' && (
           <div className="space-y-6">
