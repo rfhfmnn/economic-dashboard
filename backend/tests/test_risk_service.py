@@ -114,3 +114,65 @@ def test_get_debtor_report_clean_debtor(risk_service):
     assert len(report["entidades"]) == 0
     assert len(report["historial_24m"]) == 0
     assert len(report["cheques_rechazados"]) == 0
+    assert report["nivel_riesgo"] == "OPTIMAL"
+    assert len(report["alertas_tempranas"]) == 0
+
+
+def test_early_warning_badges_normal_vs_distressed(risk_service):
+    """Verify badges triggered for normal and distressed debtors."""
+    # Normal debtor: 0 warning badges, risk level LOW
+    report_normal = risk_service.get_debtor_report("20-30123456-3")
+    assert len(report_normal["alertas_tempranas"]) == 0
+    assert report_normal["nivel_riesgo"] == "LOW"
+
+    # Distressed debtor: critical deterioration, non-bank concentration, unpaid checks
+    report_distressed = risk_service.get_debtor_report("30-71234567-1")
+    assert report_distressed["nivel_riesgo"] == "CRITICAL"
+    badge_codes = {b["code"] for b in report_distressed["alertas_tempranas"]}
+    assert "DETERIORATION_6M" in badge_codes
+    assert "NON_BANK_CONCENTRATION" in badge_codes
+    assert "UNPAID_CHECKS_90D" in badge_codes
+
+
+def test_debt_acceleration_badge_trigger():
+    """Verify DEBT_ACCELERATION_YOY triggers when debt increases >50% YoY."""
+    from backend.app.services.risk_service import evaluate_risk_badges
+
+    report_accelerated = {
+        "peor_situacion": 1,
+        "deuda_total": 160000.0,
+        "entidades": [{"entidad": "BANCO GALICIA", "monto": 160000.0, "situacion": 1}],
+        "cheques_rechazados": [],
+        "historial_24m": [
+            {"periodo": "202602", "deuda_total": 160000.0, "peor_situacion": 1},
+            *([{"periodo": f"2025{m:02d}", "deuda_total": 100000.0, "peor_situacion": 1} for m in range(12, 1, -1)]),
+        ],
+    }
+
+    badges = evaluate_risk_badges(report_accelerated)
+    codes = {b["code"] for b in badges}
+    assert "DEBT_ACCELERATION_YOY" in codes
+    badge = next(b for b in badges if b["code"] == "DEBT_ACCELERATION_YOY")
+    assert "+60.0% i.a." in badge["metric"]
+
+
+def test_non_bank_concentration_threshold():
+    """Verify NON_BANK_CONCENTRATION threshold edge cases."""
+    from backend.app.services.risk_service import evaluate_risk_badges
+
+    # Exactly 50% non-bank debt
+    report = {
+        "peor_situacion": 1,
+        "deuda_total": 100000.0,
+        "entidades": [
+            {"entidad": "BANCO MACRO", "monto": 50000.0, "situacion": 1},
+            {"entidad": "FINTECH MONI DIGITAL (PSP)", "monto": 50000.0, "situacion": 1},
+        ],
+        "cheques_rechazados": [],
+        "historial_24m": [],
+    }
+
+    badges = evaluate_risk_badges(report)
+    codes = {b["code"] for b in badges}
+    assert "NON_BANK_CONCENTRATION" in codes
+

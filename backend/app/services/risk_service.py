@@ -144,6 +144,8 @@ class RiskService:
                 "cheques_rechazados": [],
                 "total_cheques_rechazados": 0,
                 "monto_total_cheques": 0.0,
+                "alertas_tempranas": [],
+                "nivel_riesgo": "OPTIMAL",
                 "fecha_consulta": datetime.now().isoformat(),
             }
 
@@ -194,7 +196,7 @@ class RiskService:
                 }
             )
 
-        return {
+        report = {
             "cuit": cuit,
             "cuit_formateado": format_cuit(cuit),
             "denominacion": denomination,
@@ -208,3 +210,102 @@ class RiskService:
             "monto_total_cheques": round(monto_total_cheques, 2),
             "fecha_consulta": datetime.now().isoformat(),
         }
+
+        # Evaluate early-warning alert badges & risk level
+        badges = evaluate_risk_badges(report)
+        risk_level = compute_risk_level(report, badges)
+        report["alertas_tempranas"] = badges
+        report["nivel_riesgo"] = risk_level
+
+        return report
+
+
+def evaluate_risk_badges(debtor_report: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Evaluates standardized early-warning risk badges from debtor report data."""
+    badges: List[Dict[str, Any]] = []
+    current_sit = int(debtor_report.get("peor_situacion", 1))
+    historial = debtor_report.get("historial_24m", [])
+    total_debt = float(debtor_report.get("deuda_total", 0.0))
+
+    # 1. Credit Deterioration in last 6 months (DETERIORATION_6M)
+    if len(historial) > 1:
+        recent_window = historial[1:min(7, len(historial))]
+        if recent_window:
+            baseline_sit = min(int(p.get("peor_situacion", 1)) for p in recent_window)
+            if current_sit > baseline_sit:
+                diff = current_sit - baseline_sit
+                badges.append({
+                    "code": "DETERIORATION_6M",
+                    "severity": "CRITICAL" if current_sit >= 4 else "HIGH",
+                    "title": "Deterioro Crediticio Reciente",
+                    "description": f"La calificación crediticia empeoró de Situación {baseline_sit} a Situación {current_sit} en los últimos 6 meses.",
+                    "metric": f"+{diff} escalón{'es' if diff > 1 else ''}",
+                })
+
+    # 2. Non-Bank Lender Concentration (NON_BANK_CONCENTRATION)
+    entities = debtor_report.get("entidades", [])
+    if total_debt > 0 and entities:
+        non_bank_debt = 0.0
+        non_bank_keywords = ("FINTECH", "PSP", "FIDEICOMISO", "MUTUAL", "COOP", "TARJETA", "PRESTAMO", "FINANCIERA")
+        for ent in entities:
+            name_upper = ent.get("entidad", "").upper()
+            is_bank = "BANCO" in name_upper
+            is_non_bank = any(kw in name_upper for kw in non_bank_keywords)
+            if is_non_bank or not is_bank:
+                non_bank_debt += float(ent.get("monto", 0.0))
+
+        non_bank_pct = round((non_bank_debt / total_debt) * 100, 1)
+        if non_bank_pct >= 40.0:
+            badges.append({
+                "code": "NON_BANK_CONCENTRATION",
+                "severity": "HIGH" if non_bank_pct >= 60.0 else "MEDIUM",
+                "title": "Concentración No Bancaria",
+                "description": f"El {non_bank_pct}% de la deuda total se concentra en entidades no bancarias o fintechs.",
+                "metric": f"{non_bank_pct}% no bancario",
+            })
+
+    # 3. Recent Unpaid Bounced Checks (UNPAID_CHECKS_90D)
+    cheques = debtor_report.get("cheques_rechazados", [])
+    unpaid_cheques = [ch for ch in cheques if not ch.get("pagado")]
+    if unpaid_cheques:
+        unpaid_sum = sum(float(ch.get("monto", 0.0)) for ch in unpaid_cheques)
+        badges.append({
+            "code": "UNPAID_CHECKS_90D",
+            "severity": "CRITICAL",
+            "title": "Cheques Rechazados Impagos",
+            "description": f"Registra {len(unpaid_cheques)} cheque(s) rechazado(s) impago(s) por un monto total de ${unpaid_sum:,.2f}.",
+            "metric": f"{len(unpaid_cheques)} impagos",
+        })
+
+    # 4. Debt Acceleration YoY (DEBT_ACCELERATION_YOY)
+    if len(historial) >= 12:
+        past_12m = historial[11]
+        past_debt = float(past_12m.get("deuda_total", 0.0))
+        if past_debt > 0 and total_debt > past_debt:
+            growth_pct = round(((total_debt - past_debt) / past_debt) * 100, 1)
+            if growth_pct >= 50.0:
+                badges.append({
+                    "code": "DEBT_ACCELERATION_YOY",
+                    "severity": "HIGH" if growth_pct >= 100.0 else "MEDIUM",
+                    "title": "Aceleración de Deuda Interanual",
+                    "description": f"El volumen de deuda creció un {growth_pct}% interanual comparado contra 12 meses atrás.",
+                    "metric": f"+{growth_pct}% i.a.",
+                })
+
+    return badges
+
+
+def compute_risk_level(debtor_report: Dict[str, Any], badges: List[Dict[str, Any]]) -> str:
+    """Computes overall debtor risk rating: OPTIMAL, LOW, MODERATE, HIGH, CRITICAL."""
+    worst_sit = int(debtor_report.get("peor_situacion", 1))
+    severities = {b["severity"] for b in badges}
+
+    if worst_sit >= 4 or "CRITICAL" in severities:
+        return "CRITICAL"
+    if worst_sit == 3 or "HIGH" in severities:
+        return "HIGH"
+    if worst_sit == 2 or "MEDIUM" in severities:
+        return "MODERATE"
+    if float(debtor_report.get("deuda_total", 0.0)) > 0:
+        return "LOW"
+    return "OPTIMAL"
