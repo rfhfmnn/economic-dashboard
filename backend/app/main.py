@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.database import init_db
 from backend.app.routes.macro_routes import router as macro_router
+from backend.app.routes.risk_routes import router as risk_router
 from backend.app.routes.system_routes import router as system_router
 
 
@@ -34,6 +35,7 @@ app.add_middleware(
 
 # Mount REST API routers
 app.include_router(macro_router)
+app.include_router(risk_router)
 app.include_router(system_router)
 
 
