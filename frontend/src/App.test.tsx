@@ -47,7 +47,7 @@ describe('App Shell & Navigation', () => {
     render(<App />)
 
     // Initial tab is Macro
-    expect(screen.getByText(/Monitor Macroeconómico & FX/i)).toBeDefined()
+    expect(screen.getAllByText(/Monitor Macro & FX/i).length).toBeGreaterThanOrEqual(1)
 
     // Switch to Screener
     const screenerTab = screen.getByRole('button', { name: /Central de Deudores/i })

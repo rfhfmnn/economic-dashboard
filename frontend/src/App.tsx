@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Header } from './components/layout/Header'
 import { Navbar } from './components/layout/Navbar'
+import { MacroView } from './components/macro/MacroView'
 import type { TabType } from './types'
 
 export function App() {
@@ -16,16 +17,7 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
-        {activeTab === 'macro' && (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
-              <h2 className="text-lg font-semibold text-slate-100">Monitor Macroeconómico & FX (BCRA)</h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Monitoreo en tiempo real de reservas internacionales, agregados monetarios, tasas de política y brechas cambiarias.
-              </p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'macro' && <MacroView />}
 
         {activeTab === 'screener' && (
           <div className="space-y-6">
