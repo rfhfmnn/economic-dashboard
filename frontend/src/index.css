@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 min-h-screen selection:bg-blue-600 selection:text-white;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom Risk Rating Utilities */
+.risk-sit-1 { color: #10b981; background-color: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); }
+.risk-sit-2 { color: #f59e0b; background-color: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); }
+.risk-sit-3 { color: #f97316; background-color: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.3); }
+.risk-sit-4 { color: #f43f5e; background-color: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.3); }
+.risk-sit-5 { color: #ef4444; background-color: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); }
+.risk-sit-6 { color: #a855f7; background-color: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); }
+
+/* Print Stylesheet for Executive Dossier */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
