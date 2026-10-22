@@ -31,7 +31,10 @@ class BCRAClient:
         if force_mock is not None:
             self.force_mock = force_mock
         else:
-            self.force_mock = os.getenv("FORCE_MOCK", "false").lower() in ("true", "1")
+            self.force_mock = (
+                os.getenv("FORCE_MOCK", "false").lower() in ("true", "1")
+                or os.getenv("BCRA_USE_MOCKS", "false").lower() in ("true", "1")
+            )
 
         # Custom SSL context to accommodate Argentine government certificate chains
         ssl_context = ssl.create_default_context()

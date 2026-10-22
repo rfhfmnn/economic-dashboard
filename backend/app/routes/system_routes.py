@@ -33,3 +33,9 @@ def get_system_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
         },
         "timestamp": datetime.now().isoformat(),
     }
+
+
+@router.get("/health")
+def get_system_health(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Healthcheck endpoint returning system health and connectivity."""
+    return get_system_status(db=db)

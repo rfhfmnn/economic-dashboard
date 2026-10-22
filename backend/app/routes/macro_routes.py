@@ -12,6 +12,7 @@ macro_service = MacroService()
 
 
 @router.get("/indicators/summary")
+@router.get("/summary")
 def get_indicators_summary(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Get latest snapshot of primary BCRA indicators and parallel FX market spreads."""
     return macro_service.get_indicators_summary(db)
@@ -29,6 +30,7 @@ def get_variable_series(
 
 
 @router.get("/fx-spreads")
+@router.get("/fx/spreads")
 def get_fx_spreads(
     official_base: str = Query("mayorista", description="Official rate baseline ('mayorista' or 'oficial')"),
 ) -> Dict[str, Any]:
@@ -39,7 +41,9 @@ def get_fx_spreads(
 @router.get("/catalog")
 def get_variable_catalog(
     q: Optional[str] = Query(None, description="Search query by name or category"),
+    search: Optional[str] = Query(None, description="Search query alias"),
     db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """List available BCRA series metadata with optional search filter."""
-    return macro_service.get_catalog(db, query=q)
+    query_term = q or search
+    return macro_service.get_catalog(db, query=query_term)
