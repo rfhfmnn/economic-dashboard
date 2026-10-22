@@ -176,84 +176,95 @@ def _generate_24m_periods(
     return periods
 
 
-# Specific Mock Profiles for Central de Deudores
+# Normal corporate profile
+_NORMAL_PROFILE = {
+    "status": 200,
+    "results": {
+        "identificacion": "20301234563",
+        "denominacion": "DISTRIBUIDORA DEL SUR S.A.",
+        "periodos": _generate_24m_periods(
+            base_situation=1,
+            entities=[
+                {"entidad": "BANCO DE GALICIA Y BUENOS AIRES S.A.U.", "monto": 45200.0},
+                {"entidad": "BANCO SANTANDER ARGENTINA S.A.", "monto": 18500.0},
+            ],
+            degrade_recent=False,
+        ),
+    },
+}
+
+# High risk distressed profile
+_DISTRESSED_PROFILE = {
+    "status": 200,
+    "results": {
+        "identificacion": "30712345671",
+        "denominacion": "LOGISTICA RIOPLATENSE S.R.L.",
+        "periodos": _generate_24m_periods(
+            base_situation=2,
+            entities=[
+                {"entidad": "BANCO MACRO S.A.", "monto": 12000.0},
+                {"entidad": "FINTECH CREDITO AGIL S.A. (PSP)", "monto": 85000.0},
+                {"entidad": "FIDEICOMISO FINANCIERO EXPRESS", "monto": 45000.0},
+            ],
+            degrade_recent=True,
+        ),
+    },
+}
+
+# Clean profile
+_CLEAN_PROFILE = {
+    "status": 200,
+    "results": {
+        "identificacion": "27409876549",
+        "denominacion": "ALVAREZ LUCIA MARIANA",
+        "periodos": [],
+    },
+}
+
 MOCK_DEUDORES: Dict[str, Dict[str, Any]] = {
-    # 1. Normal Borrower (Situación 1, Bank Exposure)
-    "20301234567": {
-        "status": 200,
-        "results": {
-            "identificacion": "20301234567",
-            "denominacion": "DISTRIBUIDORA DEL SUR S.A.",
-            "periodos": _generate_24m_periods(
-                base_situation=1,
-                entities=[
-                    {"entidad": "BANCO DE GALICIA Y BUENOS AIRES S.A.U.", "monto": 45200.0},
-                    {"entidad": "BANCO SANTANDER ARGENTINA S.A.", "monto": 18500.0},
-                ],
-                degrade_recent=False,
-            ),
-        },
-    },
-    # 2. High-Risk / Distressed Borrower (Situación 4, Non-Bank Fintech concentration, degradation)
-    "30712345678": {
-        "status": 200,
-        "results": {
-            "identificacion": "30712345678",
-            "denominacion": "LOGISTICA RIOPLATENSE S.R.L.",
-            "periodos": _generate_24m_periods(
-                base_situation=2,
-                entities=[
-                    {"entidad": "BANCO MACRO S.A.", "monto": 12000.0},
-                    {"entidad": "FINTECH CREDITO AGIL S.A. (PSP)", "monto": 85000.0},
-                    {"entidad": "FIDEICOMISO FINANCIERO EXPRESS", "monto": 45000.0},
-                ],
-                degrade_recent=True,
-            ),
-        },
-    },
-    # 3. Clean Borrower (No Debt Registered)
-    "27409876543": {
-        "status": 200,
-        "results": {
-            "identificacion": "27409876543",
-            "denominacion": "ALVAREZ LUCIA MARIANA",
-            "periodos": [],
-        },
+    "20301234563": _NORMAL_PROFILE,
+    "20301234567": _NORMAL_PROFILE,
+    "30712345671": _DISTRESSED_PROFILE,
+    "30712345678": _DISTRESSED_PROFILE,
+    "27409876549": _CLEAN_PROFILE,
+    "27409876543": _CLEAN_PROFILE,
+}
+
+_MOCK_CHEQUES_RECORD = {
+    "status": 200,
+    "results": {
+        "identificacion": "30712345671",
+        "denominacion": "LOGISTICA RIOPLATENSE S.R.L.",
+        "causales": [
+            {
+                "causal": "Sin fondos suficientes",
+                "entidad": "BANCO MACRO S.A.",
+                "numeroCheque": 98124501,
+                "fechaRechazo": "2026-02-14",
+                "monto": 4200000.0,
+                "fechaPago": None,
+                "fechaPagoMulta": None,
+                "estadoMulta": "Impaga",
+                "procesoJudicial": False,
+            },
+            {
+                "causal": "Sin fondos suficientes",
+                "entidad": "BANCO MACRO S.A.",
+                "numeroCheque": 98124502,
+                "fechaRechazo": "2026-02-28",
+                "monto": 2750000.0,
+                "fechaPago": None,
+                "fechaPagoMulta": None,
+                "estadoMulta": "Impaga",
+                "procesoJudicial": False,
+            },
+        ],
     },
 }
 
 MOCK_CHEQUES: Dict[str, Dict[str, Any]] = {
-    "30712345678": {
-        "status": 200,
-        "results": {
-            "identificacion": "30712345678",
-            "denominacion": "LOGISTICA RIOPLATENSE S.R.L.",
-            "causales": [
-                {
-                    "causal": "Sin fondos suficientes",
-                    "entidad": "BANCO MACRO S.A.",
-                    "numeroCheque": 98124501,
-                    "fechaRechazo": "2026-02-14",
-                    "monto": 4200000.0,
-                    "fechaPago": None,
-                    "fechaPagoMulta": None,
-                    "estadoMulta": "Impaga",
-                    "procesoJudicial": False,
-                },
-                {
-                    "causal": "Sin fondos suficientes",
-                    "entidad": "BANCO MACRO S.A.",
-                    "numeroCheque": 98124502,
-                    "fechaRechazo": "2026-02-28",
-                    "monto": 2750000.0,
-                    "fechaPago": None,
-                    "fechaPagoMulta": None,
-                    "estadoMulta": "Impaga",
-                    "procesoJudicial": False,
-                },
-            ],
-        },
-    },
+    "30712345671": _MOCK_CHEQUES_RECORD,
+    "30712345678": _MOCK_CHEQUES_RECORD,
 }
 
 
@@ -261,7 +272,13 @@ def get_mock_deudas(cuit: str) -> Dict[str, Any]:
     """Return mock Central de Deudores response for any CUIT."""
     clean_cuit = str(cuit).replace("-", "").strip()
     if clean_cuit in MOCK_DEUDORES:
-        return MOCK_DEUDORES[clean_cuit]
+        profile = MOCK_DEUDORES[clean_cuit]
+        results_copy = dict(profile["results"])
+        results_copy["identificacion"] = clean_cuit
+        return {
+            "status": 200,
+            "results": results_copy,
+        }
 
     # Dynamic default profile for any other valid CUIT
     return {
