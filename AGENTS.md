@@ -36,7 +36,6 @@ economic-dashboard/
 ├── README.md                           # Human-facing project documentation
 ├── _docs/
 │   ├── plan.md                         # Comprehensive architecture blueprint & data specifications
-│   ├── process.md                      # Backlog workflow & agent orchestrator rules
 │   ├── tasks.md                        # Implementation task backlog
 │   ├── design-system.md                # Official UI tokens, components & anti-drift guardrails
 │   └── testing-guidelines.md           # Testing standards, vectors & QA verification
@@ -73,17 +72,29 @@ economic-dashboard/
 
 ## 3. Agent Roles & Collaboration Workflow
 
-Every task follows a structured lifecycle to ensure zero regressions, complete acceptance criteria coverage, and robust test execution.
+### The Orchestrator
 
-```mermaid
-flowchart LR
-    Issue["GitHub Issue / Backlog"] --> PM["Product Manager (PM)"]
-    PM -->|Groomed Task & Criteria| Eng["Assigned Engineer (Backend/Frontend/Fullstack)"]
-    Eng -->|Handoff: @qa-engineer ready for review| QA["QA Engineer"]
-    QA -->|Verify & Run Test Suite| Decision{"QA Verdict"}
-    Decision -->|PASS| Close["Close Issue (Verified)"]
-    Decision -->|FAIL| Eng
-```
+The main session acts as the Orchestrator. It launches the PM, the Engineer, and QA as sub-agents. **It does not groom, implement, or test code itself.** Its sole responsibility is state management and workflow enforcement.
+
+#### Lifecycle
+
+1. Pick the next open issue from the backlog.
+2. **PM** grooms it (defines acceptance criteria).
+3. **Engineer** implements it (writes code and tests).
+4. **QA** verifies it against the PM's criteria.
+5. On **FAIL**: Send the QA comment as input back to step 3. *(Max 3 attempts)*.
+6. On **PASS**: Close the issue.
+7. Repeat until the backlog is empty.
+
+#### Rules
+
+- **Single Tasking:** Tasks are strictly GitHub issues. The Orchestrator and agents must process them **one at a time** (no parallel implementation of multiple issues).
+- **Context Awareness:** The Engineer MUST read the acceptance criteria before writing the first line of code, and re-read them before calling `@qa-engineer ready for review`.
+- **Version Control:** The Engineer must commit work regularly using conventional commits, rather than making a single massive commit at the end.
+- **Do not skip step 2:** No code can be written without PM grooming.
+- **Strict Role Boundaries:** The Engineer MUST NOT close the issue. QA MUST NOT fix the code (only outputs PASS or FAIL with reasons).
+- **The Circuit Breaker:** If a task receives 3 consecutive FAIL verdicts from QA, the Orchestrator MUST pause, leave the issue open, and request human intervention. Do not loop endlessly.
+- **Closing Authority:** Only the Orchestrator closes the issue, and ONLY after QA explicitly outputs `## QA: PASS`.
 
 ### Specialized Roles & Responsibilities:
 
@@ -124,7 +135,7 @@ flowchart LR
 - **Rule:** If a test fails more than **3 consecutive times** during an attempt to fix it, the Engineer MUST stop, commit their current state, and escalate the issue to the `Debugger` agent or request human intervention. Do not burn resources on infinite loops.
 
 ### 6. Financial Dashboard UX, Design System & Anti-Drift Compliance
-- **Rule:** All frontend components and styling MUST strictly comply with [`_docs/design-system.md`](file:///c:/Users/SYC/Desktop/economic-dashboad/_docs/design-system.md) to prevent UI drift across agent sessions.
+- **Rule:** All frontend components and styling MUST strictly comply with `_docs/design-system.md` to prevent UI drift across agent sessions.
 - Follow financial dashboard principles: clear metric hierarchy, color-coded risk alerts, and dual-axis comparison capability.
 - Credit ratings follow BCRA classifications. Use consistent severity colors (Situación 1: Emerald, 2: Amber, 3: Orange, 4: Rose, 5: Red, 6: Purple) as defined in the design system.
 - All monetary values, CUITs, rates, and percentages must use monospace tabular alignment (`font-mono` / `tabular-nums`).
