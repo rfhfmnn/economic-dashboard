@@ -1,6 +1,7 @@
 """SQLite database connection, session management, and SQLAlchemy ORM models."""
 
 import os
+from pathlib import Path
 from datetime import date as date_type, datetime
 from typing import Any, Dict, Generator, Optional
 
@@ -18,7 +19,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./economic_dashboard.db")
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_DB_PATH = BACKEND_DIR / "economic_dashboard.db"
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH.as_posix()}")
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
