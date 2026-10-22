@@ -24,30 +24,32 @@ The goal of this project is to build an institutional-grade financial and credit
 ### Tech Stack:
 - **Backend:** Python 3.11+, FastAPI, SQLite (SQLAlchemy / SQLModel), HTTPX (resilient client with custom SSL handling), Pytest, ReportLab / OpenPyXL.
 - **Frontend:** React 18+, Vite, TypeScript, Tailwind CSS, Lucide React, Recharts.
-- **Tooling & Orchestration:** Git, GitHub CLI (`gh`), Vitest / Pytest.
+- **Tooling & Orchestration:** Git, GitHub CLI (`gh`), Vitest / Pytest, Ruff / ESLint.
 
 ---
 
 ## 2. Repository Layout
 
-```
+```text
 economic-dashboard/
 ├── AGENTS.md                           # This operational manual
 ├── README.md                           # Human-facing project documentation
 ├── _docs/
 │   ├── plan.md                         # Comprehensive architecture blueprint & data specifications
-│   └── tasks.md                        # Implementation task backlog
+│   ├── process.md                      # Backlog workflow & agent orchestrator rules
+│   ├── tasks.md                        # Implementation task backlog
+│   ├── design-system.md                # Official UI tokens, components & anti-drift guardrails
+│   └── testing-guidelines.md           # Testing standards, vectors & QA verification
 ├── .agent/
 │   ├── agents/                         # Specialized persona definitions
 │   │   ├── pm/agent.md                 # Task grooming & acceptance criteria
-│   │   ├── software-engineer/agent.md  # General task implementation & testing
-│   │   ├── backend-depeloper/agent.md  # Server-side API & DB engineering
+│   │   ├── backend-developer/agent.md  # Server-side API & DB engineering
 │   │   ├── frontend-developer/agent.md # UI component & client state engineering
 │   │   ├── fullstack-developer/agent.md# End-to-end integration
 │   │   ├── qa-engineer/agent.md        # Acceptance criteria validation & QA verdicts
 │   │   ├── debugger/agent.md           # Defect root cause analysis & fixes
 │   │   ├── python-pro/agent.md         # Advanced Python patterns & performance
-│   │   └── ui-desinger/agent.md        # UI/UX design & layout polish
+│   │   └── ui-designer/agent.md        # UI/UX design & layout polish
 │   └── skills/
 │       └── design-dashboards/          # Dashboard design principles & references
 ├── backend/                            # FastAPI backend service
@@ -71,13 +73,13 @@ economic-dashboard/
 
 ## 3. Agent Roles & Collaboration Workflow
 
-Every task follows a structured lifecycle to ensure zero regressions, complete acceptance criteria coverage, and robust test execution:
+Every task follows a structured lifecycle to ensure zero regressions, complete acceptance criteria coverage, and robust test execution.
 
 ```mermaid
 flowchart LR
     Issue["GitHub Issue / Backlog"] --> PM["Product Manager (PM)"]
-    PM -->|Groomed Task & Criteria| Eng["Software / Fullstack Engineer"]
-    Eng -->|Code & Automated Tests| QA["QA Engineer"]
+    PM -->|Groomed Task & Criteria| Eng["Assigned Engineer (Backend/Frontend/Fullstack)"]
+    Eng -->|Handoff: @qa-engineer ready for review| QA["QA Engineer"]
     QA -->|Verify & Run Test Suite| Decision{"QA Verdict"}
     Decision -->|PASS| Close["Close Issue (Verified)"]
     Decision -->|FAIL| Eng
@@ -87,12 +89,15 @@ flowchart LR
 
 | Role | Persona File | Primary Mandate |
 |---|---|---|
-| **Product Manager** | `.agent/agents/pm/agent.md` | Grooms issues, defines testable acceptance criteria, identifies edge cases, and sets explicit scope boundaries. Does not write code. |
-| **Software Engineer** | `.agent/agents/software-engineer/agent.md` | Implements one task at a time strictly according to acceptance criteria, writes unit/integration tests, and commits work regularly. Leaves issues open for QA. |
-| **Backend Developer** | `.agent/agents/backend-depeloper/agent.md` | Focuses on FastAPI endpoints, SQLite data access, BCRA/FX clients, SSL bypass/handling, caching logic, and error handling. |
-| **Frontend Developer** | `.agent/agents/frontend-developer/agent.md` | Implements responsive React components, Recharts visualizations, Tailwind styling, Módulo 11 validation, and print stylesheets. |
-| **QA Engineer** | `.agent/agents/qa-engineer/agent.md` | Tests implementation against criteria, runs tests, issues binary `## QA: PASS` or `## QA: FAIL`, and closes issues only on full verification. Never modifies code. |
+| **Product Manager** | `.agent/agents/pm/agent.md` | Grooms issues, defines testable criteria, explicitly assigns tasks to specific engineers. |
+| **Backend Developer** | `.agent/agents/backend-developer/agent.md` | Focuses on FastAPI endpoints, SQLite, BCRA/FX clients, SSL bypass, caching, and Python tests. |
+| **Frontend Developer** | `.agent/agents/frontend-developer/agent.md` | Implements React components, Recharts visualizations, Tailwind styling, Módulo 11, and UI tests. |
+| **Fullstack Developer** | `.agent/agents/fullstack-developer/agent.md` | End-to-end features requiring simultaneous frontend and backend modifications. |
+| **QA Engineer** | `.agent/agents/qa-engineer/agent.md` | Verifies criteria, runs tests, issues binary `## QA: PASS` or `## QA: FAIL`. Never writes feature code. |
 | **Debugger** | `.agent/agents/debugger/agent.md` | Investigates test failures or runtime defects, identifies root causes, and implements minimal targeted fixes. |
+
+### Handoff & Communication Rules:
+- **Rule:** When an Engineer finishes coding and local testing, they MUST leave a comment saying `@qa-engineer ready for review` and stop executing to await QA assessment.
 
 ---
 
@@ -109,13 +114,21 @@ flowchart LR
 
 ### 3. Database & Caching Discipline
 - The project uses **SQLite** for local storage and caching.
-- Table schemas (`macro_series`, `macro_variables`, `cuit_cache`, `portfolio_items`) must be indexed on query keys (e.g., `variable_id + date`, `cuit`).
+- Table schemas (`macro_series`, `macro_variables`, `cuit_cache`, `portfolio_items`) must be indexed on query keys.
 - Cached CUIT records prevent unnecessary repetitive hits to external services.
 
-### 4. Financial Dashboard UX & Print Compliance
-- Follow financial dashboard principles: clear metric hierarchy, color-coded risk alerts, and dual-axis comparison capability for related macro series.
-- Credit ratings follow BCRA classifications (Situación 1 to 6). Use consistent severity colors (e.g., Green for Situación 1, Amber for 2-3, Red for 4-6).
-- The 1-page executive credit dossier must support clean printing via `@media print` stylesheets and binary PDF/Excel downloads.
+### 4. Dependency Management
+- **Rule:** Agents MUST NOT add new dependencies (`npm install` or `pip install`) unless explicitly required by the task description or approved by a human.
+
+### 5. Anti-Loop & Escalation Protocol
+- **Rule:** If a test fails more than **3 consecutive times** during an attempt to fix it, the Engineer MUST stop, commit their current state, and escalate the issue to the `Debugger` agent or request human intervention. Do not burn resources on infinite loops.
+
+### 6. Financial Dashboard UX, Design System & Anti-Drift Compliance
+- **Rule:** All frontend components and styling MUST strictly comply with [`_docs/design-system.md`](file:///c:/Users/SYC/Desktop/economic-dashboad/_docs/design-system.md) to prevent UI drift across agent sessions.
+- Follow financial dashboard principles: clear metric hierarchy, color-coded risk alerts, and dual-axis comparison capability.
+- Credit ratings follow BCRA classifications. Use consistent severity colors (Situación 1: Emerald, 2: Amber, 3: Orange, 4: Rose, 5: Red, 6: Purple) as defined in the design system.
+- All monetary values, CUITs, rates, and percentages must use monospace tabular alignment (`font-mono` / `tabular-nums`).
+- The 1-page executive credit dossier must support clean printing via `@media print` stylesheets without clipping or page overflowing.
 
 ---
 
@@ -123,16 +136,17 @@ flowchart LR
 
 A task or GitHub issue is considered **Done** only when:
 1. **Criteria Met:** Every acceptance criterion defined in the task is implemented.
-2. **Automated Tests Passing:** Unit or integration tests are written and pass (`pytest` for backend, `vitest`/`tsc` for frontend).
-3. **No Regressions:** Existing test suites continue to pass cleanly.
-4. **Clean Git Commit:** Code is committed with conventional commit messages (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`).
-5. **QA Verification:** The QA engineer has executed the test suite, verified the criteria, and provided a formal `## QA: PASS` verdict.
+2. **Automated Tests Passing:** Unit or integration tests are written and pass (`pytest` for backend, `vitest` for frontend).
+3. **Linting & Formatting:** Code adheres to styling guidelines (no Ruff or ESLint warnings).
+4. **No Regressions:** Existing test suites continue to pass cleanly.
+5. **Clean Git Commit:** Code is committed with conventional commit messages (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`).
+6. **QA Verification:** The QA engineer has executed the test suite, verified the criteria, and provided a formal `## QA: PASS` verdict.
 
 ---
 
 ## 6. Command Cheat Sheet
 
-### Backend (FastAPI / Pytest):
+### Backend (Python / FastAPI):
 ```bash
 # Run backend development server
 uvicorn backend.app.main:app --reload --port 8000
@@ -140,11 +154,12 @@ uvicorn backend.app.main:app --reload --port 8000
 # Run all backend tests
 pytest backend/tests/ -v
 
-# Run specific test file
-pytest backend/tests/test_bcra_client.py -v
+# Code Linting & Formatting
+ruff check backend/
+ruff format backend/
 ```
 
-### Frontend (React / Vite / Vitest):
+### Frontend (React / Vite / TS):
 ```bash
 # Install dependencies
 npm --prefix frontend install
@@ -155,8 +170,9 @@ npm --prefix frontend run dev
 # Run TypeScript type-checking & build
 npm --prefix frontend run build
 
-# Run frontend tests
+# Run frontend tests & linting
 npm --prefix frontend run test
+npm --prefix frontend run lint
 ```
 
 ### GitHub Issues & Collaboration:
@@ -164,11 +180,8 @@ npm --prefix frontend run test
 # List open issues
 gh issue list
 
-# View issue details
-gh issue view <issue-number>
-
-# Add progress or QA comment to an issue
-gh issue comment <issue-number> --body "Comment text"
+# Add handoff or QA comment to an issue
+gh issue comment <issue-number> --body "@qa-engineer ready for review"
 
 # Close verified issue
 gh issue close <issue-number> --comment "Verified by QA - all acceptance criteria passed"
