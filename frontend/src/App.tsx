@@ -3,6 +3,7 @@ import { Header } from './components/layout/Header'
 import { Navbar } from './components/layout/Navbar'
 import { MacroView } from './components/macro/MacroView'
 import { ScreenerView } from './components/risk/ScreenerView'
+import { BatchView } from './components/batch/BatchView'
 import type { TabType } from './types'
 
 export function App() {
@@ -22,16 +23,7 @@ export function App() {
 
         {activeTab === 'screener' && <ScreenerView />}
 
-        {activeTab === 'batch' && (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
-              <h2 className="text-lg font-semibold text-slate-100">Portafolio Batch & Análisis Comparativo</h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Carga masiva de CUITs vía archivo CSV/TXT para evaluación simultánea de riesgo de cartera con exportación a Excel.
-              </p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'batch' && <BatchView />}
       </main>
 
       {/* Minimal Institutional Footer */}

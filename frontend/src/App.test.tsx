@@ -57,7 +57,7 @@ describe('App Shell & Navigation', () => {
     // Switch to Batch
     const batchTab = screen.getByRole('button', { name: /Portafolio Batch/i })
     fireEvent.click(batchTab)
-    expect(screen.getByText(/Portafolio Batch & Análisis Comparativo/i)).toBeDefined()
+    expect(screen.getByText(/Subir Archivo/i)).toBeDefined()
   })
 })
 
