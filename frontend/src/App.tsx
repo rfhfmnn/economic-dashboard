@@ -1,35 +1,62 @@
+import { useState } from 'react'
+import { Header } from './components/layout/Header'
+import { Navbar } from './components/layout/Navbar'
+import type { TabType } from './types'
 
 export function App() {
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm">
-            B
-          </div>
-          <div>
-            <h1 className="text-base font-semibold text-slate-100 tracking-tight">
-              BCRA Economic & Credit Risk Monitor
-            </h1>
-            <p className="text-xs text-slate-400">
-              Banco Central de la República Argentina Intelligence Platform
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2 text-xs text-slate-400">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>System Operational</span>
-        </div>
-      </header>
+  const [activeTab, setActiveTab] = useState<TabType>('macro')
 
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
-          <h2 className="text-lg font-medium text-slate-200">Plataforma de Monitoreo Macro y Riesgo Crediticio</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Base scaffolding initialized. Ready for module integrations.
-          </p>
-        </div>
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      {/* Institutional Header */}
+      <Header />
+
+      {/* Navigation Bar */}
+      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Main Content Area */}
+      <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+        {activeTab === 'macro' && (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
+              <h2 className="text-lg font-semibold text-slate-100">Monitor Macroeconómico & FX (BCRA)</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Monitoreo en tiempo real de reservas internacionales, agregados monetarios, tasas de política y brechas cambiarias.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'screener' && (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
+              <h2 className="text-lg font-semibold text-slate-100">Central de Deudores — Single CUIT Screener</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Consulta de historial crediticio de 24 meses, clasificación de deudores (Situación 1 a 6) y banderas de alerta temprana.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'batch' && (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
+              <h2 className="text-lg font-semibold text-slate-100">Portafolio Batch & Análisis Comparativo</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Carga masiva de CUITs vía archivo CSV/TXT para evaluación simultánea de riesgo de cartera con exportación a Excel.
+              </p>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Minimal Institutional Footer */}
+      <footer className="border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500 bg-slate-950/80">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>Banco Central de la República Argentina (BCRA) — Sistema de Inteligencia Financiera</span>
+          <span className="font-mono text-[11px]">Diseño Institucional • Módulo 11 Validado</span>
+        </div>
+      </footer>
     </div>
   )
 }
