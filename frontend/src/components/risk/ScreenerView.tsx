@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FileDown, AlertTriangle, Building } from 'lucide-react'
+import { FileDown, FileText, AlertTriangle, Building } from 'lucide-react'
 import { api } from '../../services/api'
 import type { DebtorReport } from '../../types'
 import { RiskBadge } from '../common/RiskBadge'
@@ -8,6 +8,7 @@ import { CuitSearchInput } from './CuitSearchInput'
 import { DebtEntityTable } from './DebtEntityTable'
 import { HistoryHeatmap } from './HistoryHeatmap'
 import { RiskBadgeGrid } from './RiskBadgeGrid'
+import { DossierModal } from './DossierModal'
 
 export interface ScreenerViewProps {
   initialCuit?: string
@@ -15,6 +16,7 @@ export interface ScreenerViewProps {
 
 export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '20-30123456-3' }) => {
   const [report, setReport] = useState<DebtorReport | null>(null)
+  const [isDossierOpen, setIsDossierOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -110,8 +112,19 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '20-30
               </div>
 
               <button
+                type="button"
+                onClick={() => setIsDossierOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors shadow-sm ml-auto sm:ml-0"
+                title="Abrir vista de impresión de Dossier Ejecutivo"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Ver Dossier</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleDownloadPdf}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors shadow-sm ml-auto sm:ml-0"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors shadow-sm"
                 title="Descargar Dossier Ejecutivo en PDF"
               >
                 <FileDown className="w-4 h-4 text-blue-400" />
@@ -131,6 +144,13 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '20-30
             <DebtEntityTable entidades={report.entidades || []} totalDebt={report.deuda_total || 0} />
             <BouncedChecks cheques={report.cheques_rechazados || { cantidad: 0, total_monto: 0 }} />
           </div>
+
+          {/* Executive Dossier Modal */}
+          <DossierModal
+            isOpen={isDossierOpen}
+            onClose={() => setIsDossierOpen(false)}
+            report={report}
+          />
         </div>
       )}
     </div>
