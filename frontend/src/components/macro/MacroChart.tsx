@@ -13,9 +13,19 @@ import type { MacroSeriesPoint } from '../../types'
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max'
 
+export interface ChartSeries {
+  id: number | string
+  title: string
+  data: MacroSeriesPoint[]
+  axis: 'left' | 'right'
+  color: string
+  strokeDasharray?: string
+}
+
 export interface MacroChartProps {
-  primaryTitle: string
-  primaryData: MacroSeriesPoint[]
+  series?: ChartSeries[]
+  primaryTitle?: string
+  primaryData?: MacroSeriesPoint[]
   secondaryTitle?: string
   secondaryData?: MacroSeriesPoint[]
   timeframe: Timeframe
@@ -26,6 +36,7 @@ export interface MacroChartProps {
 const TIMEFRAMES: Timeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
 
 export const MacroChart: React.FC<MacroChartProps> = ({
+  series,
   primaryTitle,
   primaryData,
   secondaryTitle,
@@ -34,26 +45,51 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   onTimeframeChange,
   loading = false,
 }) => {
-  // Merge series by date
-  const chartData = useMemo(() => {
-    if (!primaryData || primaryData.length === 0) return []
-
-    const map = new Map<string, { fecha: string; primary?: number; secondary?: number }>()
-
-    primaryData.forEach((p) => {
-      map.set(p.fecha, { fecha: p.fecha, primary: p.valor })
-    })
-
-    if (secondaryData && secondaryData.length > 0) {
-      secondaryData.forEach((s) => {
-        const existing = map.get(s.fecha)
-        if (existing) {
-          existing.secondary = s.valor
-        } else {
-          map.set(s.fecha, { fecha: s.fecha, secondary: s.valor })
-        }
+  // Normalize series: either use passed multi-series or fall back to primaryData/secondaryData
+  const effectiveSeries = useMemo<ChartSeries[]>(() => {
+    if (series && series.length > 0) {
+      return series
+    }
+    const result: ChartSeries[] = []
+    if (primaryData && primaryData.length > 0) {
+      result.push({
+        id: 'primary',
+        title: primaryTitle || 'Variable Principal',
+        data: primaryData,
+        axis: 'left',
+        color: '#3b82f6',
       })
     }
+    if (secondaryData && secondaryData.length > 0) {
+      result.push({
+        id: 'secondary',
+        title: secondaryTitle || 'Variable Dual',
+        data: secondaryData,
+        axis: 'right',
+        color: '#8b5cf6',
+        strokeDasharray: '4 4',
+      })
+    }
+    return result
+  }, [series, primaryTitle, primaryData, secondaryTitle, secondaryData])
+
+  // Merge series by date
+  const chartData = useMemo(() => {
+    if (effectiveSeries.length === 0) return []
+
+    const map = new Map<string, { fecha: string; [key: string]: any }>()
+
+    effectiveSeries.forEach((s) => {
+      const key = `var_${s.id}`
+      s.data.forEach((p) => {
+        const existing = map.get(p.fecha)
+        if (existing) {
+          existing[key] = p.valor
+        } else {
+          map.set(p.fecha, { fecha: p.fecha, [key]: p.valor })
+        }
+      })
+    })
 
     const merged = Array.from(map.values())
     merged.sort((a, b) => a.fecha.localeCompare(b.fecha))
@@ -73,24 +109,53 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const cutoffStr = cutoff.toISOString().split('T')[0]
     const filtered = merged.filter((item) => item.fecha >= cutoffStr)
     return filtered.length > 0 ? filtered : merged
-  }, [primaryData, secondaryData, timeframe])
+  }, [effectiveSeries, timeframe])
+
+  const leftSeries = effectiveSeries.filter((s) => s.axis === 'left')
+  const rightSeries = effectiveSeries.filter((s) => s.axis === 'right')
+  const hasRightAxis = rightSeries.length > 0
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 sm:p-5 flex flex-col justify-between">
       {/* Header controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span>{primaryTitle}</span>
-            {secondaryTitle && (
-              <>
-                <span className="text-slate-500">vs</span>
-                <span className="text-indigo-400">{secondaryTitle}</span>
-              </>
+          <div className="flex items-center gap-2 flex-wrap text-sm font-semibold text-slate-100">
+            {leftSeries.length > 0 ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400 bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-800/60">
+                  Principal
+                </span>
+                {leftSeries.map((s, idx) => (
+                  <span key={s.id} className="inline-flex items-center gap-1.5 text-slate-200 text-xs sm:text-sm font-medium">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                    <span>{s.title}</span>
+                    {idx < leftSeries.length - 1 && <span className="text-slate-600 font-mono">/</span>}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span>{primaryTitle || 'Monitor Macroeconómico'}</span>
             )}
-          </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Evolución histórica y comparación temporal de variables macroeconómicas BCRA
+
+            {rightSeries.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-slate-500 font-normal text-xs">vs</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/60">
+                  Dual
+                </span>
+                {rightSeries.map((s, idx) => (
+                  <span key={s.id} className="inline-flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm font-medium">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                    <span>{s.title}</span>
+                    {idx < rightSeries.length - 1 && <span className="text-slate-600 font-mono">/</span>}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Evolución histórica y comparación temporal multi-variable de series BCRA
           </p>
         </div>
 
@@ -122,7 +187,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono">
-            Sin observaciones disponibles para el rango seleccionado.
+            Sin observaciones disponibles para las variables seleccionadas.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -151,7 +216,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   return val
                 }}
               />
-              {secondaryTitle && (
+              {hasRightAxis && (
                 <YAxis
                   yAxisId="right"
                   orientation="right"
@@ -175,41 +240,54 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   fontSize: '12px',
                   color: '#f8fafc',
                 }}
-                formatter={(val: any, name: any) => [
-                  typeof val === 'number' ? val.toLocaleString('es-AR') : val,
-                  name === 'primary' ? primaryTitle : secondaryTitle || name,
-                ]}
+                formatter={(val: any, name: any) => {
+                  const s = effectiveSeries.find(
+                    (item) => item.title === name || `var_${item.id}` === name || String(item.id) === String(name)
+                  )
+                  const displayName = s
+                    ? `${s.title} (${s.axis === 'left' ? 'Principal' : 'Dual'})`
+                    : (name === 'primary' ? (primaryTitle || 'Principal') : (secondaryTitle || 'Dual'))
+                  return [
+                    typeof val === 'number' ? val.toLocaleString('es-AR') : val,
+                    displayName,
+                  ]
+                }}
                 labelFormatter={(label) => `Fecha: ${label}`}
               />
               <Legend
                 verticalAlign="top"
                 align="right"
-                wrapperStyle={{ paddingBottom: '10px', fontSize: '11px' }}
-                formatter={(value) => (value === 'primary' ? primaryTitle : secondaryTitle || value)}
+                wrapperStyle={{ paddingBottom: '12px', fontSize: '12px' }}
+                formatter={(value: any) => {
+                  const s = effectiveSeries.find(
+                    (item) => item.title === value || `var_${item.id}` === value || String(item.id) === String(value)
+                  )
+                  const title = s ? s.title : (value === 'primary' ? (primaryTitle || 'Principal') : (secondaryTitle || 'Dual'))
+                  const axisLabel = s?.axis === 'right' ? 'Dual' : 'Principal'
+                  return (
+                    <span className="inline-flex items-center gap-1.5 text-slate-200 font-medium mr-2">
+                      <span>{title}</span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        ({axisLabel})
+                      </span>
+                    </span>
+                  )
+                }}
               />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="primary"
-                name="primary"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, stroke: '#60a5fa', strokeWidth: 2 }}
-              />
-              {secondaryTitle && (
+              {effectiveSeries.map((s) => (
                 <Line
-                  yAxisId="right"
+                  key={s.id}
+                  yAxisId={s.axis}
                   type="monotone"
-                  dataKey="secondary"
-                  name="secondary"
-                  stroke="#8b5cf6"
+                  dataKey={`var_${s.id}`}
+                  name={s.title}
+                  stroke={s.color}
                   strokeWidth={2}
-                  strokeDasharray="4 4"
+                  strokeDasharray={s.strokeDasharray || (s.axis === 'right' ? '4 4' : undefined)}
                   dot={false}
-                  activeDot={{ r: 4, stroke: '#c084fc', strokeWidth: 2 }}
+                  activeDot={{ r: 4, stroke: s.color, strokeWidth: 2 }}
                 />
-              )}
+              ))}
             </LineChart>
           </ResponsiveContainer>
         )}
