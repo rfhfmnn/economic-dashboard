@@ -5,17 +5,26 @@ import { formatCuit, validateCuitModulo11 } from '../../utils/cuit'
 export interface CuitSearchInputProps {
   onSearch: (cuit: string, bypassCache: boolean) => void
   loading?: boolean
+  initialCuit?: string
 }
 
 const PRESETS = [
-  { label: 'Normal (Sit. 1/2)', cuit: '20-30123456-3', desc: 'Riesgo regular' },
-  { label: 'Distressed (Sit. 4/5)', cuit: '30-71234567-1', desc: 'Alertas críticas y cheques' },
-  { label: 'Clean (Sit. 1)', cuit: '27-40987654-9', desc: 'Sin historial moroso' },
+  { label: 'Banco Galicia', cuit: '30-50000173-5', desc: 'Entidad financiera real en BCRA' },
+  { label: 'YPF S.A.', cuit: '30-54668997-9', desc: 'Gran corporativo en BCRA' },
+  { label: 'Distressed (Dellepiane)', cuit: '30-71234567-1', desc: 'Sociedad Anónima real con endeudamiento' },
+  { label: 'Rafael Hofmann', cuit: '20-42382181-8', desc: 'Persona física con deuda bancaria activa' },
+  { label: 'Clean (Sin Deuda)', cuit: '20-30123456-3', desc: 'Perfil limpio sin deudas informadas en BCRA' },
 ]
 
-export const CuitSearchInput: React.FC<CuitSearchInputProps> = ({ onSearch, loading = false }) => {
-  const [cuit, setCuit] = useState('20-30123456-3')
+export const CuitSearchInput: React.FC<CuitSearchInputProps> = ({ onSearch, loading = false, initialCuit = '30-50000173-5' }) => {
+  const [cuit, setCuit] = useState(initialCuit)
   const [bypassCache, setBypassCache] = useState(false)
+
+  React.useEffect(() => {
+    if (initialCuit) {
+      setCuit(initialCuit)
+    }
+  }, [initialCuit])
 
   const validation = validateCuitModulo11(cuit)
   const isValid = validation.valid

@@ -63,11 +63,23 @@ class BCRAClient:
 
         try:
             response = self.client.get(url, params=params)
+            # If BCRA returns 400 or 404 for an invalid variable ID, return empty rather than fabricating mock data
+            if response.status_code in (400, 404):
+                try:
+                    err_payload = response.json()
+                    if err_payload.get("status") == 404 or "IdVariable" in str(err_payload.get("errorMessages", [])):
+                        logger.warning("BCRA endpoint %s returned not found: %s", url, err_payload)
+                        return []
+                except Exception:
+                    pass
+
             response.raise_for_status()
             data = response.json()
             # If BCRA returned empty or error status inside JSON payload
             if isinstance(data, dict) and data.get("status") in (404, 500):
-                logger.warning("BCRA endpoint %s returned status %s; triggering fallback", url, data.get("status"))
+                logger.warning("BCRA endpoint %s returned status %s", url, data.get("status"))
+                if data.get("status") == 404:
+                    return []
                 return fallback_fn()
             return data
         except (httpx.HTTPError, httpx.TimeoutException, Exception) as exc:
@@ -81,7 +93,7 @@ class BCRAClient:
 
     def get_principales_variables(self) -> List[Dict[str, Any]]:
         """Fetch latest snapshot of all BCRA primary macroeconomic variables."""
-        url = f"{self.base_url}/estadisticas/v3.0/principalesvariables"
+        url = f"{self.base_url}/estadisticas/v4.0/Monetarias"
 
         def fallback():
             return MOCK_PRINCIPALES_VARIABLES
@@ -100,17 +112,28 @@ class BCRAClient:
         hasta: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Fetch historical time-series observations for a specific BCRA variable."""
-        if desde and hasta:
-            url = f"{self.base_url}/estadisticas/v3.0/DatosVariable/{id_variable}/{desde}/{hasta}"
-        else:
-            url = f"{self.base_url}/estadisticas/v3.0/DatosVariable/{id_variable}"
+        url = f"{self.base_url}/estadisticas/v4.0/Monetarias/{id_variable}"
+        params: Dict[str, Any] = {}
+        if desde:
+            params["desde"] = desde
+        if hasta:
+            params["hasta"] = hasta
 
         def fallback():
             return get_mock_variable_series(id_variable, desde=desde, hasta=hasta)
 
-        result = self._execute_with_fallback(url, fallback)
+        result = self._execute_with_fallback(url, fallback, params=params if params else None)
         if isinstance(result, dict) and "results" in result:
-            return result["results"]
+            res_list = result["results"]
+            if isinstance(res_list, list) and len(res_list) > 0:
+                first = res_list[0]
+                if isinstance(first, dict) and "detalle" in first:
+                    detalle = first["detalle"]
+                    for pt in detalle:
+                        if "idVariable" not in pt:
+                            pt["idVariable"] = id_variable
+                    return detalle
+            return res_list
         if isinstance(result, list):
             return result
         return fallback()
@@ -120,20 +143,68 @@ class BCRAClient:
         clean_cuit = str(cuit).replace("-", "").strip()
         url = f"{self.base_url}/centraldedeudores/v1.0/Deudas/{clean_cuit}"
 
-        def fallback():
+        if self.force_mock:
             return get_mock_deudas(clean_cuit)
 
-        return self._execute_with_fallback(url, fallback)
+        try:
+            response = self.client.get(url)
+            if response.status_code == 404:
+                # 404 in BCRA Central de Deudores indicates clean credit record (no debt reported)
+                return {
+                    "status": 200,
+                    "results": {
+                        "identificacion": clean_cuit,
+                        "denominacion": f"CONTRIBUYENTE {clean_cuit} (Sin deuda registrada en BCRA)",
+                        "periodos": [],
+                    },
+                }
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict) and data.get("status") == 404:
+                return {
+                    "status": 200,
+                    "results": {
+                        "identificacion": clean_cuit,
+                        "denominacion": f"CONTRIBUYENTE {clean_cuit} (Sin deuda registrada en BCRA)",
+                        "periodos": [],
+                    },
+                }
+            return data
+        except Exception as exc:
+            logger.warning(
+                "BCRA API request to %s failed (%s: %s). Falling back to mock data.",
+                url,
+                type(exc).__name__,
+                exc,
+            )
+            return get_mock_deudas(clean_cuit)
 
     def get_cheques_rechazados(self, cuit: str) -> Dict[str, Any]:
         """Fetch rejected checks records from Central de Deudores for a given CUIT."""
         clean_cuit = str(cuit).replace("-", "").strip()
         url = f"{self.base_url}/centraldedeudores/v1.0/ChequesRechazados/{clean_cuit}"
 
-        def fallback():
+        if self.force_mock:
             return get_mock_cheques_rechazados(clean_cuit)
 
-        return self._execute_with_fallback(url, fallback)
+        try:
+            response = self.client.get(url)
+            if response.status_code == 404 or (response.status_code == 200 and not response.text.strip()):
+                # 404 or empty response indicates clean record (0 rejected checks)
+                return {"status": 200, "results": {"identificacion": clean_cuit, "causales": []}}
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict) and data.get("status") == 404:
+                return {"status": 200, "results": {"identificacion": clean_cuit, "causales": []}}
+            return data
+        except Exception as exc:
+            logger.warning(
+                "BCRA API request to %s failed (%s: %s). Falling back to mock data.",
+                url,
+                type(exc).__name__,
+                exc,
+            )
+            return get_mock_cheques_rechazados(clean_cuit)
 
     def close(self) -> None:
         """Close underlying HTTP client connection pool."""

@@ -84,8 +84,25 @@ class RiskService:
         if db is not None and not bypass_cache:
             cached = db.get(CuitCache, clean)
             if cached and cached.raw_payload:
-                logger.info("Serving debtor report for CUIT %s from database cache", clean)
-                return cached.raw_payload
+                # Anti-poison guard: If cached item is a mock persona or mock default loan, bypass cache
+                is_mock_payload = (
+                    cached.denomination in (
+                        "DISTRIBUIDORA DEL SUR S.A.",
+                        "LOGISTICA RIOPLATENSE S.R.L.",
+                        "ALVAREZ LUCIA MARIANA",
+                    )
+                    or (
+                        isinstance(cached.raw_payload, dict)
+                        and cached.raw_payload.get("entidades")
+                        and len(cached.raw_payload["entidades"]) == 1
+                        and cached.raw_payload["entidades"][0].get("entidad") == "BANCO DE LA NACION ARGENTINA"
+                        and cached.raw_payload["entidades"][0].get("monto") == 35000.0
+                    )
+                )
+                if not is_mock_payload:
+                    logger.info("Serving debtor report for CUIT %s from database cache", clean)
+                    return cached.raw_payload
+                logger.info("Bypassing stale mock cache for CUIT %s to fetch live BCRA data", clean)
 
         # Fetch from external BCRA client (with automatic synthetic fallback)
         raw_deudas = self.bcra_client.get_deudas(clean)
@@ -127,7 +144,12 @@ class RiskService:
     ) -> Dict[str, Any]:
         """Normalize raw BCRA Central de Deudores response into structured credit dossier."""
         results = raw_deudas.get("results") or {}
-        denomination = results.get("denominacion") or f"CONTRIBUYENTE {cuit}"
+        raw_denom = results.get("denominacion")
+        if raw_denom and str(raw_denom).strip():
+            denomination = str(raw_denom).strip()
+        else:
+            denomination = f"CONTRIBUYENTE {format_cuit(cuit)} (Sin deudas registradas)"
+
         periods = results.get("periodos") or []
 
         # If no debt registered at all (clean profile)
@@ -152,7 +174,15 @@ class RiskService:
         # Latest period is the first element
         latest_period_obj = periods[0]
         latest_period = latest_period_obj.get("periodo")
-        latest_entities = latest_period_obj.get("entidades") or []
+        raw_latest_entities = latest_period_obj.get("entidades") or []
+
+        # Normalize entity fields so diasAtraso is consistently available
+        latest_entities = []
+        for ent in raw_latest_entities:
+            ent_copy = dict(ent)
+            if "diasAtraso" not in ent_copy and "diasAtrasoPago" in ent_copy:
+                ent_copy["diasAtraso"] = ent_copy["diasAtrasoPago"]
+            latest_entities.append(ent_copy)
 
         total_debt = round(sum(float(e.get("monto", 0.0)) for e in latest_entities), 2)
         worst_situation = max((int(e.get("situacion", 1)) for e in latest_entities), default=1)

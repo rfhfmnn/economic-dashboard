@@ -14,13 +14,13 @@ export interface ScreenerViewProps {
   initialCuit?: string
 }
 
-export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '20-30123456-3' }) => {
+export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '30-50000173-5' }) => {
   const [report, setReport] = useState<DebtorReport | null>(null)
   const [isDossierOpen, setIsDossierOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchDebtor = async (cuit: string, bypassCache: boolean = false) => {
+  const fetchDebtor = async (cuit: string, bypassCache: boolean = true) => {
     try {
       setLoading(true)
       setError(null)
@@ -36,7 +36,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '20-30
 
   useEffect(() => {
     if (initialCuit) {
-      fetchDebtor(initialCuit)
+      fetchDebtor(initialCuit, true)
     }
   }, [initialCuit])
 
@@ -49,7 +49,11 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '20-30
   return (
     <div className="space-y-6">
       {/* Search Input Bar */}
-      <CuitSearchInput onSearch={(cuit, bypass) => fetchDebtor(cuit, bypass)} loading={loading} />
+      <CuitSearchInput
+        onSearch={(cuit, bypass) => fetchDebtor(cuit, bypass)}
+        loading={loading}
+        initialCuit={initialCuit}
+      />
 
       {/* Loading Skeleton */}
       {loading && (

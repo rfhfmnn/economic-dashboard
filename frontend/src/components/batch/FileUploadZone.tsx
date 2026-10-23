@@ -9,9 +9,10 @@ export interface FileUploadZoneProps {
 }
 
 const SAMPLE_CUITS = [
-  '20-30123456-3', // Normal
-  '30-71234567-1', // Distressed
-  '27-40987654-9', // Clean
+  '30-50000173-5', // Banco Galicia (Real)
+  '30-54668997-9', // YPF S.A. (Real)
+  '20-42382181-8', // Rafael Hofmann (Real)
+  '30-71234567-1', // Transporte Dellepiane (Real)
 ]
 
 export const FileUploadZone: React.FC<FileUploadZoneProps> = ({

@@ -52,9 +52,14 @@ export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
               const sit = Math.max(1, Math.min(6, item.situacion || 1))
               const theme = HEATMAP_CLASSES[sit] || HEATMAP_CLASSES[1]
 
-              // Format periodo e.g. 2024-05 -> 05/24
-              const parts = item.periodo.split('-')
-              const shortLabel = parts.length === 2 ? `${parts[1]}/${parts[0].slice(2)}` : item.periodo
+              // Format periodo e.g. 2024-05 -> 05/24 or 202608 -> 08/26
+              let shortLabel = item.periodo
+              if (item.periodo.includes('-')) {
+                const parts = item.periodo.split('-')
+                if (parts.length === 2) shortLabel = `${parts[1]}/${parts[0].slice(2)}`
+              } else if (item.periodo.length === 6) {
+                shortLabel = `${item.periodo.slice(4, 6)}/${item.periodo.slice(2, 4)}`
+              }
 
               return (
                 <div
