@@ -90,6 +90,24 @@ export interface FxSpreadsResponse {
   timestamp: string
 }
 
+export interface FxHistoryPoint {
+  fecha: string
+  valor: number
+  compra?: number
+  venta?: number
+}
+
+export interface FxHistoryResponse {
+  rates: {
+    oficial: FxHistoryPoint[]
+    mep: FxHistoryPoint[]
+    ccl: FxHistoryPoint[]
+    blue: FxHistoryPoint[]
+  }
+  last_updated?: string
+  source?: string
+}
+
 export interface IndicatorsSummaryResponse {
   indicators: MacroIndicator[]
   fx_summary: Record<string, any>

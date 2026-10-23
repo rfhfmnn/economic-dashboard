@@ -70,3 +70,15 @@ def test_get_system_status_endpoint(client: TestClient):
     assert status_data["database"] == "connected"
     assert "mock_mode" in status_data
     assert "timestamp" in status_data
+
+
+def test_get_fx_history_endpoint(client: TestClient):
+    """Verify GET /api/macro/fx/history returns rates for all 4 cotizaciones."""
+    response = client.get("/api/macro/fx/history")
+    assert response.status_code == 200
+    data = response.json()
+    assert "rates" in data
+    rates = data["rates"]
+    for key in ("oficial", "mep", "ccl", "blue"):
+        assert key in rates
+        assert len(rates[key]) > 0

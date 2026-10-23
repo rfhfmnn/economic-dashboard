@@ -67,6 +67,34 @@ describe('MacroView Components', () => {
               }),
           })
         }
+        if (url.includes('/macro/fx/history')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                rates: {
+                  oficial: [
+                    { fecha: '2024-01-01', valor: 800.0, compra: 790.0, venta: 800.0 },
+                    { fecha: '2024-05-01', valor: 885.0, compra: 865.0, venta: 885.0 },
+                  ],
+                  mep: [
+                    { fecha: '2024-01-01', valor: 950.0, compra: 945.0, venta: 950.0 },
+                    { fecha: '2024-05-01', valor: 1045.0, compra: 1040.0, venta: 1045.0 },
+                  ],
+                  ccl: [
+                    { fecha: '2024-01-01', valor: 980.0, compra: 975.0, venta: 980.0 },
+                    { fecha: '2024-05-01', valor: 1095.0, compra: 1090.0, venta: 1095.0 },
+                  ],
+                  blue: [
+                    { fecha: '2024-01-01', valor: 1000.0, compra: 990.0, venta: 1000.0 },
+                    { fecha: '2024-05-01', valor: 1040.0, compra: 1020.0, venta: 1040.0 },
+                  ],
+                },
+                last_updated: '2024-05-10T12:00:00',
+                source: 'test',
+              }),
+          })
+        }
         if (url.includes('/macro/series/')) {
           return Promise.resolve({
             ok: true,
@@ -244,5 +272,65 @@ describe('MacroView Components', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Sin observaciones disponibles/i)).toBeNull()
     })
+  })
+
+  it('renders FxSpreadChart with four cotizations by default and supports toggles and timeframes', async () => {
+    const mockFxData = {
+      oficial_base: 885.0,
+      rates: {
+        oficial: { moneda: 'USD', nombre: 'Oficial', compra: 865.0, venta: 885.0, fechaActualizacion: '' },
+        mep: { moneda: 'USD', nombre: 'MEP', compra: 1040.0, venta: 1045.0, fechaActualizacion: '' },
+        ccl: { moneda: 'USD', nombre: 'CCL', compra: 1090.0, venta: 1095.0, fechaActualizacion: '' },
+        blue: { moneda: 'USD', nombre: 'Blue', compra: 1020.0, venta: 1040.0, fechaActualizacion: '' },
+      },
+      spreads: {
+        mep: { tipo: 'mep', oficial_venta: 885.0, paralelo_venta: 1045.0, brecha_porcentaje: 18.08, timestamp: '' },
+        ccl: { tipo: 'ccl', oficial_venta: 885.0, paralelo_venta: 1095.0, brecha_porcentaje: 23.73, timestamp: '' },
+        blue: { tipo: 'blue', oficial_venta: 885.0, paralelo_venta: 1040.0, brecha_porcentaje: 17.51, timestamp: '' },
+      },
+      timestamp: '2024-05-10T12:00:00',
+    }
+
+    render(<FxSpreadChart fxData={mockFxData} />)
+
+    // Verify Title and Subtitle
+    expect(screen.getByText('Monitor Cambiario & Brecha Financiera')).toBeDefined()
+
+    // Verify 4 Cotizations exist
+    await waitFor(() => {
+      expect(screen.getAllByText(/Oficial/i).length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText(/MEP/i).length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText(/CCL/i).length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText(/Blue/i).length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Verify default timeframes are rendered
+    expect(screen.getByRole('button', { name: '1M' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '3M' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '6M' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '1Y' })).toBeDefined()
+    expect(screen.getByRole('button', { name: '5Y' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Max' })).toBeDefined()
+    expect(screen.getByRole('button', { name: /Personalizado/i })).toBeDefined()
+
+    // Test switching timeframe
+    fireEvent.click(screen.getByRole('button', { name: '3M' }))
+
+    // Test toggling 'Personalizado'
+    fireEvent.click(screen.getByRole('button', { name: /Personalizado/i }))
+    expect(screen.getByLabelText(/Desde:/i)).toBeDefined()
+    expect(screen.getByLabelText(/Hasta:/i)).toBeDefined()
+
+    // Test toggling a cotization pill
+    const bluePill = screen.getByText('Blue').closest('div')
+    if (bluePill) {
+      fireEvent.click(bluePill)
+    }
+
+    // Export buttons
+    const pngBtn = screen.getByRole('button', { name: /PNG/i })
+    const csvBtn = screen.getByRole('button', { name: /CSV/i })
+    expect(pngBtn).toBeDefined()
+    expect(csvBtn).toBeDefined()
   })
 })

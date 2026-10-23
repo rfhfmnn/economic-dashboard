@@ -5,6 +5,7 @@
 import type {
   BatchPortfolioResponse,
   DebtorReport,
+  FxHistoryResponse,
   FxSpreadsResponse,
   IndicatorsSummaryResponse,
   MacroIndicator,
@@ -170,6 +171,24 @@ export const api = {
       rates,
       spreads,
       timestamp,
+    }
+  },
+
+  getFxHistory: async (desde?: string, hasta?: string): Promise<FxHistoryResponse> => {
+    const params = new URLSearchParams()
+    if (desde) params.append('desde', desde)
+    if (hasta) params.append('hasta', hasta)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    const res: any = await request<any>(`/macro/fx/history${qs}`)
+    return {
+      rates: {
+        oficial: res?.rates?.oficial || [],
+        mep: res?.rates?.mep || [],
+        ccl: res?.rates?.ccl || [],
+        blue: res?.rates?.blue || [],
+      },
+      last_updated: res?.last_updated || new Date().toISOString(),
+      source: res?.source || 'api',
     }
   },
 

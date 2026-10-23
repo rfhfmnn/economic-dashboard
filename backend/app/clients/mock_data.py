@@ -137,6 +137,63 @@ def get_mock_variable_series(
     return generate_mock_history(id_variable, base_val, days=365, desde=desde, hasta=hasta)
 
 
+def generate_mock_fx_history(
+    desde: Optional[str] = None,
+    hasta: Optional[str] = None,
+    days: int = 365,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Generates synthetic daily historical cotizaciones for Oficial, MEP, CCL and Blue."""
+    end_dt = datetime.strptime(hasta, "%Y-%m-%d") if hasta else datetime.now()
+    start_dt = (
+        datetime.strptime(desde, "%Y-%m-%d")
+        if desde
+        else end_dt - timedelta(days=days)
+    )
+
+    base_rates = {
+        "oficial": 1050.0,
+        "mep": 1250.0,
+        "ccl": 1290.0,
+        "blue": 1300.0,
+    }
+
+    results: Dict[str, List[Dict[str, Any]]] = {
+        "oficial": [],
+        "mep": [],
+        "ccl": [],
+        "blue": [],
+    }
+
+    current = start_dt
+    day_idx = 0
+
+    while current <= end_dt:
+        fecha_str = current.strftime("%Y-%m-%d")
+        factor = 1.0 + (day_idx * 0.0006)
+        for key, base in base_rates.items():
+            var_offset = 1.0
+            if key == "blue":
+                var_offset = 1.0 + 0.01 * ((day_idx % 7) - 3) / 10.0
+            elif key == "mep":
+                var_offset = 1.0 + 0.005 * ((day_idx % 5) - 2) / 10.0
+            elif key == "ccl":
+                var_offset = 1.0 + 0.008 * ((day_idx % 6) - 2) / 10.0
+
+            val = round(base * factor * var_offset, 2)
+            results[key].append(
+                {
+                    "fecha": fecha_str,
+                    "valor": val,
+                    "compra": round(val * 0.98, 2),
+                    "venta": val,
+                }
+            )
+        current += timedelta(days=1)
+        day_idx += 1
+
+    return results
+
+
 # Synthetic 24-month period generator helper
 def _generate_24m_periods(
     base_situation: int,

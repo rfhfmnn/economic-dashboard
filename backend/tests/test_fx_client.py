@@ -115,3 +115,35 @@ def test_fx_client_ccl_alias_supports_contadoconliqui():
         assert summary["spreads"]["ccl"]["brecha_pct"] > 0
     finally:
         client.close()
+
+
+def test_fx_client_get_historical_rates_mock():
+    """Verify get_historical_rates returns series for oficial, mep, ccl and blue."""
+    client = FXClient(force_mock=True)
+    try:
+        res = client.get_historical_rates()
+        assert "rates" in res
+        rates = res["rates"]
+        for key in ("oficial", "mep", "ccl", "blue"):
+            assert key in rates
+            assert len(rates[key]) > 0
+            pt = rates[key][0]
+            assert "fecha" in pt
+            assert "valor" in pt
+            assert pt["valor"] > 0
+    finally:
+        client.close()
+
+
+def test_fx_client_get_historical_rates_date_filtering():
+    """Verify get_historical_rates properly filters observations by desde and hasta."""
+    client = FXClient(force_mock=True)
+    try:
+        res = client.get_historical_rates(desde="2026-01-01", hasta="2026-01-15")
+        rates = res["rates"]
+        for key in ("oficial", "mep", "ccl", "blue"):
+            assert len(rates[key]) > 0
+            for pt in rates[key]:
+                assert "2026-01-01" <= pt["fecha"] <= "2026-01-15"
+    finally:
+        client.close()

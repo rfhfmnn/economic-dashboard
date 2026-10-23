@@ -1,11 +1,20 @@
-"""Parallel FX Rates Client querying DolarApi and computing Brecha Cambiaria spreads."""
-
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 import httpx
 
+from backend.app.clients.mock_data import generate_mock_fx_history
+
 logger = logging.getLogger(__name__)
+
+ARGENTINA_DATOS_SERIES: Dict[str, str] = {
+    "oficial": "https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial",
+    "mep": "https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa",
+    "ccl": "https://api.argentinadatos.com/v1/cotizaciones/dolares/contadoconliqui",
+    "blue": "https://api.argentinadatos.com/v1/cotizaciones/dolares/blue",
+}
 
 MOCK_FX_RATES: List[Dict[str, Any]] = [
     {
@@ -91,6 +100,9 @@ class FXClient:
             timeout=self.timeout,
             headers={"User-Agent": "EconomicRiskDashboard/1.0", "Accept": "application/json"},
         )
+        self._fx_history_cache: Optional[Dict[str, List[Dict[str, Any]]]] = None
+        self._fx_history_cache_time: Optional[datetime] = None
+        self._cache_ttl_seconds: int = 900
 
     def get_all_rates(self) -> List[Dict[str, Any]]:
         """Fetch all current dollar quotations."""
@@ -202,6 +214,98 @@ class FXClient:
             },
             "rates": rates_by_casa,
             "spreads": spreads,
+        }
+
+    def get_historical_rates(
+        self, desde: Optional[str] = None, hasta: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Fetch historical exchange rate series for Oficial, MEP, CCL and Blue.
+
+        Uses ArgentinaDatos endpoints with fallback to synthetic data.
+        """
+        if self.force_mock:
+            mock_rates = generate_mock_fx_history(desde=desde, hasta=hasta)
+            return {
+                "rates": mock_rates,
+                "last_updated": datetime.now().isoformat(),
+                "source": "mock",
+            }
+
+        now = datetime.now()
+        raw_rates = None
+        if self._fx_history_cache and self._fx_history_cache_time:
+            if (now - self._fx_history_cache_time).total_seconds() < self._cache_ttl_seconds:
+                raw_rates = self._fx_history_cache
+
+        if raw_rates is None:
+            fetched: Dict[str, List[Dict[str, Any]]] = {}
+
+            def _fetch_series(casa_key: str, url: str):
+                try:
+                    resp = self.client.get(url)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    pts: List[Dict[str, Any]] = []
+                    if isinstance(data, list):
+                        for item in data:
+                            fecha = item.get("fecha")
+                            venta = item.get("venta")
+                            compra = item.get("compra", 0) or 0
+                            if fecha and venta is not None:
+                                pts.append(
+                                    {
+                                        "fecha": str(fecha),
+                                        "valor": float(venta),
+                                        "compra": float(compra),
+                                        "venta": float(venta),
+                                    }
+                                )
+                    return casa_key, pts
+                except Exception as exc:
+                    logger.warning(
+                        "Failed fetching historical FX for %s from %s (%s: %s)",
+                        casa_key,
+                        url,
+                        type(exc).__name__,
+                        exc,
+                    )
+                    return casa_key, []
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [
+                    executor.submit(_fetch_series, k, u)
+                    for k, u in ARGENTINA_DATOS_SERIES.items()
+                ]
+                for f in futures:
+                    k, pts = f.result()
+                    fetched[k] = pts
+
+            if any(len(pts) == 0 for pts in fetched.values()):
+                logger.warning(
+                    "One or more historical FX series failed; using synthetic fallback."
+                )
+                raw_rates = generate_mock_fx_history(days=1825)
+            else:
+                raw_rates = fetched
+                self._fx_history_cache = raw_rates
+                self._fx_history_cache_time = now
+
+        # Filter and sort
+        filtered_rates: Dict[str, List[Dict[str, Any]]] = {}
+        for k, pts in raw_rates.items():
+            filtered = [
+                p
+                for p in pts
+                if (not desde or p["fecha"] >= desde)
+                and (not hasta or p["fecha"] <= hasta)
+            ]
+            filtered.sort(key=lambda x: x["fecha"])
+            filtered_rates[k] = filtered
+
+        return {
+            "rates": filtered_rates,
+            "last_updated": datetime.now().isoformat(),
+            "source": "argentinadatos" if self._fx_history_cache else "mock",
         }
 
     def close(self) -> None:

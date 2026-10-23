@@ -42,6 +42,16 @@ def get_fx_spreads(
     return macro_service.fx_client.get_spreads_summary(official_base=official_base)
 
 
+@router.get("/fx/history")
+@router.get("/fx-history")
+def get_fx_history(
+    desde: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    hasta: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+) -> Dict[str, Any]:
+    """Get historical series for the four main dollar exchange rates (Oficial, MEP, CCL, Blue)."""
+    return macro_service.fx_client.get_historical_rates(desde=desde, hasta=hasta)
+
+
 @router.get("/catalog")
 def get_variable_catalog(
     q: Optional[str] = Query(None, description="Search query by name or category"),
