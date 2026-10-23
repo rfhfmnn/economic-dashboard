@@ -156,6 +156,13 @@ export const api = {
       }
     }
 
+    if (!rates.ccl && (rates.contadoconliqui || rates.contadoconliquidacion)) {
+      rates.ccl = rates.contadoconliqui || rates.contadoconliquidacion
+    }
+    if (!rates.mep && rates.bolsa) {
+      rates.mep = rates.bolsa
+    }
+
     return {
       oficial_base: oficialVenta,
       rates,

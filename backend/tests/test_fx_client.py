@@ -91,3 +91,27 @@ def test_fx_client_network_fallback():
         assert "spreads" in summary
     finally:
         client.close()
+
+
+def test_fx_client_ccl_alias_supports_contadoconliqui():
+    """Verify CCL rates and spreads correctly resolve DolarApi's live 'contadoconliqui' house name."""
+    live_style_rates = [
+        {"casa": "mayorista", "nombre": "Mayorista", "compra": 1050.0, "venta": 1055.0},
+        {"casa": "bolsa", "nombre": "Bolsa", "compra": 1200.0, "venta": 1210.0},
+        {"casa": "contadoconliqui", "nombre": "Contado con liquidación", "compra": 1280.0, "venta": 1295.0},
+        {"casa": "blue", "nombre": "Blue", "compra": 1300.0, "venta": 1310.0},
+    ]
+    client = FXClient(force_mock=True)
+    client.get_all_rates = lambda: live_style_rates
+    try:
+        ccl = client.get_rate("ccl")
+        assert ccl is not None
+        assert ccl["casa"] == "contadoconliqui"
+        assert ccl["venta"] == 1295.0
+
+        summary = client.get_spreads_summary()
+        assert "ccl" in summary["spreads"]
+        assert summary["spreads"]["ccl"]["venta"] == 1295.0
+        assert summary["spreads"]["ccl"]["brecha_pct"] > 0
+    finally:
+        client.close()

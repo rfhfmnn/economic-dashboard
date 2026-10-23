@@ -114,22 +114,44 @@ class FXClient:
             return MOCK_FX_RATES
 
     def get_rate(self, casa: str) -> Optional[Dict[str, Any]]:
-        """Get quote for a specific market house (e.g., 'blue', 'mep'/'bolsa', 'ccl'/'contadoconliquidacion')."""
-        casa_alias = {
-            "mep": "bolsa",
-            "ccl": "contadoconliquidacion",
-        }
-        target_casa = casa_alias.get(casa.lower(), casa.lower())
+        """Get quote for a specific market house (e.g., 'blue', 'mep'/'bolsa', 'ccl'/'contadoconliqui')."""
+        casa_lower = casa.lower()
         rates = self.get_all_rates()
+
+        # Direct exact match
         for r in rates:
-            if r.get("casa", "").lower() == target_casa:
+            if r.get("casa", "").lower() == casa_lower:
                 return r
+
+        # MEP / Bolsa aliases
+        if casa_lower in ("mep", "bolsa"):
+            for r in rates:
+                if r.get("casa", "").lower() in ("bolsa", "mep"):
+                    return r
+
+        # CCL / Contado con Liquidación aliases (DolarApi uses 'contadoconliqui')
+        if casa_lower in ("ccl", "cable", "contadoconliqui", "contadoconliquidacion"):
+            for r in rates:
+                c = r.get("casa", "").lower()
+                if c in ("contadoconliqui", "contadoconliquidacion", "ccl") or c.startswith("contadocon"):
+                    return r
+
         return None
 
     def get_spreads_summary(self, official_base: str = "mayorista") -> Dict[str, Any]:
         """Compute spread values and percentage brechas against an official base rate."""
         rates = self.get_all_rates()
-        rates_by_casa = {r.get("casa", "").lower(): r for r in rates}
+        rates_by_casa: Dict[str, Any] = {}
+        for r in rates:
+            c = r.get("casa", "").lower()
+            rates_by_casa[c] = r
+            if c.startswith("contadocon"):
+                rates_by_casa["ccl"] = r
+                rates_by_casa["contadoconliqui"] = r
+                rates_by_casa["contadoconliquidacion"] = r
+            elif c in ("bolsa", "mep"):
+                rates_by_casa["mep"] = r
+                rates_by_casa["bolsa"] = r
 
         # Resolve official baseline (default mayorista, fallback to oficial)
         base_quote = rates_by_casa.get(official_base.lower()) or rates_by_casa.get("oficial")
@@ -144,19 +166,24 @@ class FXClient:
         official_selling = float(base_quote["venta"])
 
         targets = [
-            ("mep", "bolsa", "Dólar MEP / Bolsa"),
-            ("ccl", "contadoconliquidacion", "Dólar CCL / Cable"),
-            ("blue", "blue", "Dólar Blue / Informal"),
+            ("mep", ["bolsa", "mep"], "Dólar MEP / Bolsa"),
+            ("ccl", ["contadoconliqui", "contadoconliquidacion", "ccl"], "Dólar CCL / Cable"),
+            ("blue", ["blue"], "Dólar Blue / Informal"),
         ]
 
         spreads: Dict[str, Any] = {}
-        for key, casa_key, label in targets:
-            quote = rates_by_casa.get(casa_key)
+        for key, candidate_keys, label in targets:
+            quote = None
+            for ck in candidate_keys:
+                if ck in rates_by_casa:
+                    quote = rates_by_casa[ck]
+                    break
+
             if quote and quote.get("venta"):
                 parallel_selling = float(quote["venta"])
                 spreads[key] = {
                     "nombre": label,
-                    "casa": casa_key,
+                    "casa": quote.get("casa", key),
                     "compra": quote.get("compra"),
                     "venta": parallel_selling,
                     "spread_ars": round(parallel_selling - official_selling, 2),
@@ -165,6 +192,7 @@ class FXClient:
                 }
 
         return {
+            "oficial_base": official_selling,
             "base": {
                 "casa": base_quote.get("casa"),
                 "nombre": base_quote.get("nombre"),
@@ -172,6 +200,7 @@ class FXClient:
                 "venta": official_selling,
                 "fechaActualizacion": base_quote.get("fechaActualizacion"),
             },
+            "rates": rates_by_casa,
             "spreads": spreads,
         }
 
