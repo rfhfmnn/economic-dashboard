@@ -87,12 +87,13 @@ describe('App Shell & Navigation', () => {
     // Initial tab is Macro
     expect(screen.getAllByText(/Monitor Macro & FX/i).length).toBeGreaterThanOrEqual(1)
 
-    // Switch to Screener
+    // Switch to Screener (Central de Deudores)
     const screenerTab = screen.getByRole('button', { name: /Central de Deudores/i })
     fireEvent.click(screenerTab)
-    expect(screen.getByText(/Vectores de Prueba/i)).toBeDefined()
+    expect(screen.getByText(/Consulta Individual \(CUIT\)/i)).toBeDefined()
+    expect(screen.getByText(/Portafolio Batch/i)).toBeDefined()
 
-    // Switch to Batch
+    // Switch to Batch subtab inside Central de Deudores
     const batchTab = screen.getByRole('button', { name: /Portafolio Batch/i })
     fireEvent.click(batchTab)
     expect(screen.getByText(/Subir Archivo/i)).toBeDefined()

@@ -256,13 +256,12 @@ def generate_batch_excel_portfolio(batch_data: Dict[str, Any]) -> bytes:
     headers = [
         "CUIT / CUIL",
         "Denominación",
-        "Peor Situación",
-        "Deuda Total (ARS)",
-        "Entidades",
+        "Entidad Financiera",
+        "Situación",
+        "Monto en Entidad (ARS)",
+        "Días de Atraso",
         "Cheques Rechazados",
         "Monto Cheques (ARS)",
-        "Cant. Alertas",
-        "Detalle de Alertas",
     ]
 
     for col_idx, h_text in enumerate(headers, start=1):
@@ -274,12 +273,6 @@ def generate_batch_excel_portfolio(batch_data: Dict[str, Any]) -> bytes:
 
     current_row = 8
     for item in debtors_list:
-        badges = item.get("alertas_tempranas") or item.get("alert_badges") or []
-        badge_names = (
-            ", ".join(b.get("name") or b.get("badge", "") for b in badges)
-            if badges
-            else "Sin alertas"
-        )
         cheques = item.get("cheques_rechazados", {})
         if isinstance(cheques, dict):
             chq_count = cheques.get("cantidad", 0)
@@ -291,35 +284,61 @@ def generate_batch_excel_portfolio(batch_data: Dict[str, Any]) -> bytes:
         cuit_str = item.get("cuit_formateado") or item.get("cuit", "")
         denominacion = item.get("denominacion", "")
         peor_sit = item.get("peor_situacion") or item.get("worst_situation") or 1
-        deuda = float(item.get("deuda_total") or item.get("total_debt") or 0.0)
-        ents_count = item.get("cantidad_entidades") or len(item.get("entidades", []))
+        ents_list = item.get("entidades") or []
 
-        row_data = [
-            cuit_str,
-            denominacion,
-            peor_sit,
-            deuda,
-            ents_count,
-            chq_count,
-            chq_monto,
-            len(badges),
-            badge_names,
-        ]
+        if ents_list:
+            for ent in ents_list:
+                row_data = [
+                    cuit_str,
+                    denominacion,
+                    ent.get("entidad", ""),
+                    ent.get("situacion", peor_sit),
+                    float(ent.get("monto", 0.0)),
+                    ent.get("diasAtraso", 0),
+                    chq_count,
+                    chq_monto,
+                ]
 
-        for col_idx, val in enumerate(row_data, start=1):
-            cell = ws.cell(row=current_row, column=col_idx, value=val)
-            cell.font = regular_font
-            cell.border = cell_border
+                for col_idx, val in enumerate(row_data, start=1):
+                    cell = ws.cell(row=current_row, column=col_idx, value=val)
+                    cell.font = regular_font
+                    cell.border = cell_border
 
-            if col_idx in [4, 7]:
-                cell.number_format = '"$"#,##0.00'
-                cell.alignment = Alignment(horizontal="right")
-            elif col_idx in [1, 3, 5, 6, 8]:
-                cell.alignment = Alignment(horizontal="center")
-            else:
-                cell.alignment = Alignment(horizontal="left")
+                    if col_idx in [5, 8]:
+                        cell.number_format = '"$"#,##0.00'
+                        cell.alignment = Alignment(horizontal="right")
+                    elif col_idx in [1, 4, 6, 7]:
+                        cell.alignment = Alignment(horizontal="center")
+                    else:
+                        cell.alignment = Alignment(horizontal="left")
 
-        current_row += 1
+                current_row += 1
+        else:
+            row_data = [
+                cuit_str,
+                denominacion,
+                "Sin deuda bancaria informada",
+                peor_sit,
+                float(item.get("deuda_total") or item.get("total_debt") or 0.0),
+                0,
+                chq_count,
+                chq_monto,
+            ]
+
+            for col_idx, val in enumerate(row_data, start=1):
+                cell = ws.cell(row=current_row, column=col_idx, value=val)
+                cell.font = regular_font
+                cell.border = cell_border
+
+                if col_idx in [5, 8]:
+                    cell.number_format = '"$"#,##0.00'
+                    cell.alignment = Alignment(horizontal="right")
+                elif col_idx in [1, 4, 6, 7]:
+                    cell.alignment = Alignment(horizontal="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left")
+
+            current_row += 1
 
     for col in ws.columns:
         max_len = 0

@@ -14,7 +14,7 @@ export const DebtEntityTable: React.FC<DebtEntityTableProps> = ({ entidades, tot
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
           <Landmark className="w-3.5 h-3.5 text-blue-400" />
-          <span>Distribución de Deuda por Entidad ({entidades.length})</span>
+          <span>Distribución de deuda por entidad ({entidades.length})</span>
         </h4>
         <span className="text-xs font-mono text-slate-400">
           Deuda Total: <strong className="text-slate-100">${totalDebt.toLocaleString('es-AR')}</strong>

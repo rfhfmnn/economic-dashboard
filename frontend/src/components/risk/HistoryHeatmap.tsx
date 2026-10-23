@@ -16,12 +16,12 @@ const HEATMAP_CLASSES: Record<number, string> = {
 }
 
 const SIT_LABELS: Record<number, string> = {
-  1: 'Normal (Sit 1)',
-  2: 'Bajo Seguimiento (Sit 2)',
-  3: 'Con Problemas (Sit 3)',
-  4: 'Alto Riesgo (Sit 4)',
-  5: 'Irrecuperable (Sit 5)',
-  6: 'Disposición Técnica (Sit 6)',
+  1: 'Normal (sit 1)',
+  2: 'Bajo seguimiento (sit 2)',
+  3: 'Con problemas (sit 3)',
+  4: 'Alto riesgo (sit 4)',
+  5: 'Irrecuperable (sit 5)',
+  6: 'Disposición técnica (sit 6)',
 }
 
 export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
@@ -33,7 +33,7 @@ export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
         <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
           <Calendar className="w-3.5 h-3.5 text-blue-400" />
-          <span>Matriz de Calificación Histórica (24 Meses)</span>
+          <span>Matriz de calificación histórica (24 meses)</span>
         </h4>
         <span className="text-[11px] font-mono text-slate-500">
           Evolución mensual de la peor situación registrada en el sistema

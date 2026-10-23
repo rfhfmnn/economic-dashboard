@@ -197,7 +197,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       ctx.fillStyle = '#64748b'
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.fillText(
-        'Fuente: Banco Central de la República Argentina (BCRA) · Monitor Macroeconómico',
+        'Fuente: Banco Central de la República Argentina (BCRA) · Monitor macroeconómico',
         paddingX,
         totalHeight - 10
       )
@@ -239,7 +239,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     if (primaryData && primaryData.length > 0) {
       result.push({
         id: 'primary',
-        title: primaryTitle || 'Variable Principal',
+        title: primaryTitle || 'Variable principal',
         data: primaryData,
         axis: 'left',
         color: '#3b82f6',
@@ -248,7 +248,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     if (secondaryData && secondaryData.length > 0) {
       result.push({
         id: 'secondary',
-        title: secondaryTitle || 'Variable Dual',
+        title: secondaryTitle || 'Variable dual',
         data: secondaryData,
         axis: 'right',
         color: '#8b5cf6',
@@ -262,7 +262,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   const chartData = useMemo(() => {
     if (effectiveSeries.length === 0) return []
 
-    const map = new Map<string, { fecha: string; [key: string]: any }>()
+    const map = new Map<string, { fecha: string;[key: string]: any }>()
 
     effectiveSeries.forEach((s) => {
       const key = `var_${s.id}`
@@ -336,7 +336,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 ))}
               </div>
             ) : (
-              <span>{primaryTitle || 'Monitor Macroeconómico'}</span>
+              <span>{primaryTitle || 'Monitor macroeconómico'}</span>
             )}
 
             {rightSeries.length > 0 && (
@@ -374,11 +374,10 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   setShowCustomPicker(false)
                   onTimeframeChange(tf)
                 }}
-                className={`px-2.5 py-1 text-xs font-mono rounded transition-colors cursor-pointer ${
-                  timeframe === tf && !showCustomPicker
+                className={`px-2.5 py-1 text-xs font-mono rounded transition-colors cursor-pointer ${timeframe === tf && !showCustomPicker
                     ? 'bg-blue-600 text-white font-medium shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                }`}
+                  }`}
               >
                 {tf}
               </button>
@@ -389,11 +388,10 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 setShowCustomPicker(next)
                 if (next) onTimeframeChange('Custom')
               }}
-              className={`px-2.5 py-1 text-xs font-mono rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
-                timeframe === 'Custom' || showCustomPicker
+              className={`px-2.5 py-1 text-xs font-mono rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer ${timeframe === 'Custom' || showCustomPicker
                   ? 'bg-blue-600 text-white font-medium shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
+                }`}
               title="Seleccionar rango de fechas específico"
             >
               <Calendar className="w-3 h-3" />

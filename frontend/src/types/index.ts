@@ -184,6 +184,7 @@ export interface BatchDebtorItem {
   cantidad_entidades: number
   total_cheques_rechazados: number
   alertas_tempranas: AlertBadge[]
+  entidades?: DebtEntity[]
 }
 
 export interface BatchInvalidItem {

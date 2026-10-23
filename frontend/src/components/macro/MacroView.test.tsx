@@ -18,14 +18,14 @@ describe('MacroView Components', () => {
                 indicators: [
                   {
                     idVariable: 1,
-                    descripcion: 'Reservas Internacionales',
+                    descripcion: 'Reservas internacionales',
                     valor: 27800.5,
                     fecha: '2024-05-10',
                     categoria: 'Monetaria',
                   },
                   {
                     idVariable: 27,
-                    descripcion: 'Base Monetaria Total',
+                    descripcion: 'Base monetaria total',
                     valor: 14500.0,
                     fecha: '2024-05-10',
                     categoria: 'Monetaria',
@@ -41,8 +41,8 @@ describe('MacroView Components', () => {
             ok: true,
             json: () =>
               Promise.resolve([
-                { idVariable: 1, descripcion: 'Reservas Internacionales', categoria: 'Monetaria' },
-                { idVariable: 27, descripcion: 'Base Monetaria Total', categoria: 'Monetaria' },
+                { idVariable: 1, descripcion: 'Reservas internacionales', categoria: 'Monetaria' },
+                { idVariable: 27, descripcion: 'Base monetaria total', categoria: 'Monetaria' },
               ]),
           })
         }
@@ -101,7 +101,7 @@ describe('MacroView Components', () => {
             json: () =>
               Promise.resolve({
                 id_variable: 1,
-                variable_name: 'Reservas Internacionales',
+                variable_name: 'Reservas internacionales',
                 count: 3,
                 data: [
                   { fecha: '2024-03-01', valor: 27000 },
@@ -119,14 +119,14 @@ describe('MacroView Components', () => {
   it('renders MetricCard with formatted tabular value', () => {
     render(
       <MetricCard
-        title="Reservas Internacionales"
+        title="Reservas internacionales"
         value={27800}
         date="2024-05-10"
         unit="USD M"
         category="Monetaria"
       />
     )
-    expect(screen.getByText('Reservas Internacionales')).toBeDefined()
+    expect(screen.getByText('Reservas internacionales')).toBeDefined()
     expect(screen.getByText('USD M')).toBeDefined()
     expect(screen.getByText('Monetaria')).toBeDefined()
   })
@@ -135,7 +135,7 @@ describe('MacroView Components', () => {
     const handleTf = vi.fn()
     render(
       <MacroChart
-        primaryTitle="Reservas Internacionales"
+        primaryTitle="Reservas internacionales"
         primaryData={[
           { fecha: '2024-01-01', valor: 25000 },
           { fecha: '2024-05-01', valor: 27800 },
@@ -144,7 +144,7 @@ describe('MacroView Components', () => {
         onTimeframeChange={handleTf}
       />
     )
-    expect(screen.getByText('Reservas Internacionales')).toBeDefined()
+    expect(screen.getByText('Reservas internacionales')).toBeDefined()
     const btn6M = screen.getByRole('button', { name: '6M' })
     fireEvent.click(btn6M)
     expect(handleTf).toHaveBeenCalledWith('6M')
@@ -168,7 +168,7 @@ describe('MacroView Components', () => {
     }
     render(<FxSpreadChart fxData={mockFx} />)
     expect(screen.getByText(/Monitor Cambiario/i)).toBeDefined()
-    expect(screen.getByText('Oficial Mayorista')).toBeDefined()
+    expect(screen.getByText('Oficial mayorista')).toBeDefined()
     expect(screen.getByText('Dólar MEP')).toBeDefined()
     expect(screen.getAllByText(/\+18\.1%/).length).toBeGreaterThanOrEqual(1)
   })
@@ -176,9 +176,9 @@ describe('MacroView Components', () => {
   it('loads and integrates MacroView view asynchronously', async () => {
     render(<MacroView />)
     await waitFor(() => {
-      expect(screen.getAllByText('Reservas Internacionales').length).toBeGreaterThanOrEqual(1)
-      expect(screen.getByText('Base Monetaria Total')).toBeDefined()
-      expect(screen.getByText(/Monitor Cambiario & Brecha Financiera/i)).toBeDefined()
+      expect(screen.getAllByText('Reservas internacionales').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText('Base monetaria total')).toBeDefined()
+      expect(screen.getByText(/Monitor cambiario & brecha financiera/i)).toBeDefined()
     })
   })
 
@@ -186,14 +186,14 @@ describe('MacroView Components', () => {
     const multiSeries = [
       {
         id: 1,
-        title: 'Reservas Internacionales',
+        title: 'Reservas internacionales',
         data: [{ fecha: '2024-01-01', valor: 25000 }],
         axis: 'left' as const,
         color: '#3b82f6',
       },
       {
         id: 15,
-        title: 'Base Monetaria',
+        title: 'Base monetaria',
         data: [{ fecha: '2024-01-01', valor: 45000 }],
         axis: 'left' as const,
         color: '#06b6d4',
@@ -215,8 +215,8 @@ describe('MacroView Components', () => {
       />
     )
 
-    expect(screen.getByText('Reservas Internacionales')).toBeDefined()
-    expect(screen.getByText('Base Monetaria')).toBeDefined()
+    expect(screen.getByText('Reservas internacionales')).toBeDefined()
+    expect(screen.getByText('Base monetaria')).toBeDefined()
     expect(screen.getByText('Tasa BADLAR')).toBeDefined()
     expect(screen.getByText('Principal')).toBeDefined()
     expect(screen.getByText('Dual')).toBeDefined()
@@ -226,7 +226,7 @@ describe('MacroView Components', () => {
     const multiSeries = [
       {
         id: 1,
-        title: 'Reservas Internacionales',
+        title: 'Reservas internacionales',
         unit: 'USD M',
         data: [{ fecha: '2024-01-01', valor: 25000 }],
         axis: 'left' as const,
@@ -250,21 +250,21 @@ describe('MacroView Components', () => {
     expect(pngBtn.hasAttribute('disabled')).toBe(false)
     expect(csvBtn.hasAttribute('disabled')).toBe(false)
 
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => { })
     fireEvent.click(csvBtn)
     fireEvent.click(pngBtn)
     expect(clickSpy).toHaveBeenCalled()
     clickSpy.mockRestore()
   })
 
-  it('focuses Reservas Internacionales when clicking KPI card without showing empty observation error', async () => {
+  it('focuses Reservas internacionales when clicking KPI card without showing empty observation error', async () => {
     render(<MacroView />)
 
     await waitFor(() => {
-      expect(screen.getAllByText('Reservas Internacionales').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText('Reservas internacionales').length).toBeGreaterThanOrEqual(1)
     })
 
-    const reservasCard = screen.getAllByText('Reservas Internacionales')[0].closest('div')
+    const reservasCard = screen.getAllByText('Reservas internacionales')[0].closest('div')
     if (reservasCard) {
       fireEvent.click(reservasCard)
     }
@@ -294,7 +294,7 @@ describe('MacroView Components', () => {
     render(<FxSpreadChart fxData={mockFxData} />)
 
     // Verify Title and Subtitle
-    expect(screen.getByText('Monitor Cambiario & Brecha Financiera')).toBeDefined()
+    expect(screen.getByText('Monitor cambiario & brecha financiera')).toBeDefined()
 
     // Verify 4 Cotizations exist
     await waitFor(() => {

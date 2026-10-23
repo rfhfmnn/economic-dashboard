@@ -204,11 +204,10 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
         {/* Manage / Add button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer ${
-            isOpen
-              ? 'bg-blue-600 border-blue-500 text-white shadow-sm shadow-blue-500/20'
-              : 'border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:border-slate-600'
-          }`}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer ${isOpen
+            ? 'bg-blue-600 border-blue-500 text-white shadow-sm shadow-blue-500/20'
+            : 'border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white hover:border-slate-600'
+            }`}
         >
           <Search className="w-3.5 h-3.5 text-slate-400" />
           <span>{isOpen ? 'Cerrar Selector' : 'Seleccionar Variables'}</span>
@@ -227,7 +226,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-400" />
                 <h4 className="text-xs font-semibold text-slate-200">
-                  Selector Multi-Variable BCRA
+                  Selector multi-variable BCRA
                 </h4>
               </div>
               <div className="flex items-center gap-2 text-[11px] font-mono">
@@ -260,11 +259,10 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-2 py-0.5 rounded whitespace-nowrap transition-colors ${
-                    selectedCategory === cat
-                      ? 'bg-blue-600 text-white font-medium'
-                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
-                  }`}
+                  className={`px-2 py-0.5 rounded whitespace-nowrap transition-colors ${selectedCategory === cat
+                    ? 'bg-blue-600 text-white font-medium'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -286,9 +284,8 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                 return (
                   <div
                     key={item.idVariable}
-                    className={`p-2 rounded-md hover:bg-slate-800/50 flex items-center justify-between gap-3 text-xs transition-colors ${
-                      isPrimary ? 'bg-blue-950/20' : isSecondary ? 'bg-indigo-950/20' : ''
-                    }`}
+                    className={`p-2 rounded-md hover:bg-slate-800/50 flex items-center justify-between gap-3 text-xs transition-colors ${isPrimary ? 'bg-blue-950/20' : isSecondary ? 'bg-indigo-950/20' : ''
+                      }`}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -317,11 +314,10 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                       {/* Principal Button */}
                       <button
                         onClick={() => handleToggleP(item.idVariable)}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono border transition-all cursor-pointer ${
-                          isPrimary
-                            ? 'bg-blue-600 text-white border-blue-500 font-medium shadow-sm'
-                            : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-blue-500/60 hover:text-white'
-                        }`}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono border transition-all cursor-pointer ${isPrimary
+                          ? 'bg-blue-600 text-white border-blue-500 font-medium shadow-sm'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-blue-500/60 hover:text-white'
+                          }`}
                         title="Asignar al eje izquierdo (Principal)"
                       >
                         {isPrimary && <Check className="w-3 h-3" />}
@@ -331,11 +327,10 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                       {/* Dual Button */}
                       <button
                         onClick={() => handleToggleS(item.idVariable)}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono border transition-all cursor-pointer ${
-                          isSecondary
-                            ? 'bg-indigo-600 text-white border-indigo-500 font-medium shadow-sm'
-                            : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-indigo-500/60 hover:text-white'
-                        }`}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono border transition-all cursor-pointer ${isSecondary
+                          ? 'bg-indigo-600 text-white border-indigo-500 font-medium shadow-sm'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-indigo-500/60 hover:text-white'
+                          }`}
                         title="Asignar al eje derecho (Dual)"
                       >
                         {isSecondary && <Check className="w-3 h-3" />}
@@ -351,7 +346,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
           {/* Popover Footer */}
           <div className="p-2.5 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-xs">
             <span className="text-[11px] text-slate-400 font-mono">
-              Puede seleccionar varias en Principal y Dual simultáneamente.
+              Puede seleccionar varias en principal y dual simultáneamente.
             </span>
             <button
               onClick={() => setIsOpen(false)}

@@ -22,7 +22,7 @@ export const MacroView: React.FC = () => {
   const [fxData, setFxData] = useState<FxSpreadsResponse | null>(null)
 
   // Multi-variable selection state for Left (Principal) and Right (Dual) axes
-  const [primaryIds, setPrimaryIds] = useState<number[]>([1]) // Default: Reservas Internacionales (#1)
+  const [primaryIds, setPrimaryIds] = useState<number[]>([1]) // Default: Reservas internacionales (#1)
   const [secondaryIds, setSecondaryIds] = useState<number[]>([])
 
   // In-memory cache for series data to avoid refetching on toggling

@@ -3,7 +3,6 @@ import { Header } from './components/layout/Header'
 import { Navbar } from './components/layout/Navbar'
 import { MacroView } from './components/macro/MacroView'
 import { ScreenerView } from './components/risk/ScreenerView'
-import { BatchView } from './components/batch/BatchView'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 import type { TabType } from './types'
 
@@ -23,9 +22,9 @@ export function App() {
         <ErrorBoundary>
           {activeTab === 'macro' && <MacroView />}
 
-          {activeTab === 'screener' && <ScreenerView />}
-
-          {activeTab === 'batch' && <BatchView />}
+          {(activeTab === 'screener' || activeTab === 'batch') && (
+            <ScreenerView initialSubTab={activeTab === 'batch' ? 'batch' : 'individual'} />
+          )}
         </ErrorBoundary>
       </main>
 

@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertOctagon className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-slate-100 tracking-tight">
-              Error Inesperado en la Interfaz
+              Error inesperado en la interfaz
             </h3>
             <p className="text-xs text-slate-400 mt-2">
               Se produjo un error al procesar los datos recibidos. La aplicación ha protegido el estado del sistema.
@@ -53,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors shadow-md"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reiniciar Vista</span>
+              <span>Reiniciar vista</span>
             </button>
           </div>
         </div>

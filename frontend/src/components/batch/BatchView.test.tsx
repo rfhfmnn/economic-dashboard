@@ -20,9 +20,12 @@ describe('Batch Portfolio Components', () => {
         peor_situacion: 1,
         deuda_total: 100000.0,
         nivel_riesgo: 'LOW',
-        cantidad_entidades: 2,
+        cantidad_entidades: 1,
         total_cheques_rechazados: 0,
         alertas_tempranas: [],
+        entidades: [
+          { entidad: 'BANCO DE GALICIA Y BS AS', situacion: 1, monto: 100000.0, diasAtraso: 0 },
+        ],
       },
       {
         cuit: '30712345671',
@@ -31,7 +34,7 @@ describe('Batch Portfolio Components', () => {
         peor_situacion: 3,
         deuda_total: 120000.0,
         nivel_riesgo: 'HIGH',
-        cantidad_entidades: 3,
+        cantidad_entidades: 1,
         total_cheques_rechazados: 2,
         alertas_tempranas: [
           {
@@ -40,6 +43,9 @@ describe('Batch Portfolio Components', () => {
             severity: 'high' as const,
             description: 'Cheques impagos en últimos 90 días',
           },
+        ],
+        entidades: [
+          { entidad: 'BBVA BANCO FRANCES', situacion: 3, monto: 120000.0, diasAtraso: 60 },
         ],
       },
     ],
@@ -80,9 +86,9 @@ describe('Batch Portfolio Components', () => {
     fireEvent.click(textTab)
     expect(screen.getByPlaceholderText(/Pegue aquí los CUITs/i)).toBeDefined()
 
-    // Click sample batch button
-    const sampleBtn = screen.getByRole('button', { name: /Cargar Lote de Ejemplo/i })
-    fireEvent.click(sampleBtn)
+    // Input CUITs in text area
+    const textarea = screen.getByPlaceholderText(/Pegue aquí los CUITs/i)
+    fireEvent.change(textarea, { target: { value: '20-30123456-3\n30-71234567-1' } })
     expect(screen.getByText(/Total detectados:/i)).toBeDefined()
   })
 
@@ -91,9 +97,12 @@ describe('Batch Portfolio Components', () => {
 
     expect(screen.getByText('EMPRESA ALFA S.A.')).toBeDefined()
     expect(screen.getByText('EMPRESA BETA S.R.L.')).toBeDefined()
+    expect(screen.getByText('Entidad Financiera')).toBeDefined()
+    expect(screen.getByText('BANCO DE GALICIA Y BS AS')).toBeDefined()
+    expect(screen.getByText('BBVA BANCO FRANCES')).toBeDefined()
 
     // Search filter
-    const searchInput = screen.getByPlaceholderText(/Buscar por CUIT o Razón Social/i)
+    const searchInput = screen.getByPlaceholderText(/Buscar por CUIT, Entidad o Razón Social/i)
     fireEvent.change(searchInput, { target: { value: 'BETA' } })
     expect(screen.queryByText('EMPRESA ALFA S.A.')).toBeNull()
     expect(screen.getByText('EMPRESA BETA S.R.L.')).toBeDefined()
@@ -102,9 +111,12 @@ describe('Batch Portfolio Components', () => {
   it('evaluates batch portfolio and renders summary KPIs and Excel export button', async () => {
     render(<BatchView />)
 
-    // Load sample and evaluate
-    const sampleBtn = screen.getByRole('button', { name: /Cargar Lote de Ejemplo/i })
-    fireEvent.click(sampleBtn)
+    // Switch to text mode and input CUITs
+    const textTab = screen.getByRole('button', { name: /Pegar Lista de CUITs/i })
+    fireEvent.click(textTab)
+
+    const textarea = screen.getByPlaceholderText(/Pegue aquí los CUITs/i)
+    fireEvent.change(textarea, { target: { value: '20-30123456-3\n30-71234567-1' } })
 
     const evalBtn = screen.getByRole('button', { name: /Evaluar Portafolio en BCRA/i })
     fireEvent.click(evalBtn)
@@ -114,5 +126,34 @@ describe('Batch Portfolio Components', () => {
       expect(screen.getByText('Exportar a Excel')).toBeDefined()
       expect(screen.getByText('EMPRESA ALFA S.A.')).toBeDefined()
     })
+  })
+
+  it('renders a distinct row for each Entidad Financiera when a debtor has multiple bank debts', () => {
+    const multiEntityDebtor = [
+      {
+        cuit: '30546689979',
+        cuit_formateado: '30-54668997-9',
+        denominacion: 'YPF S.A.',
+        peor_situacion: 2,
+        deuda_total: 500000.0,
+        nivel_riesgo: 'MEDIUM',
+        cantidad_entidades: 2,
+        total_cheques_rechazados: 0,
+        alertas_tempranas: [],
+        entidades: [
+          { entidad: 'BANCO NACION', situacion: 1, monto: 300000.0, diasAtraso: 0 },
+          { entidad: 'BANCO SANTANDER', situacion: 2, monto: 200000.0, diasAtraso: 30 },
+        ],
+      },
+    ]
+
+    render(<PortfolioTable debtors={multiEntityDebtor} />)
+
+    // Two distinct rows should be rendered for YPF S.A., one for BANCO NACION and one for BANCO SANTANDER
+    expect(screen.getAllByText('YPF S.A.').length).toBe(2)
+    expect(screen.getByText('BANCO NACION')).toBeDefined()
+    expect(screen.getByText('BANCO SANTANDER')).toBeDefined()
+    expect(screen.getByText('$300.000,0')).toBeDefined()
+    expect(screen.getByText('$200.000,0')).toBeDefined()
   })
 })

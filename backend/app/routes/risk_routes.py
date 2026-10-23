@@ -117,6 +117,7 @@ async def evaluate_batch_portfolio(
                     "cantidad_entidades": len(report.get("entidades", [])),
                     "total_cheques_rechazados": report.get("total_cheques_rechazados", 0),
                     "alertas_tempranas": report.get("alertas_tempranas", []),
+                    "entidades": report.get("entidades", []),
                 }
             )
         except Exception as exc:

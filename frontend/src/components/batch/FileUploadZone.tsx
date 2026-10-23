@@ -1,5 +1,5 @@
 import React, { useState, useId } from 'react'
-import { Upload, FileText, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
 import { cleanCuit, validateCuitModulo11 } from '../../utils/cuit'
 
 export interface FileUploadZoneProps {
@@ -7,13 +7,6 @@ export interface FileUploadZoneProps {
   onEvaluateFile: (file: File) => void
   loading?: boolean
 }
-
-const SAMPLE_CUITS = [
-  '30-50000173-5', // Banco Galicia (Real)
-  '30-54668997-9', // YPF S.A. (Real)
-  '20-42382181-8', // Rafael Hofmann (Real)
-  '30-71234567-1', // Transporte Dellepiane (Real)
-]
 
 export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   onEvaluateCuits,
@@ -72,11 +65,6 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     }
   }
 
-  const handleLoadSample = () => {
-    setMode('text')
-    setTextInput(SAMPLE_CUITS.join('\n'))
-  }
-
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 sm:p-5 space-y-4">
       {/* Mode switcher tabs */}
@@ -85,38 +73,27 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           <button
             type="button"
             onClick={() => setMode('file')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              mode === 'file'
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'file'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>Subir Archivo (CSV / TXT)</span>
+            <span>Subir archivo (CSV/TXT)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMode('text')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              mode === 'text'
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === 'text'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Pegar Lista de CUITs</span>
+            <span>Pegar lista de CUITs</span>
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={handleLoadSample}
-          className="flex items-center gap-1 text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Cargar Lote de Ejemplo</span>
-        </button>
       </div>
 
       {/* Mode 1: Drag & Drop Zone */}
@@ -127,11 +104,10 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
-              dragActive
-                ? 'border-blue-500 bg-blue-500/10'
-                : 'border-slate-700 hover:border-slate-600 bg-slate-950/40'
-            }`}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${dragActive
+              ? 'border-blue-500 bg-blue-500/10'
+              : 'border-slate-700 hover:border-slate-600 bg-slate-950/40'
+              }`}
           >
             <input
               id={fileInputId}
@@ -143,7 +119,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             <label htmlFor={fileInputId} className="cursor-pointer space-y-2 block">
               <Upload className="w-8 h-8 text-slate-400 mx-auto" />
               <div className="text-xs text-slate-300">
-                <span className="font-semibold text-blue-400">Haga clic para seleccionar</span> o arrastre un archivo CSV / TXT
+                <span className="font-semibold text-blue-400">Haga clic para seleccionar</span> o arrastre un archivo CSV/TXT
               </div>
               <p className="text-[11px] text-slate-500 font-mono">
                 Admite CUITs separados por salto de línea, coma o tabulación
@@ -203,14 +179,13 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           type="button"
           onClick={handleEvaluate}
           disabled={loading || (mode === 'file' && !selectedFile) || (mode === 'text' && parsedCuits.length === 0)}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-semibold text-white transition-all shadow-sm ${
-            loading || (mode === 'file' && !selectedFile) || (mode === 'text' && parsedCuits.length === 0)
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-              : 'bg-blue-600 hover:bg-blue-500 cursor-pointer shadow-blue-500/10'
-          }`}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-semibold text-white transition-all shadow-sm ${loading || (mode === 'file' && !selectedFile) || (mode === 'text' && parsedCuits.length === 0)
+            ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+            : 'bg-blue-600 hover:bg-blue-500 cursor-pointer shadow-blue-500/10'
+            }`}
         >
           <Upload className="w-4 h-4" />
-          <span>{loading ? 'Evaluando Cartera...' : 'Evaluar Portafolio en BCRA'}</span>
+          <span>{loading ? 'Evaluando cartera...' : 'Evaluar portafolio en BCRA'}</span>
         </button>
       </div>
     </div>

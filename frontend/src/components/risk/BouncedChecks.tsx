@@ -14,7 +14,7 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
           <FileWarning className="w-3.5 h-3.5 text-blue-400" />
-          <span>Registro de Cheques Rechazados</span>
+          <span>Registro de cheques rechazados</span>
         </h4>
 
         <div className="flex items-center gap-3 text-xs font-mono">
@@ -37,7 +37,7 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px]">
                     <th className="py-2 px-3">N° Cheque</th>
-                    <th className="py-2 px-3">Fecha Rechazo</th>
+                    <th className="py-2 px-3">Fecha rechazo</th>
                     <th className="py-2 px-3 text-right">Monto (ARS)</th>
                     <th className="py-2 px-3">Causal</th>
                   </tr>

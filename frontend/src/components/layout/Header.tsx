@@ -32,20 +32,17 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         {/* Brand identity */}
         <div className="flex items-center space-x-3.5">
-          <div className="h-9 w-9 rounded-md bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center font-bold text-white shadow-md border border-blue-500/30 text-sm tracking-wider">
-            BCRA
-          </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold text-slate-100 tracking-tight">
-                BCRA Economic & Credit Risk Monitor
+                Monitor de coyuntura y riesgo
               </h1>
               <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                 v0.1.0
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Banco Central de la República Argentina — Central de Deudores & FX Inteligente
+              BCRA, INDEC, argentina.gob, etc
             </p>
           </div>
         </div>
@@ -55,7 +52,7 @@ export const Header: React.FC = () => {
           {error ? (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 font-medium">
               <WifiOff className="w-3.5 h-3.5" />
-              <span>Offline / Conexión Interrumpida</span>
+              <span>Offline/Conexión interrumpida</span>
             </div>
           ) : status?.offline_mode || !status?.bcra_connected ? (
             <div
@@ -63,7 +60,7 @@ export const Header: React.FC = () => {
               title="Respaldo sintético activo. Operatividad completa sin conexión externa."
             >
               <ServerCog className="w-3.5 h-3.5" />
-              <span>Modo Mock Sintético Activo</span>
+              <span>Modo mock sintético activo</span>
             </div>
           ) : (
             <div
@@ -71,7 +68,7 @@ export const Header: React.FC = () => {
               title="Conectado exitosamente a BCRA y DolarApi"
             >
               <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span>Live BCRA En Línea</span>
+              <span>BCRA API en línea</span>
             </div>
           )}
 

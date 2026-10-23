@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react'
 import { Search, ArrowUpDown, FileDown, Layers } from 'lucide-react'
 import type { BatchDebtorItem } from '../../types'
 import { RiskBadge } from '../common/RiskBadge'
-import { EarlyWarningBadge } from '../common/EarlyWarningBadge'
 import { api } from '../../services/api'
 
 export interface PortfolioTableProps {
@@ -10,51 +9,101 @@ export interface PortfolioTableProps {
   portfolioName?: string
 }
 
-type SortField = 'peor_situacion' | 'deuda_total' | 'alertas' | 'denominacion'
+export interface PortfolioEntityRow {
+  rowId: string
+  cuit: string
+  cuit_formateado: string
+  denominacion: string
+  entidad: string
+  situacion: number
+  monto: number
+  diasAtraso?: number
+  total_cheques_rechazados: number
+}
+
+type SortField = 'situacion' | 'monto' | 'denominacion' | 'entidad'
 
 export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfolioName = 'Portafolio' }) => {
   const [search, setSearch] = useState('')
-  const [sortField, setSortField] = useState<SortField>('peor_situacion')
-  const [sortAsc, setSortAsc] = useState(false) // Default: descending (worst first)
+  const [sortField, setSortField] = useState<SortField>('situacion')
+  const [sortAsc, setSortAsc] = useState(false) // Default: worst situation first
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortAsc(!sortAsc)
     } else {
       setSortField(field)
-      setSortAsc(field === 'denominacion')
+      setSortAsc(field === 'denominacion' || field === 'entidad')
     }
   }
 
+  // Flatten debtors into individual rows per Entidad Financiera
+  const entityRows = useMemo<PortfolioEntityRow[]>(() => {
+    const rows: PortfolioEntityRow[] = []
+
+    for (const d of debtors) {
+      if (d.entidades && d.entidades.length > 0) {
+        d.entidades.forEach((ent, idx) => {
+          rows.push({
+            rowId: `${d.cuit}-${ent.entidad}-${idx}`,
+            cuit: d.cuit,
+            cuit_formateado: d.cuit_formateado || d.cuit,
+            denominacion: d.denominacion,
+            entidad: ent.entidad,
+            situacion: ent.situacion,
+            monto: ent.monto,
+            diasAtraso: ent.diasAtraso,
+            total_cheques_rechazados: d.total_cheques_rechazados || 0,
+          })
+        })
+      } else {
+        rows.push({
+          rowId: `${d.cuit}-sin-deuda`,
+          cuit: d.cuit,
+          cuit_formateado: d.cuit_formateado || d.cuit,
+          denominacion: d.denominacion,
+          entidad: 'Sin deuda bancaria informada',
+          situacion: d.peor_situacion || 1,
+          monto: d.deuda_total || 0,
+          diasAtraso: 0,
+          total_cheques_rechazados: d.total_cheques_rechazados || 0,
+        })
+      }
+    }
+
+    return rows
+  }, [debtors])
+
   const filteredAndSorted = useMemo(() => {
-    let list = [...debtors]
+    let list = [...entityRows]
 
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(
-        (d) =>
-          d.denominacion.toLowerCase().includes(q) ||
-          d.cuit.includes(q) ||
-          (d.cuit_formateado && d.cuit_formateado.includes(q))
+        (r) =>
+          r.denominacion.toLowerCase().includes(q) ||
+          r.cuit.includes(q) ||
+          r.cuit_formateado.includes(q) ||
+          r.entidad.toLowerCase().includes(q)
       )
     }
 
     list.sort((a, b) => {
       let comp = 0
-      if (sortField === 'peor_situacion') {
-        comp = a.peor_situacion - b.peor_situacion
-      } else if (sortField === 'deuda_total') {
-        comp = a.deuda_total - b.deuda_total
-      } else if (sortField === 'alertas') {
-        comp = (a.alertas_tempranas?.length || 0) - (b.alertas_tempranas?.length || 0)
+      if (sortField === 'situacion') {
+        comp = a.situacion - b.situacion
+      } else if (sortField === 'monto') {
+        comp = a.monto - b.monto
       } else if (sortField === 'denominacion') {
         comp = a.denominacion.localeCompare(b.denominacion)
+      } else if (sortField === 'entidad') {
+        comp = a.entidad.localeCompare(b.entidad)
       }
       return sortAsc ? comp : -comp
     })
 
     return list
-  }, [debtors, search, sortField, sortAsc])
+  }, [entityRows, search, sortField, sortAsc])
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/60 overflow-hidden">
@@ -63,7 +112,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-400" />
           <h3 className="text-sm font-semibold text-slate-100">
-            {portfolioName} — Detalle Comparativo ({filteredAndSorted.length} de {debtors.length})
+            {portfolioName} — Detalle Comparativo por Entidad ({filteredAndSorted.length} registros)
           </h3>
         </div>
 
@@ -71,7 +120,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Buscar por CUIT o Razón Social..."
+            placeholder="Buscar por CUIT, entidad o razón Social..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-700 bg-slate-950 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -95,34 +144,34 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </div>
               </th>
               <th
-                onClick={() => handleSort('peor_situacion')}
-                className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-200 select-none"
-              >
-                <div className="flex items-center justify-center gap-1">
-                  <span>Peor Sit.</span>
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('deuda_total')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-200 select-none"
-              >
-                <div className="flex items-center justify-end gap-1">
-                  <span>Deuda Total (ARS)</span>
-                  <ArrowUpDown className="w-3 h-3" />
-                </div>
-              </th>
-              <th className="py-2.5 px-3 text-center">Entidades</th>
-              <th className="py-2.5 px-3 text-center">Cheques</th>
-              <th
-                onClick={() => handleSort('alertas')}
+                onClick={() => handleSort('entidad')}
                 className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
               >
                 <div className="flex items-center gap-1">
-                  <span>Alertas Tempranas</span>
+                  <span>Entidad Financiera</span>
                   <ArrowUpDown className="w-3 h-3" />
                 </div>
               </th>
+              <th
+                onClick={() => handleSort('situacion')}
+                className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-200 select-none"
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <span>Situación</span>
+                  <ArrowUpDown className="w-3 h-3" />
+                </div>
+              </th>
+              <th
+                onClick={() => handleSort('monto')}
+                className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-200 select-none"
+              >
+                <div className="flex items-center justify-end gap-1">
+                  <span>Monto en Entidad (ARS)</span>
+                  <ArrowUpDown className="w-3 h-3" />
+                </div>
+              </th>
+              <th className="py-2.5 px-3 text-center">Días atraso</th>
+              <th className="py-2.5 px-3 text-center">Cheques</th>
               <th className="py-2.5 px-3 text-right">Dossier</th>
             </tr>
           </thead>
@@ -130,49 +179,45 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
             {filteredAndSorted.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-xs text-slate-500 font-sans">
-                  No se encontraron deudores en el portafolio con ese criterio de búsqueda.
+                  No se encontraron deudores ni entidades en el portafolio con ese criterio de búsqueda.
                 </td>
               </tr>
             ) : (
-              filteredAndSorted.map((d) => (
-                <tr key={d.cuit} className="hover:bg-slate-800/40 transition-colors">
+              filteredAndSorted.map((r) => (
+                <tr key={r.rowId} className="hover:bg-slate-800/40 transition-colors">
                   <td className="py-2.5 px-3 font-semibold text-slate-300">
-                    {d.cuit_formateado || d.cuit}
+                    {r.cuit_formateado}
                   </td>
-                  <td className="py-2.5 px-3 font-sans font-medium text-slate-100 max-w-xs truncate" title={d.denominacion}>
-                    {d.denominacion}
+                  <td className="py-2.5 px-3 font-sans font-medium text-slate-100 max-w-xs truncate" title={r.denominacion}>
+                    {r.denominacion}
+                  </td>
+                  <td className="py-2.5 px-3 font-sans font-medium text-slate-200 max-w-xs truncate" title={r.entidad}>
+                    {r.entidad}
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    <RiskBadge situacion={d.peor_situacion} size="sm" variant="solid" />
+                    <RiskBadge situacion={r.situacion} size="sm" variant="solid" />
                   </td>
                   <td className="py-2.5 px-3 text-right font-bold text-slate-100 tabular-nums">
-                    ${d.deuda_total?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) || '0'}
+                    ${r.monto?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) || '0'}
                   </td>
-                  <td className="py-2.5 px-3 text-center text-slate-300 tabular-nums">
-                    {d.cantidad_entidades || 0}
+                  <td className="py-2.5 px-3 text-center tabular-nums text-slate-400">
+                    {r.diasAtraso && r.diasAtraso > 0 ? (
+                      <span className="text-amber-400 font-bold">{r.diasAtraso} d</span>
+                    ) : (
+                      <span>0 d</span>
+                    )}
                   </td>
                   <td className="py-2.5 px-3 text-center tabular-nums">
-                    <span className={d.total_cheques_rechazados > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}>
-                      {d.total_cheques_rechazados || 0}
+                    <span className={r.total_cheques_rechazados > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}>
+                      {r.total_cheques_rechazados || 0}
                     </span>
-                  </td>
-                  <td className="py-2.5 px-3 font-sans">
-                    {d.alertas_tempranas && d.alertas_tempranas.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 max-w-sm">
-                        {d.alertas_tempranas.map((b) => (
-                          <EarlyWarningBadge key={b.id} badge={b} size="sm" />
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-[11px] text-emerald-400 font-mono">Sin alertas</span>
-                    )}
                   </td>
                   <td className="py-2.5 px-3 text-right">
                     <button
                       type="button"
-                      onClick={() => window.open(api.getExportPdfUrl(d.cuit), '_blank')}
+                      onClick={() => window.open(api.getExportPdfUrl(r.cuit), '_blank')}
                       className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
-                      title="Descargar Dossier PDF de este deudor"
+                      title={`Descargar dossier PDF de ${r.denominacion}`}
                     >
                       <FileDown className="w-3.5 h-3.5" />
                     </button>

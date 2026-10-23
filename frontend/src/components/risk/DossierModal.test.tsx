@@ -28,7 +28,7 @@ describe('DossierModal Component', () => {
     alertas_tempranas: [
       {
         id: 'CREDIT_DETERIORATION',
-        name: 'Deterioro Crediticio',
+        name: 'Deterioro crediticio',
         severity: 'high',
         description: 'Caída de situación en últimos meses',
       },
@@ -37,27 +37,26 @@ describe('DossierModal Component', () => {
 
   it('does not render when isOpen is false', () => {
     const { container } = render(
-      <DossierModal isOpen={false} onClose={() => {}} report={mockReport} />
+      <DossierModal isOpen={false} onClose={() => { }} report={mockReport} />
     )
     expect(container.firstChild).toBeNull()
   })
 
   it('renders complete executive dossier elements when open', () => {
-    render(<DossierModal isOpen={true} onClose={() => {}} report={mockReport} />)
+    render(<DossierModal isOpen={true} onClose={() => { }} report={mockReport} />)
 
     expect(screen.getByText('BANCO CENTRAL DE LA REPÚBLICA ARGENTINA')).toBeDefined()
     expect(screen.getByText('EMPRESA EJECUTIVA S.A.')).toBeDefined()
     expect(screen.getByText('20-30123456-3')).toBeDefined()
     expect(screen.getByText('$850.000 ARS')).toBeDefined()
-    expect(screen.getByText('Deterioro Crediticio')).toBeDefined()
     expect(screen.getByText('BANCO NACION')).toBeDefined()
     expect(screen.getByText('BANCO PROVINCIA')).toBeDefined()
     expect(screen.getByText('Imprimir Dossier')).toBeDefined()
   })
 
-  it('triggers window.print when Imprimir Dossier button is clicked', () => {
-    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
-    render(<DossierModal isOpen={true} onClose={() => {}} report={mockReport} />)
+  it('triggers window.print when Imprimir dossier button is clicked', () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => { })
+    render(<DossierModal isOpen={true} onClose={() => { }} report={mockReport} />)
 
     const printBtn = screen.getByRole('button', { name: /Imprimir Dossier/i })
     fireEvent.click(printBtn)

@@ -60,7 +60,7 @@ export const BatchView: React.FC = () => {
       document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(`Error al generar Excel: ${err?.message}`)
+      alert(`Error al generar .xlsx: ${err?.message}`)
     } finally {
       setExporting(false)
     }
@@ -123,7 +123,7 @@ export const BatchView: React.FC = () => {
                   onClick={handleExportExcel}
                   disabled={exporting}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold transition-colors shadow-sm"
-                  title="Descargar Portafolio en formato Excel .xlsx"
+                  title="Descargar portafolio en formato .xlsx"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
                   <span>{exporting ? 'Generando Excel...' : 'Exportar a Excel'}</span>

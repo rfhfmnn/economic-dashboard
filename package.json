@@ -1,0 +1,14 @@
+{
+  "name": "economic-dashboard-bcra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Institutional-grade financial and credit risk intelligence dashboard (BCRA)",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix frontend run test",
+    "lint": "npm --prefix frontend run lint",
+    "backend": "python -m uvicorn backend.app.main:app --reload --port 8000",
+    "backend:test": "python -m pytest backend/tests/ -v"
+  }
+}

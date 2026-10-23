@@ -13,7 +13,7 @@ export const RiskBadgeGrid: React.FC<RiskBadgeGridProps> = ({ badges }) => {
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
           <ShieldAlert className="w-3.5 h-3.5 text-blue-400" />
-          <span>Matriz de Alertas Tempranas ({badges.length})</span>
+          <span>Matriz de alertas tempranas ({badges.length})</span>
         </h4>
       </div>
 

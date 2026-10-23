@@ -31,7 +31,7 @@ describe('Credit Screener Components', () => {
     alertas_tempranas: [
       {
         id: 'CREDIT_DETERIORATION',
-        name: 'Deterioro Crediticio',
+        name: 'Deterioro crediticio',
         severity: 'high' as const,
         description: 'Empeoramiento de calificación en los últimos meses',
       },
@@ -53,14 +53,16 @@ describe('Credit Screener Components', () => {
     )
   })
 
-  it('validates CUIT input and provides preset buttons', () => {
+  it('validates CUIT input and triggers search on submit', () => {
     const handleSearch = vi.fn()
     render(<CuitSearchInput onSearch={handleSearch} />)
 
-    // Preset button
-    const presetBtn = screen.getByRole('button', { name: /Distressed/i })
-    fireEvent.click(presetBtn)
-    expect(handleSearch).toHaveBeenCalledWith('30-71234567-1', false)
+    const input = screen.getByPlaceholderText(/Ej: 20-30123456-3/i)
+    fireEvent.change(input, { target: { value: '20-30123456-3' } })
+
+    const searchBtn = screen.getByRole('button', { name: /Consultar BCRA/i })
+    fireEvent.click(searchBtn)
+    expect(handleSearch).toHaveBeenCalledWith('20-30123456-3', false)
   })
 
   it('renders DebtEntityTable with entity list and amounts', () => {
@@ -76,13 +78,13 @@ describe('Credit Screener Components', () => {
 
   it('renders HistoryHeatmap cells with situation labels', () => {
     render(<HistoryHeatmap history={mockDebtorReport.historia_24m} />)
-    expect(screen.getByText(/Matriz de Calificación Histórica/i)).toBeDefined()
+    expect(screen.getByText(/Matriz de calificación histórica/i)).toBeDefined()
     expect(screen.getByText('05/24')).toBeDefined()
   })
 
   it('renders BouncedChecks details and accumulated amounts', () => {
     render(<BouncedChecks cheques={mockDebtorReport.cheques_rechazados} />)
-    expect(screen.getByText(/Registro de Cheques Rechazados/i)).toBeDefined()
+    expect(screen.getByText(/Registro de cheques rechazados/i)).toBeDefined()
     expect(screen.getByText('CHQ-8821')).toBeDefined()
   })
 
@@ -91,7 +93,7 @@ describe('Credit Screener Components', () => {
     await waitFor(() => {
       expect(screen.getByText('ACME ARGENTINA S.A.')).toBeDefined()
       expect(screen.getByText('Exportar PDF')).toBeDefined()
-      expect(screen.getByText('Deterioro Crediticio')).toBeDefined()
+      expect(screen.getByText('BANCO DE GALICIA Y BUENOS AIRES')).toBeDefined()
     })
   })
 })
