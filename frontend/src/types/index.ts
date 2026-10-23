@@ -27,6 +27,7 @@ export interface MacroIndicator {
   valor: number
   fecha: string
   categoria: string
+  unit?: string
 }
 
 export interface MacroSeriesPoint {
@@ -45,6 +46,7 @@ export interface VariableCatalogItem {
   idVariable: number
   descripcion: string
   categoria?: string
+  unit?: string
 }
 
 export interface FxRate {

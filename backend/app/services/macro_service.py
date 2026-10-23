@@ -50,7 +50,7 @@ class MacroService:
 
             name = item.get("descripcion") or f"Variable {var_id}"
             category = item.get("categoria") or KEY_VARIABLES.get(var_id, {}).get("category", "General")
-            unit = item.get("unidad") or KEY_VARIABLES.get(var_id, {}).get("unit", "")
+            unit = KEY_VARIABLES.get(var_id, {}).get("unit") or item.get("unidadExpresion") or item.get("unidad") or ""
 
             stmt = (
                 sqlite_upsert(MacroVariable)

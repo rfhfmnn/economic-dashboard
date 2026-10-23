@@ -70,6 +70,7 @@ export const api = {
           valor: ind.valor ?? ind.value ?? 0,
           fecha: ind.fecha ?? ind.date ?? '',
           categoria: ind.categoria ?? ind.category ?? 'General',
+          unit: ind.unit ?? ind.unidad ?? '',
         }))
       : Object.values(rawIndicators).map((ind: any) => ({
           idVariable: ind.variable_id ?? ind.idVariable ?? 0,
@@ -77,6 +78,7 @@ export const api = {
           valor: ind.value ?? ind.valor ?? 0,
           fecha: ind.date ?? ind.fecha ?? '',
           categoria: ind.category ?? ind.categoria ?? 'General',
+          unit: ind.unit ?? ind.unidad ?? '',
         }))
 
     return {
@@ -113,6 +115,7 @@ export const api = {
       idVariable: item.idVariable ?? item.variable_id ?? 0,
       descripcion: item.descripcion ?? item.name ?? '',
       categoria: item.categoria ?? item.category ?? '',
+      unit: item.unit ?? item.unidad ?? '',
     }))
   },
 

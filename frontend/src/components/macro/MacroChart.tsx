@@ -16,6 +16,7 @@ export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max'
 export interface ChartSeries {
   id: number | string
   title: string
+  unit?: string
   data: MacroSeriesPoint[]
   axis: 'left' | 'right'
   color: string
@@ -130,6 +131,11 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   <span key={s.id} className="inline-flex items-center gap-1.5 text-slate-200 text-xs sm:text-sm font-medium">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                     <span>{s.title}</span>
+                    {s.unit && (
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60">
+                        {s.unit}
+                      </span>
+                    )}
                     {idx < leftSeries.length - 1 && <span className="text-slate-600 font-mono">/</span>}
                   </span>
                 ))}
@@ -148,6 +154,11 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   <span key={s.id} className="inline-flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm font-medium">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                     <span>{s.title}</span>
+                    {s.unit && (
+                      <span className="text-[10px] font-mono text-indigo-400/80 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/60">
+                        {s.unit}
+                      </span>
+                    )}
                     {idx < rightSeries.length - 1 && <span className="text-slate-600 font-mono">/</span>}
                   </span>
                 ))}
@@ -247,8 +258,9 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   const displayName = s
                     ? `${s.title} (${s.axis === 'left' ? 'Principal' : 'Dual'})`
                     : (name === 'primary' ? (primaryTitle || 'Principal') : (secondaryTitle || 'Dual'))
+                  const unitSuffix = s?.unit ? ` ${s.unit}` : ''
                   return [
-                    typeof val === 'number' ? val.toLocaleString('es-AR') : val,
+                    typeof val === 'number' ? `${val.toLocaleString('es-AR')}${unitSuffix}` : val,
                     displayName,
                   ]
                 }}
@@ -267,6 +279,11 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   return (
                     <span className="inline-flex items-center gap-1.5 text-slate-200 font-medium mr-2">
                       <span>{title}</span>
+                      {s?.unit && (
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-1 py-0.2 rounded border border-emerald-800/30">
+                          {s.unit}
+                        </span>
+                      )}
                       <span className="text-[10px] font-mono text-slate-400">
                         ({axisLabel})
                       </span>

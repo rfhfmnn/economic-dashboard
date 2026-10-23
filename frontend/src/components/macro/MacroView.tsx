@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { api } from '../../services/api'
 import type {
@@ -8,24 +8,26 @@ import type {
   VariableCatalogItem,
 } from '../../types'
 import { FxSpreadChart } from './FxSpreadChart'
-import { MacroChart, type Timeframe } from './MacroChart'
+import { MacroChart, type Timeframe, type ChartSeries } from './MacroChart'
 import { MetricCard } from './MetricCard'
 import { VariablePicker } from './VariablePicker'
+
+const PRIMARY_COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#38bdf8', '#14b8a6']
+const SECONDARY_COLORS = ['#8b5cf6', '#f59e0b', '#ec4899', '#a855f7', '#fb923c']
 
 export const MacroView: React.FC = () => {
   const [summary, setSummary] = useState<IndicatorsSummaryResponse | null>(null)
   const [catalog, setCatalog] = useState<VariableCatalogItem[]>([])
   const [fxData, setFxData] = useState<FxSpreadsResponse | null>(null)
 
-  // Primary & Secondary active series
-  const [primaryId, setPrimaryId] = useState<number>(1) // Default: Reservas Internacionales (#1)
-  const [secondaryId, setSecondaryId] = useState<number | undefined>(undefined)
+  // Multi-variable selection state for Left (Principal) and Right (Dual) axes
+  const [primaryIds, setPrimaryIds] = useState<number[]>([1]) // Default: Reservas Internacionales (#1)
+  const [secondaryIds, setSecondaryIds] = useState<number[]>([])
 
-  const [primaryTitle, setPrimaryTitle] = useState<string>('Reservas Internacionales')
-  const [secondaryTitle, setSecondaryTitle] = useState<string | undefined>(undefined)
-
-  const [primarySeries, setPrimarySeries] = useState<MacroSeriesPoint[]>([])
-  const [secondarySeries, setSecondarySeries] = useState<MacroSeriesPoint[]>([])
+  // In-memory cache for series data to avoid refetching on toggling
+  const [seriesCache, setSeriesCache] = useState<
+    Record<number, { title: string; data: MacroSeriesPoint[] }>
+  >({})
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1Y')
   const [loading, setLoading] = useState<boolean>(true)
@@ -52,46 +54,121 @@ export const MacroView: React.FC = () => {
     }
   }
 
-  // Fetch primary series when primaryId changes
+  // Fetch missing series data whenever primaryIds or secondaryIds change
   useEffect(() => {
-    const fetchPrimary = async () => {
+    const allSelectedIds = Array.from(new Set([...primaryIds, ...secondaryIds]))
+    const missingIds = allSelectedIds.filter((id) => !seriesCache[id])
+
+    if (missingIds.length === 0) return
+
+    const fetchMissing = async () => {
       try {
         setChartLoading(true)
-        const res = await api.getMacroSeries(primaryId)
-        setPrimarySeries(res.data)
-        setPrimaryTitle(res.variable_name || `Serie #${primaryId}`)
-      } catch (err) {
-        console.error('Error fetching primary series:', err)
+        const results = await Promise.all(
+          missingIds.map((id) =>
+            api
+              .getMacroSeries(id)
+              .then((res) => ({
+                id,
+                title: res.variable_name || `Serie #${id}`,
+                data: res.data,
+              }))
+              .catch((err) => {
+                console.error(`Error fetching series #${id}:`, err)
+                return { id, title: `Serie #${id}`, data: [] }
+              })
+          )
+        )
+
+        setSeriesCache((prev) => {
+          const updated = { ...prev }
+          results.forEach((item) => {
+            updated[item.id] = { title: item.title, data: item.data }
+          })
+          return updated
+        })
       } finally {
         setChartLoading(false)
       }
     }
-    fetchPrimary()
-  }, [primaryId])
 
-  // Fetch secondary series when secondaryId changes
-  useEffect(() => {
-    if (!secondaryId) {
-      setSecondarySeries([])
-      setSecondaryTitle(undefined)
-      return
-    }
-
-    const fetchSecondary = async () => {
-      try {
-        const res = await api.getMacroSeries(secondaryId)
-        setSecondarySeries(res.data)
-        setSecondaryTitle(res.variable_name || `Serie #${secondaryId}`)
-      } catch (err) {
-        console.error('Error fetching secondary series:', err)
-      }
-    }
-    fetchSecondary()
-  }, [secondaryId])
+    fetchMissing()
+  }, [primaryIds, secondaryIds])
 
   useEffect(() => {
     loadDashboardData()
   }, [])
+
+  // Build multi-series structure for MacroChart
+  const chartSeries = useMemo<ChartSeries[]>(() => {
+    const seriesList: ChartSeries[] = []
+
+    primaryIds.forEach((id, idx) => {
+      const cached = seriesCache[id]
+      const catItem = catalog.find((c) => c.idVariable === id)
+      seriesList.push({
+        id,
+        title: cached?.title || catItem?.descripcion || `Serie #${id}`,
+        unit: catItem?.unit || '',
+        data: cached?.data || [],
+        axis: 'left',
+        color: PRIMARY_COLORS[idx % PRIMARY_COLORS.length],
+      })
+    })
+
+    secondaryIds.forEach((id, idx) => {
+      const cached = seriesCache[id]
+      const catItem = catalog.find((c) => c.idVariable === id)
+      seriesList.push({
+        id,
+        title: cached?.title || catItem?.descripcion || `Serie #${id}`,
+        unit: catItem?.unit || '',
+        data: cached?.data || [],
+        axis: 'right',
+        color: SECONDARY_COLORS[idx % SECONDARY_COLORS.length],
+        strokeDasharray: '4 4',
+      })
+    })
+
+    return seriesList
+  }, [primaryIds, secondaryIds, seriesCache, catalog])
+
+  const totalObservations = useMemo(() => {
+    return chartSeries.reduce((acc, s) => acc + s.data.length, 0)
+  }, [chartSeries])
+
+  // Handlers for variable toggling
+  const handleTogglePrimary = (id: number) => {
+    if (primaryIds.includes(id)) {
+      if (primaryIds.length > 1) {
+        setPrimaryIds(primaryIds.filter((p) => p !== id))
+      }
+    } else {
+      setPrimaryIds([...primaryIds, id])
+      setSecondaryIds(secondaryIds.filter((s) => s !== id))
+    }
+  }
+
+  const handleToggleSecondary = (id: number) => {
+    if (secondaryIds.includes(id)) {
+      setSecondaryIds(secondaryIds.filter((s) => s !== id))
+    } else {
+      setSecondaryIds([...secondaryIds, id])
+      if (primaryIds.includes(id) && primaryIds.length > 1) {
+        setPrimaryIds(primaryIds.filter((p) => p !== id))
+      }
+    }
+  }
+
+  const handleRemovePrimary = (id: number) => {
+    if (primaryIds.length > 1) {
+      setPrimaryIds(primaryIds.filter((p) => p !== id))
+    }
+  }
+
+  const handleRemoveSecondary = (id: number) => {
+    setSecondaryIds(secondaryIds.filter((s) => s !== id))
+  }
 
   if (loading) {
     return (
@@ -114,7 +191,7 @@ export const MacroView: React.FC = () => {
         <p className="text-xs text-rose-300 max-w-md mx-auto">{error}</p>
         <button
           onClick={loadDashboardData}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Reintentar Conexión</span>
@@ -127,40 +204,41 @@ export const MacroView: React.FC = () => {
     <div className="space-y-6">
       {/* Top Indicators KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summary?.indicators?.slice(0, 8).map((ind) => (
-          <MetricCard
-            key={ind.idVariable}
-            title={ind.descripcion}
-            value={ind.valor}
-            date={ind.fecha}
-            category={ind.categoria}
-            active={ind.idVariable === primaryId}
-            onClick={() => setPrimaryId(ind.idVariable)}
-          />
-        ))}
+        {Array.isArray(summary?.indicators) &&
+          summary.indicators.slice(0, 8).map((ind) => (
+            <MetricCard
+              key={ind.idVariable}
+              title={ind.descripcion}
+              value={ind.valor}
+              date={ind.fecha}
+              category={ind.categoria}
+              unit={ind.unit}
+              active={primaryIds.includes(ind.idVariable)}
+              onClick={() => handleTogglePrimary(ind.idVariable)}
+            />
+          ))}
       </div>
 
-      {/* Main Interactive Time-Series Section */}
+      {/* Main Interactive Time-Series Section with Multi-Select */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900/40 p-3 rounded-lg border border-slate-800">
           <VariablePicker
             catalog={catalog}
-            selectedPrimaryId={primaryId}
-            selectedSecondaryId={secondaryId}
-            onSelectPrimary={(id) => setPrimaryId(id)}
-            onSelectSecondary={(id) => setSecondaryId(id)}
+            selectedPrimaryIds={primaryIds}
+            selectedSecondaryIds={secondaryIds}
+            onTogglePrimary={handleTogglePrimary}
+            onToggleSecondary={handleToggleSecondary}
+            onRemovePrimary={handleRemovePrimary}
+            onRemoveSecondary={handleRemoveSecondary}
           />
 
           <span className="text-[11px] font-mono text-slate-500">
-            {primarySeries.length} observaciones registradas
+            {chartSeries.length} variable{chartSeries.length > 1 ? 's' : ''} activa{chartSeries.length > 1 ? 's' : ''} • {totalObservations.toLocaleString('es-AR')} puntos
           </span>
         </div>
 
         <MacroChart
-          primaryTitle={primaryTitle}
-          primaryData={primarySeries}
-          secondaryTitle={secondaryTitle}
-          secondaryData={secondarySeries}
+          series={chartSeries}
           timeframe={timeframe}
           onTimeframeChange={setTimeframe}
           loading={chartLoading}
