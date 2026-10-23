@@ -24,6 +24,14 @@ describe('MacroView Components', () => {
                     categoria: 'Monetaria',
                   },
                   {
+                    idVariable: 28,
+                    descripcion: 'Inflación Interanual',
+                    valor: 68.5,
+                    fecha: '2024-05-10',
+                    categoria: 'Precios',
+                    unit: '%',
+                  },
+                  {
                     idVariable: 27,
                     descripcion: 'Base monetaria total',
                     valor: 14500.0,
@@ -42,6 +50,7 @@ describe('MacroView Components', () => {
             json: () =>
               Promise.resolve([
                 { idVariable: 1, descripcion: 'Reservas internacionales', categoria: 'Monetaria' },
+                { idVariable: 28, descripcion: 'Inflación Interanual', categoria: 'Precios', unit: '%' },
                 { idVariable: 27, descripcion: 'Base monetaria total', categoria: 'Monetaria' },
               ]),
           })
@@ -92,6 +101,21 @@ describe('MacroView Components', () => {
                 },
                 last_updated: '2024-05-10T12:00:00',
                 source: 'test',
+              }),
+          })
+        }
+        if (url.includes('/macro/series/28')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                id_variable: 28,
+                variable_name: 'Inflación Interanual',
+                count: 2,
+                data: [
+                  { fecha: '2024-04-01', valor: 65.0 },
+                  { fecha: '2024-05-01', valor: 68.5 },
+                ],
               }),
           })
         }
@@ -267,6 +291,23 @@ describe('MacroView Components', () => {
     const reservasCard = screen.getAllByText('Reservas internacionales')[0].closest('div')
     if (reservasCard) {
       fireEvent.click(reservasCard)
+    }
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Sin observaciones disponibles/i)).toBeNull()
+    })
+  })
+
+  it('focuses Inflacion Interanual in principal variables and updates chart', async () => {
+    render(<MacroView />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Inflación Interanual').length).toBeGreaterThanOrEqual(1)
+    })
+
+    const inflacionCard = screen.getAllByText('Inflación Interanual')[0].closest('div')
+    if (inflacionCard) {
+      fireEvent.click(inflacionCard)
     }
 
     await waitFor(() => {

@@ -86,7 +86,7 @@ def test_get_indicators_summary(db_session, macro_service):
     assert "1" in indicators
     assert indicators["1"]["value"] is not None
     assert "27" in indicators
-    assert "6" in indicators
+    assert "28" in indicators
 
     fx_spreads = summary["fx_spreads"]
     assert "base" in fx_spreads

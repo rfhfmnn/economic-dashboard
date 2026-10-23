@@ -70,13 +70,13 @@ describe('App Shell & Navigation', () => {
 
   it('renders header, insignia, and system status', async () => {
     render(<App />)
-    expect(screen.getByText(/BCRA Economic & Credit Risk Monitor/i)).toBeDefined()
-    expect(screen.getAllByText(/Central de Deudores/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/Monitor de coyuntura y riesgo/i)).toBeDefined()
+    expect(screen.getAllByText(/Central de deudores/i).length).toBeGreaterThanOrEqual(1)
 
     await waitFor(() => {
       expect(
-        screen.queryByText(/Live BCRA En Línea/i) ||
-          screen.queryByText(/Modo Mock Sintético Activo/i)
+        screen.queryByText(/Live BCRA en línea/i) ||
+          screen.queryByText(/Modo mock sintético activo/i)
       ).toBeDefined()
     })
   })
@@ -85,18 +85,18 @@ describe('App Shell & Navigation', () => {
     render(<App />)
 
     // Initial tab is Macro
-    expect(screen.getAllByText(/Monitor Macro & FX/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/Monitor macroeconómico/i).length).toBeGreaterThanOrEqual(1)
 
     // Switch to Screener (Central de Deudores)
-    const screenerTab = screen.getByRole('button', { name: /Central de Deudores/i })
+    const screenerTab = screen.getByRole('button', { name: /Central de deudores/i })
     fireEvent.click(screenerTab)
-    expect(screen.getByText(/Consulta Individual \(CUIT\)/i)).toBeDefined()
-    expect(screen.getByText(/Portafolio Batch/i)).toBeDefined()
+    expect(screen.getByText(/Consulta individual/i)).toBeDefined()
+    expect(screen.getByText(/Portafolio batch/i)).toBeDefined()
 
     // Switch to Batch subtab inside Central de Deudores
-    const batchTab = screen.getByRole('button', { name: /Portafolio Batch/i })
+    const batchTab = screen.getByRole('button', { name: /Portafolio batch/i })
     fireEvent.click(batchTab)
-    expect(screen.getByText(/Subir Archivo/i)).toBeDefined()
+    expect(screen.getByText(/Subir archivo/i)).toBeDefined()
   })
 })
 

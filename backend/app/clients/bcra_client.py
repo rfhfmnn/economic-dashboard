@@ -71,7 +71,7 @@ class BCRAClient:
                         logger.warning("BCRA endpoint %s returned not found: %s", url, err_payload)
                         # Always fall back to synthetic data for key macro variables and known series
                         url_clean = url.rstrip("/")
-                        if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 30, 31, 74, 77)):
+                        if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 28, 30, 31, 74, 77)):
                             return fallback_fn()
                         return []
                 except Exception:
@@ -84,7 +84,7 @@ class BCRAClient:
                 logger.warning("BCRA endpoint %s returned status %s", url, data.get("status"))
                 if data.get("status") == 404:
                     url_clean = url.rstrip("/")
-                    if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 30, 31, 74, 77)):
+                    if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 28, 30, 31, 74, 77)):
                         return fallback_fn()
                     return []
                 return fallback_fn()

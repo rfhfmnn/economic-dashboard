@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 
 KEY_VARIABLES = {
     1: {"name": "Reservas Internacionales", "category": "Monetario", "unit": "Millones USD"},
-    15: {"name": "Base Monetaria", "category": "Monetario", "unit": "Millones ARS"},
-    7: {"name": "Tasa BADLAR", "category": "Tasas", "unit": "%"},
-    11: {"name": "Tasa BAIBAR Interbancaria", "category": "Tasas", "unit": "%"},
-    5: {"name": "Tipo de Cambio Mayorista A3500", "category": "Cambiario", "unit": "ARS/USD"},
     4: {"name": "Tipo de Cambio Minorista", "category": "Cambiario", "unit": "ARS/USD"},
+    5: {"name": "Tipo de Cambio Mayorista A3500", "category": "Cambiario", "unit": "ARS/USD"},
+    28: {"name": "Inflación Interanual", "category": "Precios", "unit": "%"},
+    7: {"name": "Tasa BADLAR", "category": "Tasas", "unit": "%"},
+    27: {"name": "Inflación Mensual", "category": "Precios", "unit": "%"},
     30: {"name": "CER", "category": "Precios", "unit": "Índice"},
     31: {"name": "UVA", "category": "Precios", "unit": "ARS"},
-    6: {"name": "Tasa de Política Monetaria (Histórica)", "category": "Tasas", "unit": "%"},
-    27: {"name": "Inflación Mensual", "category": "Precios", "unit": "%"},
+    15: {"name": "Base Monetaria", "category": "Monetario", "unit": "Millones ARS"},
+    11: {"name": "Tasa BAIBAR Interbancaria", "category": "Tasas", "unit": "%"},
 }
 
 
@@ -53,6 +53,8 @@ class MacroService:
                 name = "Reservas Internacionales"
             elif var_id == 77 and "variaci" not in raw_name.lower():
                 name = "Reservas Internacionales (Variación Diaria de Saldos)"
+            elif var_id == 28:
+                name = "Inflación Interanual"
             else:
                 name = raw_name.strip()
             category = item.get("categoria") or KEY_VARIABLES.get(var_id, {}).get("category", "General")
