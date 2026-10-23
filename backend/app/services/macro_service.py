@@ -15,13 +15,15 @@ logger = logging.getLogger(__name__)
 
 KEY_VARIABLES = {
     1: {"name": "Reservas Internacionales", "category": "Monetario", "unit": "Millones USD"},
-    27: {"name": "Base Monetaria", "category": "Monetario", "unit": "Millones ARS"},
-    6: {"name": "Tasa de Política Monetaria", "category": "Tasas", "unit": "%"},
+    15: {"name": "Base Monetaria", "category": "Monetario", "unit": "Millones ARS"},
     7: {"name": "Tasa BADLAR", "category": "Tasas", "unit": "%"},
+    11: {"name": "Tasa BAIBAR Interbancaria", "category": "Tasas", "unit": "%"},
     5: {"name": "Tipo de Cambio Mayorista A3500", "category": "Cambiario", "unit": "ARS/USD"},
     4: {"name": "Tipo de Cambio Minorista", "category": "Cambiario", "unit": "ARS/USD"},
     30: {"name": "CER", "category": "Precios", "unit": "Índice"},
     31: {"name": "UVA", "category": "Precios", "unit": "ARS"},
+    6: {"name": "Tasa de Política Monetaria (Histórica)", "category": "Tasas", "unit": "%"},
+    27: {"name": "Inflación Mensual", "category": "Precios", "unit": "%"},
 }
 
 
@@ -125,8 +127,12 @@ class MacroService:
         variable_id: int,
         desde: Optional[str] = None,
         hasta: Optional[str] = None,
+        refresh: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Retrieve historical series from DB cache, auto-syncing if empty."""
+        """Retrieve historical series from DB cache, auto-syncing if empty or refresh requested."""
+        if refresh:
+            self.sync_variable_series(db, variable_id=variable_id, desde=desde, hasta=hasta)
+
         stmt = select(MacroSeries).where(MacroSeries.variable_id == variable_id)
 
         parsed_desde: Optional[date] = None
@@ -156,16 +162,19 @@ class MacroService:
             for r in records
         ]
 
-    def get_indicators_summary(self, db: Session) -> Dict[str, Any]:
+    def get_indicators_summary(self, db: Session, refresh: bool = False) -> Dict[str, Any]:
         """Aggregate latest snapshot of key macro indicators and parallel FX spreads."""
         # Ensure catalog is populated
         catalog_count = db.query(MacroVariable).count()
-        if catalog_count == 0:
+        if catalog_count == 0 or refresh:
             self.sync_catalog(db)
 
         indicators_data: Dict[str, Any] = {}
 
         for var_id, meta in KEY_VARIABLES.items():
+            if refresh:
+                self.sync_variable_series(db, variable_id=var_id)
+
             latest = db.scalar(
                 select(MacroSeries)
                 .where(MacroSeries.variable_id == var_id)

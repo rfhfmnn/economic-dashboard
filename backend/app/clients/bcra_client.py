@@ -69,6 +69,8 @@ class BCRAClient:
                     err_payload = response.json()
                     if err_payload.get("status") == 404 or "IdVariable" in str(err_payload.get("errorMessages", [])):
                         logger.warning("BCRA endpoint %s returned not found: %s", url, err_payload)
+                        if url.rstrip("/").endswith("/6"):
+                            return fallback_fn()
                         return []
                 except Exception:
                     pass
@@ -135,6 +137,8 @@ class BCRAClient:
                     return detalle
             return res_list
         if isinstance(result, list):
+            if len(result) == 0 and id_variable == 6:
+                return fallback()
             return result
         return fallback()
 

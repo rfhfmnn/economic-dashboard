@@ -52,11 +52,11 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 27,
         "cdSerie": 250,
-        "descripcion": "Base Monetaria - Total (en millones de pesos)",
-        "categoria": "Monetario",
-        "unidad": "Millones de ARS",
+        "descripcion": "Inflación mensual",
+        "categoria": "Precios",
+        "unidad": "%",
         "fecha": "2026-03-20",
-        "valor": 24500000.0,
+        "valor": 2.4,
     },
     {
         "idVariable": 30,
@@ -87,7 +87,7 @@ def generate_mock_history(
     hasta: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Generates synthetic daily time series data ending at current date."""
-    end_dt = datetime.strptime(hasta, "%Y-%m-%d") if hasta else datetime(2026, 3, 20)
+    end_dt = datetime.strptime(hasta, "%Y-%m-%d") if hasta else datetime.now()
     start_dt = (
         datetime.strptime(desde, "%Y-%m-%d")
         if desde
@@ -99,8 +99,8 @@ def generate_mock_history(
     day_idx = 0
 
     while current <= end_dt:
-        # Generate stable pseudo-realistic slight drift
-        factor = 1.0 + (day_idx * 0.0008) + ((day_idx % 7) * 0.0003)
+        # Generate smooth realistic linear drift without periodic sawtooth artifacts
+        factor = 1.0 + (day_idx * 0.0005)
         val = round(base_value * factor, 2)
         results.append(
             {
@@ -125,7 +125,7 @@ def get_mock_variable_series(
         5: 990.0,
         6: 35.0,
         7: 38.0,
-        27: 21000000.0,
+        27: 2.5,
         30: 450.0,
         31: 1150.0,
     }
