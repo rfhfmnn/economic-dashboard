@@ -75,13 +75,6 @@ export const Header: React.FC = () => {
             </div>
           )}
 
-          {status?.cached_records && (
-            <div className="hidden sm:flex items-center gap-2 text-slate-500 font-mono text-[11px] border-l border-slate-800 pl-3">
-              <span>Series: <strong className="text-slate-300">{status.cached_records.macro_series}</strong></span>
-              <span>•</span>
-              <span>CUITs: <strong className="text-slate-300">{status.cached_records.cuits}</strong></span>
-            </div>
-          )}
 
           <button
             onClick={fetchStatus}

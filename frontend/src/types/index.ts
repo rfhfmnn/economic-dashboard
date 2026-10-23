@@ -10,7 +10,7 @@ export interface SystemStatusResponse {
   bcra_connected: boolean
   dolarapi_connected: boolean
   offline_mode: boolean
-  cached_records: {
+  cached_records?: {
     macro_series: number
     cuits: number
   }

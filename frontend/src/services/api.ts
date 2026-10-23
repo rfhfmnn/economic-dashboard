@@ -7,6 +7,7 @@ import type {
   DebtorReport,
   FxSpreadsResponse,
   IndicatorsSummaryResponse,
+  MacroIndicator,
   MacroSeriesResponse,
   SystemStatusResponse,
   VariableCatalogItem,
@@ -45,31 +46,147 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // System Health & Connectivity
-  getSystemStatus: () => request<SystemStatusResponse>('/system/status'),
+  getSystemStatus: async (): Promise<SystemStatusResponse> => {
+    const res: any = await request<any>('/system/status')
+    return {
+      status: res?.status || 'ok',
+      system: res?.system || 'BCRA Monitor',
+      bcra_connected: res?.bcra_connected ?? (res?.services?.bcra_api === 'active'),
+      dolarapi_connected: res?.dolarapi_connected ?? (res?.services?.fx_api === 'active'),
+      offline_mode: res?.offline_mode ?? res?.mock_mode ?? false,
+      cached_records: res?.cached_records,
+      timestamp: res?.timestamp || new Date().toISOString(),
+    }
+  },
 
   // Macro & FX Endpoints
-  getMacroSummary: () => request<IndicatorsSummaryResponse>('/macro/summary'),
+  getMacroSummary: async (): Promise<IndicatorsSummaryResponse> => {
+    const res: any = await request<any>('/macro/summary')
+    const rawIndicators = res?.indicators || {}
+    const indicatorsList: MacroIndicator[] = Array.isArray(rawIndicators)
+      ? rawIndicators.map((ind: any) => ({
+          idVariable: ind.idVariable ?? ind.variable_id ?? 0,
+          descripcion: ind.descripcion ?? ind.name ?? '',
+          valor: ind.valor ?? ind.value ?? 0,
+          fecha: ind.fecha ?? ind.date ?? '',
+          categoria: ind.categoria ?? ind.category ?? 'General',
+        }))
+      : Object.values(rawIndicators).map((ind: any) => ({
+          idVariable: ind.variable_id ?? ind.idVariable ?? 0,
+          descripcion: ind.name ?? ind.descripcion ?? '',
+          valor: ind.value ?? ind.valor ?? 0,
+          fecha: ind.date ?? ind.fecha ?? '',
+          categoria: ind.category ?? ind.categoria ?? 'General',
+        }))
 
-  getMacroSeries: (idVariable: number, desde?: string, hasta?: string) => {
+    return {
+      indicators: indicatorsList,
+      fx_summary: res?.fx_summary || res?.fx_spreads || {},
+      timestamp: res?.timestamp || res?.last_updated || new Date().toISOString(),
+    }
+  },
+
+  getMacroSeries: async (idVariable: number, desde?: string, hasta?: string): Promise<MacroSeriesResponse> => {
     const params = new URLSearchParams()
     if (desde) params.append('desde', desde)
     if (hasta) params.append('hasta', hasta)
     const qs = params.toString() ? `?${params.toString()}` : ''
-    return request<MacroSeriesResponse>(`/macro/series/${idVariable}${qs}`)
+    const res: any = await request<any>(`/macro/series/${idVariable}${qs}`)
+
+    const rawData = Array.isArray(res) ? res : (res?.data || [])
+    return {
+      id_variable: res?.id_variable ?? idVariable,
+      variable_name: res?.variable_name ?? `Serie #${idVariable}`,
+      count: rawData.length,
+      data: rawData.map((pt: any) => ({
+        fecha: pt.fecha ?? pt.date ?? '',
+        valor: pt.valor ?? pt.value ?? 0,
+      })),
+    }
   },
 
-  getMacroCatalog: (search?: string) => {
+  getMacroCatalog: async (search?: string): Promise<VariableCatalogItem[]> => {
     const qs = search ? `?search=${encodeURIComponent(search)}` : ''
-    return request<VariableCatalogItem[]>(`/macro/catalog${qs}`)
+    const res: any = await request<any>(`/macro/catalog${qs}`)
+    const list = Array.isArray(res) ? res : []
+    return list.map((item: any) => ({
+      idVariable: item.idVariable ?? item.variable_id ?? 0,
+      descripcion: item.descripcion ?? item.name ?? '',
+      categoria: item.categoria ?? item.category ?? '',
+    }))
   },
 
-  getFxSpreads: () => request<FxSpreadsResponse>('/macro/fx/spreads'),
+  getFxSpreads: async (): Promise<FxSpreadsResponse> => {
+    const res: any = await request<any>('/macro/fx/spreads')
+    const oficialVenta = res?.oficial_base ?? res?.base?.venta ?? 0
+    const oficialCompra = res?.base?.compra ?? 0
+    const timestamp = res?.timestamp ?? res?.base?.fechaActualizacion ?? new Date().toISOString()
+
+    const rates: Record<string, any> = { ...(res?.rates || {}) }
+    if (!rates.oficial && res?.base) {
+      rates.oficial = {
+        moneda: 'USD',
+        nombre: res.base.nombre || 'Oficial Mayorista',
+        compra: oficialCompra,
+        venta: oficialVenta,
+        fechaActualizacion: timestamp,
+      }
+    }
+
+    const spreads: Record<string, any> = {}
+    if (res?.spreads) {
+      for (const [k, v] of Object.entries(res.spreads as Record<string, any>)) {
+        rates[k] = rates[k] || {
+          moneda: 'USD',
+          nombre: v.nombre || k.toUpperCase(),
+          compra: v.compra || 0,
+          venta: v.venta || 0,
+          fechaActualizacion: v.fechaActualizacion || timestamp,
+        }
+        spreads[k] = {
+          tipo: k,
+          oficial_venta: oficialVenta,
+          paralelo_venta: v.venta || 0,
+          brecha_porcentaje: v.brecha_porcentaje ?? v.brecha_pct ?? 0,
+          timestamp: v.fechaActualizacion || timestamp,
+        }
+      }
+    }
+
+    return {
+      oficial_base: oficialVenta,
+      rates,
+      spreads,
+      timestamp,
+    }
+  },
 
   // Credit Risk & Central de Deudores Endpoints
-  getDebtorReport: (cuit: string, bypassCache: boolean = false) => {
+  getDebtorReport: async (cuit: string, bypassCache: boolean = false): Promise<DebtorReport> => {
     const clean = cuit.replace(/\D/g, '')
     const qs = bypassCache ? '?bypass_cache=true' : ''
-    return request<DebtorReport>(`/risk/deudores/${clean}${qs}`)
+    const res: any = await request<any>(`/risk/deudores/${clean}${qs}`)
+
+    return {
+      ...res,
+      periodo: res.periodo ?? res.periodo_reciente,
+      historia_24m: (res.historia_24m ?? res.historial_24m ?? []).map((h: any) => ({
+        periodo: h.periodo,
+        situacion: h.situacion ?? h.peor_situacion ?? 1,
+      })),
+      cheques_rechazados: Array.isArray(res.cheques_rechazados)
+        ? {
+            cantidad: res.total_cheques_rechazados ?? res.cheques_rechazados.length,
+            total_monto: res.monto_total_cheques ?? 0,
+            detalles: res.cheques_rechazados.map((c: any) => ({
+              numeroCheque: c.numero_cheque ?? c.numeroCheque,
+              fechaRechazo: c.fecha_rechazo ?? c.fechaRechazo,
+              monto: c.monto ?? 0,
+              causal: c.causal,
+            })),
+          }
+        : res.cheques_rechazados || { cantidad: 0, total_monto: 0, detalles: [] },
+    }
   },
 
   evaluateBatch: (cuits: string[], portfolioName: string = 'Portafolio') =>
