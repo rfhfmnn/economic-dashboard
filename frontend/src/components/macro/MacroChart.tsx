@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { Calendar } from 'lucide-react'
+import React, { useMemo, useState, useRef } from 'react'
+import { Calendar, Camera, FileSpreadsheet } from 'lucide-react'
 import {
   ResponsiveContainer,
   LineChart,
@@ -68,6 +68,153 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   const handleEndDateChange = (val: string) => {
     setInternalEndDate(val)
     if (onCustomDateChange) onCustomDateChange(startDate, val)
+  }
+
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+
+  const handleDownloadCsv = () => {
+    if (chartData.length === 0 || effectiveSeries.length === 0) return
+
+    const headerCols = [
+      'Fecha',
+      ...effectiveSeries.map((s) => {
+        const unit = s.unit ? ` (${s.unit})` : ''
+        const axis = s.axis === 'left' ? 'Principal' : 'Dual'
+        return `"${s.title.replace(/"/g, '""')}${unit} [${axis}]"`
+      }),
+    ]
+
+    const rows = chartData.map((item) => {
+      const cols = [item.fecha]
+      effectiveSeries.forEach((s) => {
+        const val = item[`var_${s.id}`]
+        cols.push(val !== undefined && val !== null ? String(val) : '')
+      })
+      return cols.join(';')
+    })
+
+    const csvContent = '\uFEFF' + [headerCols.join(';'), ...rows].join('\r\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const dateStr = new Date().toISOString().split('T')[0]
+    a.download = `series_macro_bcra_${timeframe.toLowerCase()}_${dateStr}.csv`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  }
+
+  const handleDownloadPng = () => {
+    const container = chartContainerRef.current
+    if (!container) return
+
+    const svgElement = container.querySelector('svg.recharts-surface') as SVGSVGElement | null
+    if (!svgElement) return
+
+    const rect = svgElement.getBoundingClientRect()
+    const svgWidth = Math.max(700, rect.width || 800)
+    const svgHeight = Math.max(300, rect.height || 320)
+
+    const scale = 2
+    const paddingX = 28
+    const headerHeight = 72
+    const footerHeight = 28
+
+    const totalWidth = svgWidth + paddingX * 2
+    const totalHeight = svgHeight + headerHeight + footerHeight
+
+    const canvas = document.createElement('canvas')
+    canvas.width = totalWidth * scale
+    canvas.height = totalHeight * scale
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.scale(scale, scale)
+
+    // Dark canvas background
+    ctx.fillStyle = '#090d16'
+    ctx.fillRect(0, 0, totalWidth, totalHeight)
+
+    // Blue accent top bar
+    ctx.fillStyle = '#3b82f6'
+    ctx.fillRect(0, 0, totalWidth, 3)
+
+    // Main title
+    ctx.fillStyle = '#f8fafc'
+    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    const titleText = effectiveSeries.map((s) => s.title).join('  vs  ') || 'Monitor Macroeconómico BCRA'
+    const displayTitle = titleText.length > 70 ? titleText.slice(0, 67) + '...' : titleText
+    ctx.fillText(displayTitle, paddingX, 32)
+
+    // Period / Timeframe subtitle
+    ctx.fillStyle = '#94a3b8'
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    const periodText =
+      chartData.length > 0
+        ? `Período: ${chartData[0].fecha} a ${chartData[chartData.length - 1].fecha} (${timeframe})`
+        : `Período: ${timeframe}`
+    ctx.fillText(periodText, paddingX, 52)
+
+    // Draw Legend series on top right of the canvas
+    let legendX = totalWidth - paddingX
+    effectiveSeries.slice(0, 3).reverse().forEach((s) => {
+      const label = `${s.title}${s.unit ? ` (${s.unit})` : ''}`
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      const textWidth = ctx.measureText(label).width
+      legendX -= textWidth
+
+      ctx.fillStyle = '#e2e8f0'
+      ctx.fillText(label, legendX, 50)
+
+      legendX -= 14
+      ctx.beginPath()
+      ctx.arc(legendX + 6, 46, 4, 0, Math.PI * 2)
+      ctx.fillStyle = s.color
+      ctx.fill()
+
+      legendX -= 14
+    })
+
+    // Clone SVG to attach proper standalone XML attributes
+    const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
+    clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    clonedSvg.setAttribute('width', String(svgWidth))
+    clonedSvg.setAttribute('height', String(svgHeight))
+
+    const svgData = new XMLSerializer().serializeToString(clonedSvg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = window.URL.createObjectURL(svgBlob)
+
+    const img = new Image()
+    img.onload = () => {
+      ctx.drawImage(img, paddingX, headerHeight, svgWidth, svgHeight)
+      window.URL.revokeObjectURL(url)
+
+      // Footer notice
+      ctx.fillStyle = '#64748b'
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(
+        'Fuente: Banco Central de la República Argentina (BCRA) · Monitor Macroeconómico',
+        paddingX,
+        totalHeight - 10
+      )
+
+      const pngUrl = canvas.toDataURL('image/png')
+      const a = document.createElement('a')
+      a.href = pngUrl
+      const dateStr = new Date().toISOString().split('T')[0]
+      a.download = `grafico_bcra_${timeframe.toLowerCase()}_${dateStr}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+    img.onerror = () => {
+      window.URL.revokeObjectURL(url)
+      console.error('Error al generar la imagen PNG del gráfico')
+    }
+    img.src = url
   }
   // Normalize series: either use passed multi-series or fall back to primaryData/secondaryData
   const effectiveSeries = useMemo<ChartSeries[]>(() => {
@@ -203,41 +350,66 @@ export const MacroChart: React.FC<MacroChartProps> = ({
             Evolución histórica y comparación temporal multi-variable de series BCRA
           </p>
         </div>
-
-        {/* Timeframe pill switcher with Personalizado */}
-        <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-0.5 self-start sm:self-auto flex-wrap">
-          {TIMEFRAMES.map((tf) => (
+        {/* Timeframe pill switcher with Personalizado & Export actions */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-0.5 flex-wrap">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => {
+                  setShowCustomPicker(false)
+                  onTimeframeChange(tf)
+                }}
+                className={`px-2.5 py-1 text-xs font-mono rounded transition-colors cursor-pointer ${
+                  timeframe === tf && !showCustomPicker
+                    ? 'bg-blue-600 text-white font-medium shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
             <button
-              key={tf}
               onClick={() => {
-                setShowCustomPicker(false)
-                onTimeframeChange(tf)
+                const next = !showCustomPicker
+                setShowCustomPicker(next)
+                if (next) onTimeframeChange('Custom')
               }}
-              className={`px-2.5 py-1 text-xs font-mono rounded transition-colors cursor-pointer ${
-                timeframe === tf && !showCustomPicker
+              className={`px-2.5 py-1 text-xs font-mono rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+                timeframe === 'Custom' || showCustomPicker
                   ? 'bg-blue-600 text-white font-medium shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
+              title="Seleccionar rango de fechas específico"
             >
-              {tf}
+              <Calendar className="w-3 h-3" />
+              <span>Personalizado</span>
             </button>
-          ))}
-          <button
-            onClick={() => {
-              const next = !showCustomPicker
-              setShowCustomPicker(next)
-              if (next) onTimeframeChange('Custom')
-            }}
-            className={`px-2.5 py-1 text-xs font-mono rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
-              timeframe === 'Custom' || showCustomPicker
-                ? 'bg-blue-600 text-white font-medium shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-            title="Seleccionar rango de fechas específico"
-          >
-            <Calendar className="w-3 h-3" />
-            <span>Personalizado</span>
-          </button>
+          </div>
+
+          {/* Export buttons: PNG and CSV/Excel */}
+          <div className="inline-flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleDownloadPng}
+              disabled={chartData.length === 0}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded border border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-900 hover:border-slate-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              title="Descargar gráfico como imagen PNG de alta resolución"
+            >
+              <Camera className="w-3.5 h-3.5 text-blue-400" />
+              <span>PNG</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              disabled={chartData.length === 0}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded border border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-900 hover:border-slate-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              title="Descargar datos en formato CSV compatible con Excel"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>CSV / Excel</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -288,7 +460,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       )}
 
       {/* Chart Canvas */}
-      <div className="h-72 sm:h-80 w-full relative">
+      <div ref={chartContainerRef} className="h-72 sm:h-80 w-full relative">
         {loading && (
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm z-10 flex items-center justify-center">
             <span className="text-xs text-blue-400 font-mono animate-pulse">Cargando serie temporal...</span>

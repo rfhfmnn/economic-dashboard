@@ -153,4 +153,79 @@ describe('MacroView Components', () => {
       expect(screen.getByText(/Monitor Cambiario & Brecha Financiera/i)).toBeDefined()
     })
   })
+
+  it('renders MacroChart with multiple series across left and right axes', () => {
+    const multiSeries = [
+      {
+        id: 1,
+        title: 'Reservas Internacionales',
+        data: [{ fecha: '2024-01-01', valor: 25000 }],
+        axis: 'left' as const,
+        color: '#3b82f6',
+      },
+      {
+        id: 15,
+        title: 'Base Monetaria',
+        data: [{ fecha: '2024-01-01', valor: 45000 }],
+        axis: 'left' as const,
+        color: '#06b6d4',
+      },
+      {
+        id: 7,
+        title: 'Tasa BADLAR',
+        data: [{ fecha: '2024-01-01', valor: 35.5 }],
+        axis: 'right' as const,
+        color: '#8b5cf6',
+      },
+    ]
+
+    render(
+      <MacroChart
+        series={multiSeries}
+        timeframe="1Y"
+        onTimeframeChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Reservas Internacionales')).toBeDefined()
+    expect(screen.getByText('Base Monetaria')).toBeDefined()
+    expect(screen.getByText('Tasa BADLAR')).toBeDefined()
+    expect(screen.getByText('Principal')).toBeDefined()
+    expect(screen.getByText('Dual')).toBeDefined()
+  })
+
+  it('renders PNG and CSV/Excel export buttons and handles download clicks', () => {
+    const multiSeries = [
+      {
+        id: 1,
+        title: 'Reservas Internacionales',
+        unit: 'USD M',
+        data: [{ fecha: '2024-01-01', valor: 25000 }],
+        axis: 'left' as const,
+        color: '#3b82f6',
+      },
+    ]
+
+    render(
+      <MacroChart
+        series={multiSeries}
+        timeframe="1Y"
+        onTimeframeChange={vi.fn()}
+      />
+    )
+
+    const pngBtn = screen.getByRole('button', { name: /PNG/i })
+    const csvBtn = screen.getByRole('button', { name: /CSV \/ Excel/i })
+
+    expect(pngBtn).toBeDefined()
+    expect(csvBtn).toBeDefined()
+    expect(pngBtn.hasAttribute('disabled')).toBe(false)
+    expect(csvBtn.hasAttribute('disabled')).toBe(false)
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    fireEvent.click(csvBtn)
+    fireEvent.click(pngBtn)
+    expect(clickSpy).toHaveBeenCalled()
+    clickSpy.mockRestore()
+  })
 })
