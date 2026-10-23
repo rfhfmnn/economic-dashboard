@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
+import { Calendar } from 'lucide-react'
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,7 +12,7 @@ import {
 } from 'recharts'
 import type { MacroSeriesPoint } from '../../types'
 
-export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max'
+export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
 
 export interface ChartSeries {
   id: number | string
@@ -32,6 +33,9 @@ export interface MacroChartProps {
   timeframe: Timeframe
   onTimeframeChange: (tf: Timeframe) => void
   loading?: boolean
+  customStartDate?: string
+  customEndDate?: string
+  onCustomDateChange?: (start: string, end: string) => void
 }
 
 const TIMEFRAMES: Timeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
@@ -45,7 +49,26 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   timeframe,
   onTimeframeChange,
   loading = false,
+  customStartDate: propStartDate,
+  customEndDate: propEndDate,
+  onCustomDateChange,
 }) => {
+  const [internalStartDate, setInternalStartDate] = useState<string>('')
+  const [internalEndDate, setInternalEndDate] = useState<string>('')
+  const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false)
+
+  const startDate = propStartDate !== undefined ? propStartDate : internalStartDate
+  const endDate = propEndDate !== undefined ? propEndDate : internalEndDate
+
+  const handleStartDateChange = (val: string) => {
+    setInternalStartDate(val)
+    if (onCustomDateChange) onCustomDateChange(val, endDate)
+  }
+
+  const handleEndDateChange = (val: string) => {
+    setInternalEndDate(val)
+    if (onCustomDateChange) onCustomDateChange(startDate, val)
+  }
   // Normalize series: either use passed multi-series or fall back to primaryData/secondaryData
   const effectiveSeries = useMemo<ChartSeries[]>(() => {
     if (series && series.length > 0) {
@@ -95,8 +118,19 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const merged = Array.from(map.values())
     merged.sort((a, b) => a.fecha.localeCompare(b.fecha))
 
-    // Filter by timeframe
-    if (timeframe === 'Max' || merged.length === 0) return merged
+    // Filter by timeframe or custom range
+    if (merged.length === 0) return merged
+
+    if (timeframe === 'Custom') {
+      const filtered = merged.filter((item) => {
+        if (startDate && item.fecha < startDate) return false
+        if (endDate && item.fecha > endDate) return false
+        return true
+      })
+      return filtered.length > 0 ? filtered : merged
+    }
+
+    if (timeframe === 'Max') return merged
 
     const latest = new Date(merged[merged.length - 1].fecha)
     let cutoff = new Date(latest)
@@ -110,7 +144,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const cutoffStr = cutoff.toISOString().split('T')[0]
     const filtered = merged.filter((item) => item.fecha >= cutoffStr)
     return filtered.length > 0 ? filtered : merged
-  }, [effectiveSeries, timeframe])
+  }, [effectiveSeries, timeframe, startDate, endDate])
 
   const leftSeries = effectiveSeries.filter((s) => s.axis === 'left')
   const rightSeries = effectiveSeries.filter((s) => s.axis === 'right')
@@ -170,14 +204,17 @@ export const MacroChart: React.FC<MacroChartProps> = ({
           </p>
         </div>
 
-        {/* Timeframe pill switcher */}
-        <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-0.5 self-start sm:self-auto">
+        {/* Timeframe pill switcher with Personalizado */}
+        <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950 p-0.5 self-start sm:self-auto flex-wrap">
           {TIMEFRAMES.map((tf) => (
             <button
               key={tf}
-              onClick={() => onTimeframeChange(tf)}
-              className={`px-2.5 py-1 text-xs font-mono rounded transition-colors ${
-                timeframe === tf
+              onClick={() => {
+                setShowCustomPicker(false)
+                onTimeframeChange(tf)
+              }}
+              className={`px-2.5 py-1 text-xs font-mono rounded transition-colors cursor-pointer ${
+                timeframe === tf && !showCustomPicker
                   ? 'bg-blue-600 text-white font-medium shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
@@ -185,8 +222,70 @@ export const MacroChart: React.FC<MacroChartProps> = ({
               {tf}
             </button>
           ))}
+          <button
+            onClick={() => {
+              const next = !showCustomPicker
+              setShowCustomPicker(next)
+              if (next) onTimeframeChange('Custom')
+            }}
+            className={`px-2.5 py-1 text-xs font-mono rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+              timeframe === 'Custom' || showCustomPicker
+                ? 'bg-blue-600 text-white font-medium shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+            title="Seleccionar rango de fechas específico"
+          >
+            <Calendar className="w-3 h-3" />
+            <span>Personalizado</span>
+          </button>
         </div>
       </div>
+
+      {/* Expandable Custom Date Range Selector Toolbar */}
+      {(showCustomPicker || timeframe === 'Custom') && (
+        <div className="mb-4 p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 font-mono">
+              <span className="text-slate-400 text-xs">Desde:</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  handleStartDateChange(e.target.value)
+                  if (timeframe !== 'Custom') onTimeframeChange('Custom')
+                }}
+                className="bg-slate-900 border border-slate-700 text-slate-100 px-2 py-1 rounded text-xs focus:outline-none focus:border-blue-500 font-mono transition-colors"
+              />
+            </div>
+            <div className="flex items-center gap-2 font-mono">
+              <span className="text-slate-400 text-xs">Hasta:</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  handleEndDateChange(e.target.value)
+                  if (timeframe !== 'Custom') onTimeframeChange('Custom')
+                }}
+                className="bg-slate-900 border border-slate-700 text-slate-100 px-2 py-1 rounded text-xs focus:outline-none focus:border-blue-500 font-mono transition-colors"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  handleStartDateChange('')
+                  handleEndDateChange('')
+                }}
+                className="text-[11px] text-blue-400 hover:text-blue-300 underline font-mono cursor-pointer"
+              >
+                Limpiar fechas
+              </button>
+            )}
+          </div>
+          <span className="text-[11px] font-mono text-slate-400">
+            {chartData.length.toLocaleString('es-AR')} observaciones en período
+          </span>
+        </div>
+      )}
 
       {/* Chart Canvas */}
       <div className="h-72 sm:h-80 w-full relative">
