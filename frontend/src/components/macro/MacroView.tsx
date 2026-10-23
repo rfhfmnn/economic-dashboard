@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { api } from '../../services/api'
-import type {
+import {
   FxSpreadsResponse,
   IndicatorsSummaryResponse,
   MacroSeriesPoint,
   VariableCatalogItem,
+  KNOWN_BCRA_VARIABLES,
 } from '../../types'
 import { FxSpreadChart } from './FxSpreadChart'
 import { MacroChart, type Timeframe, type ChartSeries } from './MacroChart'
@@ -68,14 +69,22 @@ export const MacroView: React.FC = () => {
           missingIds.map((id) =>
             api
               .getMacroSeries(id)
-              .then((res) => ({
-                id,
-                title: res.variable_name || `Serie #${id}`,
-                data: res.data,
-              }))
+              .then((res) => {
+                const catItem = catalog.find((c) => c.idVariable === id)
+                const title =
+                  catItem?.descripcion ||
+                  (res.variable_name && !res.variable_name.startsWith('Serie #') ? res.variable_name : null) ||
+                  KNOWN_BCRA_VARIABLES[id]?.name ||
+                  `Serie #${id}`
+                return {
+                  id,
+                  title,
+                  data: res.data,
+                }
+              })
               .catch((err) => {
                 console.error(`Error fetching series #${id}:`, err)
-                return { id, title: `Serie #${id}`, data: [] }
+                return { id, title: KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`, data: [] }
               })
           )
         )
@@ -106,10 +115,16 @@ export const MacroView: React.FC = () => {
     primaryIds.forEach((id, idx) => {
       const cached = seriesCache[id]
       const catItem = catalog.find((c) => c.idVariable === id)
+      const title =
+        catItem?.descripcion ||
+        (cached?.title && !cached.title.startsWith('Serie #') ? cached.title : null) ||
+        KNOWN_BCRA_VARIABLES[id]?.name ||
+        `Serie #${id}`
+      const unit = catItem?.unit || KNOWN_BCRA_VARIABLES[id]?.unit || ''
       seriesList.push({
         id,
-        title: cached?.title || catItem?.descripcion || `Serie #${id}`,
-        unit: catItem?.unit || '',
+        title,
+        unit,
         data: cached?.data || [],
         axis: 'left',
         color: PRIMARY_COLORS[idx % PRIMARY_COLORS.length],
@@ -119,10 +134,16 @@ export const MacroView: React.FC = () => {
     secondaryIds.forEach((id, idx) => {
       const cached = seriesCache[id]
       const catItem = catalog.find((c) => c.idVariable === id)
+      const title =
+        catItem?.descripcion ||
+        (cached?.title && !cached.title.startsWith('Serie #') ? cached.title : null) ||
+        KNOWN_BCRA_VARIABLES[id]?.name ||
+        `Serie #${id}`
+      const unit = catItem?.unit || KNOWN_BCRA_VARIABLES[id]?.unit || ''
       seriesList.push({
         id,
-        title: cached?.title || catItem?.descripcion || `Serie #${id}`,
-        unit: catItem?.unit || '',
+        title,
+        unit,
         data: cached?.data || [],
         axis: 'right',
         color: SECONDARY_COLORS[idx % SECONDARY_COLORS.length],

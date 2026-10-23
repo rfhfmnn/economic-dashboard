@@ -49,6 +49,22 @@ export interface VariableCatalogItem {
   unit?: string
 }
 
+export const KNOWN_BCRA_VARIABLES: Record<number, { name: string; unit?: string }> = {
+  1: { name: 'Reservas Internacionales', unit: 'USD M' },
+  4: { name: 'Tipo de Cambio Oficial (A3500)', unit: 'ARS/USD' },
+  5: { name: 'Tipo de Cambio Minorista', unit: 'ARS/USD' },
+  6: { name: 'Tasa de Política Monetaria', unit: '% TNA' },
+  7: { name: 'Tasa BADLAR Bancos Privados', unit: '% TNA' },
+  15: { name: 'Base Monetaria Total', unit: 'ARS M' },
+  27: { name: 'Inflación Mensual', unit: '%' },
+  28: { name: 'Inflación Interanual', unit: '%' },
+  29: { name: 'Índice de Precios al Consumidor (CER)', unit: 'Índice' },
+  30: { name: 'Unidad de Valor Adquisitivo (UVA)', unit: 'ARS' },
+  31: { name: 'Unidad de Vivienda (UVI)', unit: 'ARS' },
+  34: { name: 'Préstamos al Sector Privado', unit: 'ARS M' },
+  35: { name: 'Depósitos a Plazo Fijo', unit: 'ARS M' },
+}
+
 export interface FxRate {
   moneda: string
   nombre: string

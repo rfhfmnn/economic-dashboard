@@ -12,6 +12,7 @@ import type {
   SystemStatusResponse,
   VariableCatalogItem,
 } from '../types'
+import { KNOWN_BCRA_VARIABLES } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -96,9 +97,10 @@ export const api = {
     const res: any = await request<any>(`/macro/series/${idVariable}${qs}`)
 
     const rawData = Array.isArray(res) ? res : (res?.data || [])
+    const knownName = KNOWN_BCRA_VARIABLES[idVariable]?.name
     return {
       id_variable: res?.id_variable ?? idVariable,
-      variable_name: res?.variable_name ?? `Serie #${idVariable}`,
+      variable_name: (res?.variable_name && !res.variable_name.startsWith('Serie #')) ? res.variable_name : (knownName ?? `Serie #${idVariable}`),
       count: rawData.length,
       data: rawData.map((pt: any) => ({
         fecha: pt.fecha ?? pt.date ?? '',

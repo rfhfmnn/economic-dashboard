@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Search, Layers, X, Filter, Check } from 'lucide-react'
-import type { VariableCatalogItem } from '../../types'
+import { VariableCatalogItem, KNOWN_BCRA_VARIABLES } from '../../types'
 
 export interface VariablePickerProps {
   catalog: VariableCatalogItem[]
@@ -134,6 +134,8 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
           </span>
           {activePrimaryIds.map((id) => {
             const item = catalog.find((c) => c.idVariable === id)
+            const title = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
+            const unit = item?.unit || KNOWN_BCRA_VARIABLES[id]?.unit
             return (
               <span
                 key={id}
@@ -141,11 +143,11 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
               >
                 <span className="font-mono text-[10px] text-blue-400 font-semibold">#{id}</span>
                 <span className="font-medium truncate max-w-[140px] sm:max-w-[200px]">
-                  {item?.descripcion || `Serie #${id}`}
+                  {title}
                 </span>
-                {item?.unit && (
+                {unit && (
                   <span className="text-[10px] font-mono text-blue-300 bg-blue-900/40 px-1 rounded">
-                    {item.unit}
+                    {unit}
                   </span>
                 )}
                 {activePrimaryIds.length > 1 && (
@@ -170,6 +172,8 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             </span>
             {activeSecondaryIds.map((id) => {
               const item = catalog.find((c) => c.idVariable === id)
+              const title = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
+              const unit = item?.unit || KNOWN_BCRA_VARIABLES[id]?.unit
               return (
                 <span
                   key={id}
@@ -177,11 +181,11 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                 >
                   <span className="font-mono text-[10px] text-indigo-400 font-semibold">#{id}</span>
                   <span className="font-medium truncate max-w-[140px] sm:max-w-[200px]">
-                    {item?.descripcion || `Serie #${id}`}
+                    {title}
                   </span>
-                  {item?.unit && (
+                  {unit && (
                     <span className="text-[10px] font-mono text-indigo-300 bg-indigo-900/40 px-1 rounded">
-                      {item.unit}
+                      {unit}
                     </span>
                   )}
                   <button

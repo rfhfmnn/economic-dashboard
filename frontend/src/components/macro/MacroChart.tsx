@@ -11,6 +11,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 import type { MacroSeriesPoint } from '../../types'
+import { KNOWN_BCRA_VARIABLES } from '../../types'
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
 
@@ -219,7 +220,20 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   // Normalize series: either use passed multi-series or fall back to primaryData/secondaryData
   const effectiveSeries = useMemo<ChartSeries[]>(() => {
     if (series && series.length > 0) {
-      return series
+      return series.map((s) => {
+        let title = s.title
+        let unit = s.unit
+        const numId = typeof s.id === 'number' ? s.id : Number(String(s.id).replace(/\D/g, ''))
+        if (numId && KNOWN_BCRA_VARIABLES[numId]) {
+          if (!title || title.startsWith('Serie #')) {
+            title = KNOWN_BCRA_VARIABLES[numId].name
+          }
+          if (!unit) {
+            unit = KNOWN_BCRA_VARIABLES[numId].unit
+          }
+        }
+        return { ...s, title, unit }
+      })
     }
     const result: ChartSeries[] = []
     if (primaryData && primaryData.length > 0) {
