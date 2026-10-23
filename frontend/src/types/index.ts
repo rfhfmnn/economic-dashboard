@@ -63,6 +63,8 @@ export const KNOWN_BCRA_VARIABLES: Record<number, { name: string; unit?: string 
   31: { name: 'Unidad de Vivienda (UVI)', unit: 'ARS' },
   34: { name: 'Préstamos al Sector Privado', unit: 'ARS M' },
   35: { name: 'Depósitos a Plazo Fijo', unit: 'ARS M' },
+  74: { name: 'Reservas Internacionales (sin DEG 2009)', unit: 'USD M' },
+  77: { name: 'Reservas Internacionales (Variación Diaria)', unit: 'USD M' },
 }
 
 export interface FxRate {

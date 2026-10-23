@@ -475,13 +475,11 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
       {/* Chart Canvas */}
       <div ref={chartContainerRef} className="h-72 sm:h-80 w-full relative">
-        {loading && (
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm z-10 flex items-center justify-center">
+        {loading ? (
+          <div className="h-full flex items-center justify-center">
             <span className="text-xs text-blue-400 font-mono animate-pulse">Cargando serie temporal...</span>
           </div>
-        )}
-
-        {chartData.length === 0 ? (
+        ) : chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono">
             Sin observaciones disponibles para las variables seleccionadas.
           </div>

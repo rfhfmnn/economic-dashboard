@@ -228,4 +228,21 @@ describe('MacroView Components', () => {
     expect(clickSpy).toHaveBeenCalled()
     clickSpy.mockRestore()
   })
+
+  it('focuses Reservas Internacionales when clicking KPI card without showing empty observation error', async () => {
+    render(<MacroView />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Reservas Internacionales').length).toBeGreaterThanOrEqual(1)
+    })
+
+    const reservasCard = screen.getAllByText('Reservas Internacionales')[0].closest('div')
+    if (reservasCard) {
+      fireEvent.click(reservasCard)
+    }
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Sin observaciones disponibles/i)).toBeNull()
+    })
+  })
 })

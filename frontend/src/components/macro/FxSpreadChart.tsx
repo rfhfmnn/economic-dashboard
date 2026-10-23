@@ -21,7 +21,22 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({ fxData, loading = 
     )
   }
 
-  const { oficial_base, rates, spreads, timestamp } = fxData
+  const oficial_base = fxData.oficial_base || 0
+  const rates = fxData.rates || {}
+  const spreads = fxData.spreads || {}
+  const timestamp = fxData.timestamp
+
+  let formattedTime = 'Reciente'
+  try {
+    if (timestamp) {
+      const parsedDate = new Date(timestamp)
+      if (!isNaN(parsedDate.getTime())) {
+        formattedTime = parsedDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      }
+    }
+  } catch {
+    formattedTime = 'Reciente'
+  }
 
   const fxCards = [
     { key: 'oficial', label: 'Oficial Mayorista', desc: 'A3500 BCRA' },
@@ -50,7 +65,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({ fxData, loading = 
         </div>
 
         <span className="text-[11px] font-mono text-slate-500">
-          Act: {new Date(timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          Act: {formattedTime}
         </span>
       </div>
 
@@ -108,25 +123,25 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({ fxData, loading = 
       <div className="mt-4 p-3 rounded-lg border border-slate-800 bg-slate-950/40 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-medium text-slate-300">Brecha Cambiaria Máxima:</span>
-          {spreads.blue && (
+          {spreads?.blue && (
             <span
               className={`font-mono font-bold px-2 py-0.5 rounded border ${getSpreadBadgeClass(
-                Math.max(spreads.mep?.brecha_porcentaje || 0, spreads.ccl?.brecha_porcentaje || 0, spreads.blue?.brecha_porcentaje || 0)
+                Math.max(spreads?.mep?.brecha_porcentaje || 0, spreads?.ccl?.brecha_porcentaje || 0, spreads?.blue?.brecha_porcentaje || 0)
               )}`}
             >
               {Math.max(
-                spreads.mep?.brecha_porcentaje || 0,
-                spreads.ccl?.brecha_porcentaje || 0,
-                spreads.blue?.brecha_porcentaje || 0
+                spreads?.mep?.brecha_porcentaje || 0,
+                spreads?.ccl?.brecha_porcentaje || 0,
+                spreads?.blue?.brecha_porcentaje || 0
               ).toFixed(2)}%
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
-          <span>MEP Spread: <strong className="text-slate-200">+{spreads.mep?.brecha_porcentaje?.toFixed(1) || 0}%</strong></span>
-          <span>CCL Spread: <strong className="text-slate-200">+{spreads.ccl?.brecha_porcentaje?.toFixed(1) || 0}%</strong></span>
-          <span>Blue Spread: <strong className="text-slate-200">+{spreads.blue?.brecha_porcentaje?.toFixed(1) || 0}%</strong></span>
+          <span>MEP Spread: <strong className="text-slate-200">+{spreads?.mep?.brecha_porcentaje?.toFixed(1) || '0.0'}%</strong></span>
+          <span>CCL Spread: <strong className="text-slate-200">+{spreads?.ccl?.brecha_porcentaje?.toFixed(1) || '0.0'}%</strong></span>
+          <span>Blue Spread: <strong className="text-slate-200">+{spreads?.blue?.brecha_porcentaje?.toFixed(1) || '0.0'}%</strong></span>
         </div>
       </div>
     </div>

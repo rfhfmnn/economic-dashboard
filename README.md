@@ -12,22 +12,47 @@ An institutional-grade financial and credit risk intelligence dashboard powered 
 
 ---
 
-## Quick Start & Execution Commands
+## Quick Start & Execution
 
-### 1. Backend Service & Tests
+### 🚀 One-Command Launch (Backend + Frontend)
 
+#### Using Bash (Git Bash / WSL / macOS / Linux):
+```bash
+./run.sh
+```
+*Options:*
+- `./run.sh` — Launches both FastAPI backend and Vite frontend concurrently.
+- `./run.sh --backend` — Starts backend only (`http://localhost:8000`).
+- `./run.sh --frontend` — Starts frontend only (`http://localhost:5173`).
+- `./run.sh --test` — Runs all backend and frontend automated test suites.
+
+#### Using Windows Command Prompt / PowerShell:
+```cmd
+run.bat
+```
+or with root `npm`:
+```bash
+npm run dev        # Starts frontend (delegates to frontend/package.json)
+npm run backend    # Starts backend service
+npm test           # Runs frontend tests
+npm run backend:test # Runs backend pytest suite
+```
+
+---
+
+### Manual Service Commands
+
+#### 1. Backend Service & Tests
 ```bash
 # Run automated backend test suite
 python -m pytest backend/tests/ -v
 
 # Start backend development server (FastAPI)
-uvicorn backend.app.main:app --reload --port 8000
+python -m uvicorn backend.app.main:app --reload --port 8000
 ```
+API endpoints: `http://localhost:8000` (Healthcheck: `http://localhost:8000/health`, OpenAPI docs: `http://localhost:8000/docs`).
 
-The API will be available at `http://localhost:8000` (Healthcheck at `http://localhost:8000/health`, OpenAPI docs at `http://localhost:8000/docs`).
-
-### 2. Frontend Development & Build
-
+#### 2. Frontend Development & Build
 ```bash
 # Install frontend dependencies
 npm --prefix frontend install
@@ -41,8 +66,6 @@ npm --prefix frontend run build
 # Run frontend tests
 npm --prefix frontend run test
 ```
-
-The frontend will run at `http://localhost:5173`.
 
 ---
 

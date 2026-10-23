@@ -4,6 +4,7 @@ import { Navbar } from './components/layout/Navbar'
 import { MacroView } from './components/macro/MacroView'
 import { ScreenerView } from './components/risk/ScreenerView'
 import { BatchView } from './components/batch/BatchView'
+import { ErrorBoundary } from './components/common/ErrorBoundary'
 import type { TabType } from './types'
 
 export function App() {
@@ -19,11 +20,13 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
-        {activeTab === 'macro' && <MacroView />}
+        <ErrorBoundary>
+          {activeTab === 'macro' && <MacroView />}
 
-        {activeTab === 'screener' && <ScreenerView />}
+          {activeTab === 'screener' && <ScreenerView />}
 
-        {activeTab === 'batch' && <BatchView />}
+          {activeTab === 'batch' && <BatchView />}
+        </ErrorBoundary>
       </main>
 
       {/* Minimal Institutional Footer */}

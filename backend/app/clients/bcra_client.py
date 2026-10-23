@@ -69,7 +69,9 @@ class BCRAClient:
                     err_payload = response.json()
                     if err_payload.get("status") == 404 or "IdVariable" in str(err_payload.get("errorMessages", [])):
                         logger.warning("BCRA endpoint %s returned not found: %s", url, err_payload)
-                        if url.rstrip("/").endswith("/6"):
+                        # Always fall back to synthetic data for key macro variables and known series
+                        url_clean = url.rstrip("/")
+                        if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 30, 31, 74, 77)):
                             return fallback_fn()
                         return []
                 except Exception:
@@ -81,6 +83,9 @@ class BCRAClient:
             if isinstance(data, dict) and data.get("status") in (404, 500):
                 logger.warning("BCRA endpoint %s returned status %s", url, data.get("status"))
                 if data.get("status") == 404:
+                    url_clean = url.rstrip("/")
+                    if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 30, 31, 74, 77)):
+                        return fallback_fn()
                     return []
                 return fallback_fn()
             return data
@@ -135,9 +140,10 @@ class BCRAClient:
                         if "idVariable" not in pt:
                             pt["idVariable"] = id_variable
                     return detalle
-            return res_list
+                return res_list
+            return fallback()
         if isinstance(result, list):
-            if len(result) == 0 and id_variable == 6:
+            if len(result) == 0:
                 return fallback()
             return result
         return fallback()

@@ -58,10 +58,13 @@ export const MacroView: React.FC = () => {
   // Fetch missing series data whenever primaryIds or secondaryIds change
   useEffect(() => {
     const allSelectedIds = Array.from(new Set([...primaryIds, ...secondaryIds]))
-    const missingIds = allSelectedIds.filter((id) => !seriesCache[id])
+    const missingIds = allSelectedIds.filter(
+      (id) => !seriesCache[id] || !seriesCache[id].data || seriesCache[id].data.length === 0
+    )
 
     if (missingIds.length === 0) return
 
+    let isMounted = true
     const fetchMissing = async () => {
       try {
         setChartLoading(true)
@@ -79,7 +82,7 @@ export const MacroView: React.FC = () => {
                 return {
                   id,
                   title,
-                  data: res.data,
+                  data: res.data || [],
                 }
               })
               .catch((err) => {
@@ -89,19 +92,29 @@ export const MacroView: React.FC = () => {
           )
         )
 
+        if (!isMounted) return
+
         setSeriesCache((prev) => {
           const updated = { ...prev }
           results.forEach((item) => {
-            updated[item.id] = { title: item.title, data: item.data }
+            // Only cache valid series with data so temporary network drops can be retried cleanly
+            if (item.data && item.data.length > 0) {
+              updated[item.id] = { title: item.title, data: item.data }
+            }
           })
           return updated
         })
       } finally {
-        setChartLoading(false)
+        if (isMounted) {
+          setChartLoading(false)
+        }
       }
     }
 
     fetchMissing()
+    return () => {
+      isMounted = false
+    }
   }, [primaryIds, secondaryIds])
 
   useEffect(() => {
@@ -158,7 +171,13 @@ export const MacroView: React.FC = () => {
     return chartSeries.reduce((acc, s) => acc + s.data.length, 0)
   }, [chartSeries])
 
-  // Handlers for variable toggling
+  // Handler for clicking a top KPI indicator card: focuses the chart on that variable
+  const handleSelectCard = (id: number) => {
+    setPrimaryIds([id])
+    setSecondaryIds((prev) => prev.filter((s) => s !== id))
+  }
+
+  // Handlers for variable toggling in catalog / multiselect
   const handleTogglePrimary = (id: number) => {
     if (primaryIds.includes(id)) {
       if (primaryIds.length > 1) {
@@ -235,7 +254,7 @@ export const MacroView: React.FC = () => {
               category={ind.categoria}
               unit={ind.unit}
               active={primaryIds.includes(ind.idVariable)}
-              onClick={() => handleTogglePrimary(ind.idVariable)}
+              onClick={() => handleSelectCard(ind.idVariable)}
             />
           ))}
       </div>

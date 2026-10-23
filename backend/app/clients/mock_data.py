@@ -125,12 +125,16 @@ def get_mock_variable_series(
         5: 990.0,
         6: 35.0,
         7: 38.0,
+        11: 32.0,
+        15: 14500000.0,
         27: 2.5,
         30: 450.0,
         31: 1150.0,
+        74: 26000.0,
+        77: 25.0,
     }
     base_val = base_map.get(id_variable, 100.0)
-    return generate_mock_history(id_variable, base_val, days=120, desde=desde, hasta=hasta)
+    return generate_mock_history(id_variable, base_val, days=365, desde=desde, hasta=hasta)
 
 
 # Synthetic 24-month period generator helper

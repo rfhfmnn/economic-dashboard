@@ -48,7 +48,13 @@ class MacroService:
             if not var_id:
                 continue
 
-            name = item.get("descripcion") or f"Variable {var_id}"
+            raw_name = item.get("descripcion") or f"Variable {var_id}"
+            if var_id == 1:
+                name = "Reservas Internacionales"
+            elif var_id == 77 and "variaci" not in raw_name.lower():
+                name = "Reservas Internacionales (Variación Diaria de Saldos)"
+            else:
+                name = raw_name.strip()
             category = item.get("categoria") or KEY_VARIABLES.get(var_id, {}).get("category", "General")
             unit = KEY_VARIABLES.get(var_id, {}).get("unit") or item.get("unidadExpresion") or item.get("unidad") or ""
 

@@ -25,6 +25,44 @@ describe('App Shell & Navigation', () => {
               }),
           })
         }
+        if (url.includes('/macro/series/')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                { variable_id: 1, date: '2026-03-01', value: 27500.0 },
+                { variable_id: 1, date: '2026-03-20', value: 28450.0 },
+              ]),
+          })
+        }
+        if (url.includes('/macro/summary')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                indicators: {
+                  '1': { variable_id: 1, name: 'Reservas Internacionales', category: 'Monetario', unit: 'USD M', value: 28450, date: '2026-03-20' },
+                },
+                fx_spreads: {},
+                last_updated: new Date().toISOString(),
+              }),
+          })
+        }
+        if (url.includes('/macro/catalog')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                { variable_id: 1, name: 'Reservas Internacionales', category: 'Principales Variables', unit: 'USD M' },
+              ]),
+          })
+        }
+        if (url.includes('/macro/fx')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ official_base: 1000, rates: {}, spreads: {}, timestamp: '' }),
+          })
+        }
         return Promise.reject(new Error('Unknown url'))
       })
     )

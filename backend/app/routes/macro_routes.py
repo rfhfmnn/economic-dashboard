@@ -13,9 +13,12 @@ macro_service = MacroService()
 
 @router.get("/indicators/summary")
 @router.get("/summary")
-def get_indicators_summary(db: Session = Depends(get_db)) -> Dict[str, Any]:
+def get_indicators_summary(
+    refresh: bool = Query(False, description="Force sync latest observations from BCRA v4.0"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """Get latest snapshot of primary BCRA indicators and parallel FX market spreads."""
-    return macro_service.get_indicators_summary(db)
+    return macro_service.get_indicators_summary(db, refresh=refresh)
 
 
 @router.get("/series/{variable_id}")
@@ -23,10 +26,11 @@ def get_variable_series(
     variable_id: int,
     desde: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
     hasta: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+    refresh: bool = Query(False, description="Force sync latest series from BCRA v4.0"),
     db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """Get historical time-series observations for a specific BCRA variable."""
-    return macro_service.get_variable_history(db, variable_id=variable_id, desde=desde, hasta=hasta)
+    return macro_service.get_variable_history(db, variable_id=variable_id, desde=desde, hasta=hasta, refresh=refresh)
 
 
 @router.get("/fx-spreads")
