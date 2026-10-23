@@ -63,3 +63,23 @@ Description: Implement `DossierModal.tsx` in `frontend/src/components/risk/` ass
 ## 16. End-to-End Integration, Mock Toggle, and System Polish
 Goal: Connect all frontend views to live backend endpoints, verify offline mock mode toggling, and perform complete system sanity checks.
 Description: Wire all frontend views to the FastAPI backend, verifying seamless operation whether using live BCRA endpoints or offline mock mode via configuration toggles. Test real-world Argentine test CUITs and edge cases such as individuals with no debt history, high-risk debtors, and bounced check records. Conduct an end-to-end audit verifying error banners, loading indicators, responsive layouts, and cross-browser print functionality.
+
+## 17. ArgentinaDatos REM API Client and Report Caching
+Goal: Build an HTTP client to fetch market expectation reports from ArgentinaDatos API with local caching and offline fallbacks.
+Description: Implement `backend/app/clients/rem_client.py` using HTTPX to query `/v1/finanzas/rem` for available report periods and `/v1/finanzas/rem/{año}/{mes}` for detailed indicator projections. Store retrieved reports in SQLite with a configurable time-to-live to prevent redundant network traffic to public APIs, backed by synthetic fallback data in `backend/app/clients/mock_data.py`. Write unit tests verifying payload normalization, error handling, and offline fallback behavior.
+
+## 18. REM Consensus and Inflation Expectation Analysis Service
+Goal: Implement the service layer to compute market consensus paths and compare actual INDEC inflation against historical REM forecasts.
+Description: Create `backend/app/services/rem_service.py` to extract monthly inflation, official exchange rate paths, and interest rate curves from cached REM reports. Calculate expectation-versus-reality metrics by pairing actual INDEC CPI monthly figures with market expectations published in preceding REM reports, computing forecast error deltas and interquartile dispersion ($P_{25} - P_{75}$). Expose FastAPI routes under `/api/macro/rem/*` and write tests verifying surprise delta calculations and cohort filtering ("todos" vs. "top_10").
+
+## 19. REM Expectations View Shell and Executive KPI Cards
+Goal: Build the REM sub-view within Monitor Macroeconómico, including report selectors, cohort toggles, and executive summary cards.
+Description: Implement `RemView.tsx` and `RemMetricCard.tsx` in `frontend/src/components/macro/rem/` with a sub-navigation toggle in `MacroView.tsx` to switch between "Series BCRA & FX" and "Expectativas REM". Provide controls to select published report dates and toggle between "Todos los participantes" and "Top 10 Más Precisos" cohorts. Add component tests ensuring that metric cards for 12-month expected inflation, next-month inflation, year-end exchange rate, and policy rate render accurately with appropriate consensus metrics.
+
+## 20. REM CPI Expectation vs. Reality Chart and Forecast Cone
+Goal: Build the interactive Recharts visualization comparing actual INDEC monthly inflation against historical REM forecasts and future projection cones.
+Description: Implement `CpiExpectationChart.tsx` in `frontend/src/components/macro/rem/` displaying historical months with solid actual inflation bars and dashed previous-report expected inflation lines. Extend the timeline into future projection months using an expectation cone with shaded confidence bands representing the interquartile range ($P_{25} - P_{75}$) and full percentile spread ($P_{10} - P_{90}$). Write component tests verifying that historical delta bars and projection bands correctly parse backend comparison series and display rich tooltips on hover.
+
+## 21. REM Nominal FX Trajectory and Consensus Breakdown Table
+Goal: Build the nominal exchange rate projection chart and the multi-indicator detailed consensus breakdown table.
+Description: Implement `FxProjectionChart.tsx` and `RemTable.tsx` in `frontend/src/components/macro/rem/` showing official exchange rate paths across future months alongside a comprehensive tabular breakdown. Structure the table with categorical filters (Precios, Tipo de Cambio, Tasas, Actividad) and monospace tabular columns for Median, Mean, Interquartile Range, Min/Max, and Participant counts. Add component tests verifying that category filters update table rows and that numeric values display with strict tabular monospace alignment.

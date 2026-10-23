@@ -36,8 +36,8 @@ export interface CotizationConfig {
 export const COTIZACIONES: CotizationConfig[] = [
   { key: 'oficial', name: 'Oficial mayorista', shortName: 'Oficial', desc: 'A3500 BCRA', color: '#38bdf8' },
   { key: 'mep', name: 'Dólar MEP', shortName: 'MEP', desc: 'Bolsa (AL30)', color: '#818cf8' },
-  { key: 'ccl', name: 'Dólar CCL', shortName: 'CCL', desc: 'Contado con liq.', color: '#f59e0b' },
-  { key: 'blue', name: 'Dólar Blue', shortName: 'Blue', desc: 'Informal/Libre', color: '#10b981' },
+  { key: 'ccl', name: 'Dólar CCL', shortName: 'CCL', desc: 'Contado con liq.', color: '#a855f7' },
+  { key: 'blue', name: 'Dólar Blue', shortName: 'Blue', desc: 'Informal/Libre', color: '#f59e0b' },
 ]
 
 const TIMEFRAMES: FxTimeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
@@ -46,12 +46,16 @@ export interface FxSpreadChartProps {
   fxData: FxSpreadsResponse | null
   loading?: boolean
   initialHistory?: FxHistoryResponse | null
+  timeframe?: FxTimeframe
+  onTimeframeChange?: (tf: FxTimeframe) => void
 }
 
 export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
   fxData,
   loading = false,
   initialHistory = null,
+  timeframe: propTimeframe,
+  onTimeframeChange,
 }) => {
   // Historical data state
   const [historyData, setHistoryData] = useState<FxHistoryResponse | null>(initialHistory)
@@ -66,7 +70,16 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
   })
 
   // Date and Timeframe controls
-  const [timeframe, setTimeframe] = useState<FxTimeframe>('1Y')
+  const [internalTimeframe, setInternalTimeframe] = useState<FxTimeframe>('1Y')
+  const timeframe = propTimeframe ?? internalTimeframe
+
+  const handleTimeframeChange = (tf: FxTimeframe) => {
+    setInternalTimeframe(tf)
+    if (onTimeframeChange) {
+      onTimeframeChange(tf)
+    }
+  }
+
   const [customStartDate, setCustomStartDate] = useState<string>('')
   const [customEndDate, setCustomEndDate] = useState<string>('')
   const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false)
@@ -669,7 +682,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                   key={tf}
                   type="button"
                   onClick={() => {
-                    setTimeframe(tf)
+                    handleTimeframeChange(tf)
                     if (showCustomPicker) setShowCustomPicker(false)
                   }}
                   className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${timeframe === tf
@@ -684,7 +697,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setTimeframe('Custom')
+                  handleTimeframeChange('Custom')
                   setShowCustomPicker(!showCustomPicker)
                 }}
                 className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${timeframe === 'Custom'
@@ -739,7 +752,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                 value={customStartDate}
                 onChange={(e) => {
                   setCustomStartDate(e.target.value)
-                  setTimeframe('Custom')
+                  handleTimeframeChange('Custom')
                 }}
                 className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               />
@@ -754,7 +767,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                 value={customEndDate}
                 onChange={(e) => {
                   setCustomEndDate(e.target.value)
-                  setTimeframe('Custom')
+                  handleTimeframeChange('Custom')
                 }}
                 className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               />
@@ -779,7 +792,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               <p>Sin observaciones de cotizaciones disponibles para el rango seleccionado.</p>
               <button
                 type="button"
-                onClick={() => setTimeframe('1Y')}
+                onClick={() => handleTimeframeChange('1Y')}
                 className="mt-2 text-emerald-400 hover:underline"
               >
                 Restablecer a 1 Año

@@ -96,4 +96,16 @@ describe('Credit Screener Components', () => {
       expect(screen.getByText('BANCO DE GALICIA Y BUENOS AIRES')).toBeDefined()
     })
   })
+
+  it('calculates and displays DTI ratio when income is entered', async () => {
+    render(<ScreenerView initialCuit="20-30123456-3" />)
+    await waitFor(() => {
+      expect(screen.getByText('ACME ARGENTINA S.A.')).toBeDefined()
+    })
+
+    const incomeInput = screen.getByPlaceholderText(/Ingreso estimado/i)
+    fireEvent.change(incomeInput, { target: { value: '50000' } })
+
+    expect(screen.getByText(/Carga \/ Cobertura/i)).toBeDefined()
+  })
 })

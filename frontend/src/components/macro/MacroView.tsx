@@ -12,6 +12,7 @@ import { FxSpreadChart } from './FxSpreadChart'
 import { MacroChart, type Timeframe, type ChartSeries } from './MacroChart'
 import { MetricCard } from './MetricCard'
 import { VariablePicker } from './VariablePicker'
+import { formatGrammaticalTitle, isInflationMetric } from '../../utils/formatters'
 
 const PRIMARY_COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#38bdf8', '#14b8a6']
 const SECONDARY_COLORS = ['#8b5cf6', '#f59e0b', '#ec4899', '#a855f7', '#fb923c']
@@ -74,11 +75,12 @@ export const MacroView: React.FC = () => {
               .getMacroSeries(id)
               .then((res) => {
                 const catItem = catalog.find((c) => c.idVariable === id)
-                const title =
+                const title = formatGrammaticalTitle(
                   catItem?.descripcion ||
                   (res.variable_name && !res.variable_name.startsWith('Serie #') ? res.variable_name : null) ||
                   KNOWN_BCRA_VARIABLES[id]?.name ||
                   `Serie #${id}`
+                )
                 return {
                   id,
                   title,
@@ -121,6 +123,71 @@ export const MacroView: React.FC = () => {
     loadDashboardData()
   }, [])
 
+  // Prefetch series data for top KPI indicators so sparklines and deltas populate smoothly
+  useEffect(() => {
+    if (!summary?.indicators || summary.indicators.length === 0) return
+    const topIds = summary.indicators.slice(0, 8).map((ind) => ind.idVariable)
+    const missingTopIds = topIds.filter((id) => !seriesCache[id])
+    if (missingTopIds.length === 0) return
+
+    let isMounted = true
+    Promise.all(
+      missingTopIds.map((id) =>
+        api
+          .getMacroSeries(id)
+          .then((res) => ({ id, data: res.data || [] }))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (!isMounted) return
+      setSeriesCache((prev) => {
+        const updated = { ...prev }
+        results.forEach((r) => {
+          if (r && r.data && r.data.length > 0 && !updated[r.id]) {
+            updated[r.id] = { title: `Serie #${r.id}`, data: r.data }
+          }
+        })
+        return updated
+      })
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [summary])
+
+  // Helper to calculate MoM, YoY, and 30-day sparkline from historical points
+  const computeDeltas = (points: MacroSeriesPoint[]) => {
+    if (!points || points.length < 2) {
+      return { momDelta: undefined, yoyDelta: undefined, recentPoints: undefined }
+    }
+    const recentPoints = points.slice(-30).map((p) => p.valor)
+    const latest = points[points.length - 1]
+    const latestDate = new Date(latest.fecha)
+
+    const targetMom = new Date(latestDate.getTime() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0]
+    const targetYoy = new Date(latestDate.getTime() - 365 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0]
+
+    const momMatch = points.filter((p) => p.fecha <= targetMom).pop() || points[0]
+    const yoyMatch = points.filter((p) => p.fecha <= targetYoy).pop()
+
+    const momDelta =
+      momMatch && momMatch.valor !== 0
+        ? ((latest.valor - momMatch.valor) / Math.abs(momMatch.valor)) * 100
+        : undefined
+
+    const yoyDelta =
+      yoyMatch && yoyMatch.valor !== 0
+        ? ((latest.valor - yoyMatch.valor) / Math.abs(yoyMatch.valor)) * 100
+        : undefined
+
+    return { momDelta, yoyDelta, recentPoints }
+  }
+
   // Build multi-series structure for MacroChart
   const chartSeries = useMemo<ChartSeries[]>(() => {
     const seriesList: ChartSeries[] = []
@@ -128,11 +195,12 @@ export const MacroView: React.FC = () => {
     primaryIds.forEach((id, idx) => {
       const cached = seriesCache[id]
       const catItem = catalog.find((c) => c.idVariable === id)
-      const title =
+      const rawTitle =
         catItem?.descripcion ||
         (cached?.title && !cached.title.startsWith('Serie #') ? cached.title : null) ||
         KNOWN_BCRA_VARIABLES[id]?.name ||
         `Serie #${id}`
+      const title = formatGrammaticalTitle(rawTitle)
       const unit = catItem?.unit || KNOWN_BCRA_VARIABLES[id]?.unit || ''
       seriesList.push({
         id,
@@ -147,11 +215,12 @@ export const MacroView: React.FC = () => {
     secondaryIds.forEach((id, idx) => {
       const cached = seriesCache[id]
       const catItem = catalog.find((c) => c.idVariable === id)
-      const title =
+      const rawTitle =
         catItem?.descripcion ||
         (cached?.title && !cached.title.startsWith('Serie #') ? cached.title : null) ||
         KNOWN_BCRA_VARIABLES[id]?.name ||
         `Serie #${id}`
+      const title = formatGrammaticalTitle(rawTitle)
       const unit = catItem?.unit || KNOWN_BCRA_VARIABLES[id]?.unit || ''
       seriesList.push({
         id,
@@ -227,14 +296,14 @@ export const MacroView: React.FC = () => {
     return (
       <div className="rounded-lg border border-rose-900/50 bg-rose-950/20 p-6 text-center space-y-3">
         <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
-        <h3 className="text-base font-semibold text-rose-200">Error de Carga Macroeconómica</h3>
+        <h3 className="text-base font-semibold text-rose-200">Error de carga macroeconómica</h3>
         <p className="text-xs text-rose-300 max-w-md mx-auto">{error}</p>
         <button
           onClick={loadDashboardData}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Reintentar Conexión</span>
+          <span>Reintentar conexión</span>
         </button>
       </div>
     )
@@ -245,18 +314,27 @@ export const MacroView: React.FC = () => {
       {/* Top Indicators KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.isArray(summary?.indicators) &&
-          summary.indicators.slice(0, 8).map((ind) => (
-            <MetricCard
-              key={ind.idVariable}
-              title={ind.descripcion}
-              value={ind.valor}
-              date={ind.fecha}
-              category={ind.categoria}
-              unit={ind.unit}
-              active={primaryIds.includes(ind.idVariable)}
-              onClick={() => handleSelectCard(ind.idVariable)}
-            />
-          ))}
+          summary.indicators.slice(0, 8).map((ind) => {
+            const cached = seriesCache[ind.idVariable]
+            const formattedTitle = formatGrammaticalTitle(ind.descripcion)
+            const isInflation = isInflationMetric(ind.idVariable, ind.descripcion)
+            const { momDelta, yoyDelta, recentPoints } = computeDeltas(cached?.data || [])
+            return (
+              <MetricCard
+                key={ind.idVariable}
+                title={formattedTitle}
+                value={ind.valor}
+                date={ind.fecha}
+                category={ind.categoria}
+                unit={ind.unit}
+                momDelta={isInflation ? undefined : momDelta}
+                yoyDelta={isInflation ? undefined : yoyDelta}
+                recentPoints={recentPoints}
+                active={primaryIds.includes(ind.idVariable)}
+                onClick={() => handleSelectCard(ind.idVariable)}
+              />
+            )
+          })}
       </div>
 
       {/* Main Interactive Time-Series Section with Multi-Select */}
@@ -286,7 +364,16 @@ export const MacroView: React.FC = () => {
       </div>
 
       {/* FX Monitor & Spreads Board */}
-      <FxSpreadChart fxData={fxData} />
+      <FxSpreadChart
+        fxData={fxData}
+        timeframe={timeframe as any}
+        onTimeframeChange={(tf) => {
+          if (['1M', '3M', '6M', '1Y', '5Y', 'Max'].includes(tf)) {
+            setTimeframe(tf as Timeframe)
+          }
+        }}
+      />
     </div>
   )
 }
+

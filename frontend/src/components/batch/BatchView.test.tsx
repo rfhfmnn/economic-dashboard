@@ -156,4 +156,23 @@ describe('Batch Portfolio Components', () => {
     expect(screen.getByText('$300.000,0')).toBeDefined()
     expect(screen.getByText('$200.000,0')).toBeDefined()
   })
+
+  it('switches to consolidated debtor view and toggles entity breakdown', () => {
+    render(<PortfolioTable debtors={mockBatchResponse.debtors} />)
+
+    // Switch to Consolidado por Deudor mode
+    const groupTab = screen.getByRole('button', { name: /Consolidado por Deudor/i })
+    fireEvent.click(groupTab)
+
+    expect(screen.getByText('Peor Situación')).toBeDefined()
+    expect(screen.getByText('Deuda Total (ARS)')).toBeDefined()
+    expect(screen.getByText('EMPRESA ALFA S.A.')).toBeDefined()
+    expect(screen.getByText('EMPRESA BETA S.R.L.')).toBeDefined()
+
+    // Expand debtor details
+    const expandBtn = screen.getAllByTitle('Ver entidades')[0]
+    fireEvent.click(expandBtn)
+    expect(screen.getByText(/Desglose de Entidades Financieras/i)).toBeDefined()
+  })
 })
+

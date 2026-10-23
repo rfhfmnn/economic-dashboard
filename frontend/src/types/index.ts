@@ -50,21 +50,21 @@ export interface VariableCatalogItem {
 }
 
 export const KNOWN_BCRA_VARIABLES: Record<number, { name: string; unit?: string }> = {
-  1: { name: 'Reservas Internacionales', unit: 'USD M' },
-  4: { name: 'Tipo de Cambio Oficial (A3500)', unit: 'ARS/USD' },
-  5: { name: 'Tipo de Cambio Minorista', unit: 'ARS/USD' },
-  6: { name: 'Tasa de Política Monetaria', unit: '% TNA' },
-  7: { name: 'Tasa BADLAR Bancos Privados', unit: '% TNA' },
-  15: { name: 'Base Monetaria Total', unit: 'ARS M' },
-  27: { name: 'Inflación Mensual', unit: '%' },
-  28: { name: 'Inflación Interanual', unit: '%' },
-  29: { name: 'Índice de Precios al Consumidor (CER)', unit: 'Índice' },
-  30: { name: 'Unidad de Valor Adquisitivo (UVA)', unit: 'ARS' },
-  31: { name: 'Unidad de Vivienda (UVI)', unit: 'ARS' },
-  34: { name: 'Préstamos al Sector Privado', unit: 'ARS M' },
-  35: { name: 'Depósitos a Plazo Fijo', unit: 'ARS M' },
-  74: { name: 'Reservas Internacionales (sin DEG 2009)', unit: 'USD M' },
-  77: { name: 'Reservas Internacionales (Variación Diaria)', unit: 'USD M' },
+  1: { name: 'Reservas internacionales', unit: 'USD M' },
+  4: { name: 'Tipo de cambio oficial (A3500)', unit: 'ARS/USD' },
+  5: { name: 'Tipo de cambio minorista', unit: 'ARS/USD' },
+  6: { name: 'Tasa de política monetaria', unit: '% TNA' },
+  7: { name: 'Tasa BADLAR bancos privados', unit: '% TNA' },
+  15: { name: 'Base monetaria total', unit: 'ARS M' },
+  27: { name: 'Inflación intermensual', unit: '%' },
+  28: { name: 'Inflación interanual', unit: '%' },
+  29: { name: 'Índice de precios al consumidor (CER)', unit: 'Índice' },
+  30: { name: 'Unidad de valor adquisitivo (UVA)', unit: 'ARS' },
+  31: { name: 'Unidad de vivienda (UVI)', unit: 'ARS' },
+  34: { name: 'Préstamos al sector privado', unit: 'ARS M' },
+  35: { name: 'Depósitos a plazo fijo', unit: 'ARS M' },
+  74: { name: 'Reservas internacionales (sin DEG 2009)', unit: 'USD M' },
+  77: { name: 'Reservas internacionales (variación diaria)', unit: 'USD M' },
 }
 
 export interface FxRate {
@@ -142,6 +142,9 @@ export interface BouncedCheckItem {
   fechaRechazo: string
   monto: number
   causal?: string
+  pagado?: boolean
+  fechaPago?: string | null
+  estadoMulta?: string
 }
 
 export interface BouncedCheckSummary {

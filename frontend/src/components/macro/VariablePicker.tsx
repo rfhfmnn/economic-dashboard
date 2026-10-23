@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Search, Layers, X, Filter, Check } from 'lucide-react'
 import { VariableCatalogItem, KNOWN_BCRA_VARIABLES } from '../../types'
+import { formatGrammaticalTitle } from '../../utils/formatters'
 
 export interface VariablePickerProps {
   catalog: VariableCatalogItem[]
@@ -134,7 +135,8 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
           </span>
           {activePrimaryIds.map((id) => {
             const item = catalog.find((c) => c.idVariable === id)
-            const title = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
+            const rawTitle = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
+            const title = formatGrammaticalTitle(rawTitle)
             const unit = item?.unit || KNOWN_BCRA_VARIABLES[id]?.unit
             return (
               <span
@@ -172,7 +174,8 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             </span>
             {activeSecondaryIds.map((id) => {
               const item = catalog.find((c) => c.idVariable === id)
-              const title = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
+              const rawTitle = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
+              const title = formatGrammaticalTitle(rawTitle)
               const unit = item?.unit || KNOWN_BCRA_VARIABLES[id]?.unit
               return (
                 <span
@@ -293,7 +296,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                           #{item.idVariable}
                         </span>
                         <span className="text-slate-200 font-medium truncate">
-                          {item.descripcion}
+                          {formatGrammaticalTitle(item.descripcion)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">

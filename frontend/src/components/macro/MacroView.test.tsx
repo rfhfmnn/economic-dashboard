@@ -298,15 +298,19 @@ describe('MacroView Components', () => {
     })
   })
 
-  it('focuses Inflacion Interanual in principal variables and updates chart', async () => {
+  it('focuses Inflación interanual in principal variables and updates chart without rendering MoM or YoY', async () => {
     render(<MacroView />)
 
     await waitFor(() => {
-      expect(screen.getAllByText('Inflación Interanual').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText('Inflación interanual').length).toBeGreaterThanOrEqual(1)
     })
 
-    const inflacionCard = screen.getAllByText('Inflación Interanual')[0].closest('div')
+    const inflacionCard = screen.getAllByText('Inflación interanual')[0].closest('div')
+    expect(inflacionCard).not.toBeNull()
     if (inflacionCard) {
+      // Must not render MoM or YoY because inflation is a rate of variation itself
+      expect(inflacionCard.textContent).not.toContain('MoM')
+      expect(inflacionCard.textContent).not.toContain('YoY')
       fireEvent.click(inflacionCard)
     }
 

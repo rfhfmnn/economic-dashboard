@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react'
-import { FileDown, FileText, AlertTriangle, Building, Search, Layers } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { FileDown, FileText, AlertTriangle, Building, Search, Layers, Calculator } from 'lucide-react'
 import { api } from '../../services/api'
 import type { DebtorReport } from '../../types'
 import { RiskBadge } from '../common/RiskBadge'
 import { BouncedChecks } from './BouncedChecks'
 import { CuitSearchInput } from './CuitSearchInput'
 import { DebtEntityTable } from './DebtEntityTable'
-import { DossierModal } from './DossierModal'
+import { DossierModal, type DtiAnalysisData } from './DossierModal'
 import { BatchView } from '../batch/BatchView'
 
 export interface ScreenerViewProps {
@@ -20,6 +20,10 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
   const [isDossierOpen, setIsDossierOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Debt-to-Income / Capacidad de Pago Calculator State
+  const [incomeInput, setIncomeInput] = useState<string>('')
+  const [incomeFrequency, setIncomeFrequency] = useState<'monthly' | 'annual'>('monthly')
 
   useEffect(() => {
     if (initialSubTab) {
@@ -46,6 +50,36 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
       fetchDebtor(initialCuit, true)
     }
   }, [initialCuit])
+
+  const dtiAnalysis = useMemo<DtiAnalysisData | null>(() => {
+    if (!report || !incomeInput.trim()) return null
+    const num = parseFloat(incomeInput.replace(/[^0-9.]/g, ''))
+    if (!num || num <= 0) return null
+
+    // Central de Deudores debts are in thousands of ARS (e.g. 75000 = $75.000 miles)
+    const incomeInMiles = num >= 100000 ? num / 1000 : num
+    const annualIncomeInMiles = incomeFrequency === 'monthly' ? incomeInMiles * 12 : incomeInMiles
+    const multiple = annualIncomeInMiles > 0 ? (report.deuda_total / annualIncomeInMiles) : 0
+
+    let label = 'Baja carga (< 1.0x)'
+    let color = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+
+    if (multiple > 2.5) {
+      label = 'Carga elevada (> 2.5x)'
+      color = 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+    } else if (multiple > 1.0) {
+      label = 'Carga moderada (1.0x - 2.5x)'
+      color = 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+    }
+
+    return {
+      income: num,
+      frequency: incomeFrequency,
+      multiple,
+      label,
+      color,
+    }
+  }, [report, incomeInput, incomeFrequency])
 
   const handleDownloadPdf = () => {
     if (!report) return
@@ -175,6 +209,77 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                 </div>
               </div>
 
+              {/* Debt-to-Income (DTI) & Capacidad de Pago Calculator */}
+              <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                      <Calculator className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                        Capacidad de Pago & Ratio Deuda / Ingreso (DTI)
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        Compare la deuda total informada en BCRA (${report.deuda_total?.toLocaleString('es-AR')}) contra los ingresos declarados del titular.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Income Input & Quick Controls */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={incomeInput}
+                        onChange={(e) => setIncomeInput(e.target.value)}
+                        placeholder="Ingreso estimado..."
+                        className="w-44 pl-6 pr-3 py-1.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded-md text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="inline-flex rounded-md border border-slate-700 bg-slate-950 p-0.5 text-xs font-mono">
+                      <button
+                        type="button"
+                        onClick={() => setIncomeFrequency('monthly')}
+                        className={`px-2 py-1 rounded text-[11px] transition-colors ${incomeFrequency === 'monthly' ? 'bg-slate-800 text-white font-medium' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        Mensual
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIncomeFrequency('annual')}
+                        className={`px-2 py-1 rounded text-[11px] transition-colors ${incomeFrequency === 'annual' ? 'bg-slate-800 text-white font-medium' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        Anual
+                      </button>
+                    </div>
+
+                    {dtiAnalysis && (
+                      <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-500 uppercase font-mono block">Carga / Cobertura</span>
+                          <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded border ${dtiAnalysis.color}`}>
+                            {dtiAnalysis.multiple.toFixed(1)}x {dtiAnalysis.label}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIncomeInput('')}
+                          className="text-[10px] text-slate-500 hover:text-slate-300 underline font-mono"
+                          title="Limpiar ingreso"
+                        >
+                          Limpiar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Bank Breakdown & Bounced Checks Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <DebtEntityTable entidades={report.entidades || []} totalDebt={report.deuda_total || 0} />
@@ -186,6 +291,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                 isOpen={isDossierOpen}
                 onClose={() => setIsDossierOpen(false)}
                 report={report}
+                dtiData={dtiAnalysis}
               />
             </div>
           )}

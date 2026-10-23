@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import type { MacroSeriesPoint } from '../../types'
 import { KNOWN_BCRA_VARIABLES } from '../../types'
+import { formatGrammaticalTitle } from '../../utils/formatters'
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
 
@@ -145,7 +146,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     // Main title
     ctx.fillStyle = '#f8fafc'
     ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    const titleText = effectiveSeries.map((s) => s.title).join('  vs  ') || 'Monitor Macroeconómico BCRA'
+    const titleText = effectiveSeries.map((s) => formatGrammaticalTitle(s.title)).join('  vs  ') || 'Monitor macroeconómico BCRA'
     const displayTitle = titleText.length > 70 ? titleText.slice(0, 67) + '...' : titleText
     ctx.fillText(displayTitle, paddingX, 32)
 
@@ -325,7 +326,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 {leftSeries.map((s, idx) => (
                   <span key={s.id} className="inline-flex items-center gap-1.5 text-slate-200 text-xs sm:text-sm font-medium">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                    <span>{s.title}</span>
+                    <span>{formatGrammaticalTitle(s.title)}</span>
                     {s.unit && (
                       <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60">
                         {s.unit}
@@ -336,7 +337,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 ))}
               </div>
             ) : (
-              <span>{primaryTitle || 'Monitor macroeconómico'}</span>
+              <span>{formatGrammaticalTitle(primaryTitle || 'Monitor macroeconómico')}</span>
             )}
 
             {rightSeries.length > 0 && (
@@ -348,7 +349,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 {rightSeries.map((s, idx) => (
                   <span key={s.id} className="inline-flex items-center gap-1.5 text-indigo-300 text-xs sm:text-sm font-medium">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                    <span>{s.title}</span>
+                    <span>{formatGrammaticalTitle(s.title)}</span>
                     {s.unit && (
                       <span className="text-[10px] font-mono text-indigo-400/80 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/60">
                         {s.unit}

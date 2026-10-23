@@ -7,7 +7,7 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 1,
         "cdSerie": 246,
-        "descripcion": "Reservas Internacionales del BCRA (en millones de USD)",
+        "descripcion": "Reservas internacionales del BCRA (en millones de USD)",
         "categoria": "Monetario",
         "unidad": "Millones de USD",
         "fecha": "2026-03-20",
@@ -16,7 +16,7 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 4,
         "cdSerie": 272,
-        "descripcion": "Tipo de Cambio Minorista ($ por USD)",
+        "descripcion": "Tipo de cambio minorista ($ por USD)",
         "categoria": "Cambiario",
         "unidad": "ARS/USD",
         "fecha": "2026-03-20",
@@ -25,7 +25,7 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 5,
         "cdSerie": 273,
-        "descripcion": "Tipo de Cambio Mayorista Com. A 3500 ($ por USD)",
+        "descripcion": "Tipo de cambio mayorista Com. A 3500 ($ por USD)",
         "categoria": "Cambiario",
         "unidad": "ARS/USD",
         "fecha": "2026-03-20",
@@ -34,7 +34,7 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 28,
         "cdSerie": 7936,
-        "descripcion": "Inflación Interanual",
+        "descripcion": "Inflación interanual",
         "categoria": "Precios",
         "unidad": "%",
         "fecha": "2026-03-20",
@@ -52,7 +52,7 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 27,
         "cdSerie": 250,
-        "descripcion": "Inflación mensual",
+        "descripcion": "Inflación intermensual",
         "categoria": "Precios",
         "unidad": "%",
         "fecha": "2026-03-20",
@@ -70,7 +70,7 @@ MOCK_PRINCIPALES_VARIABLES: List[Dict[str, Any]] = [
     {
         "idVariable": 31,
         "cdSerie": 7913,
-        "descripcion": "Unidad de Valor Adquisitivo (UVA) (en pesos)",
+        "descripcion": "Unidad de valor adquisitivo (UVA) (en pesos)",
         "categoria": "Precios",
         "unidad": "ARS",
         "fecha": "2026-03-20",

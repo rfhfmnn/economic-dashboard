@@ -14,16 +14,16 @@ from backend.app.database import MacroSeries, MacroVariable
 logger = logging.getLogger(__name__)
 
 KEY_VARIABLES = {
-    1: {"name": "Reservas Internacionales", "category": "Monetario", "unit": "Millones USD"},
-    4: {"name": "Tipo de Cambio Minorista", "category": "Cambiario", "unit": "ARS/USD"},
-    5: {"name": "Tipo de Cambio Mayorista A3500", "category": "Cambiario", "unit": "ARS/USD"},
-    28: {"name": "Inflación Interanual", "category": "Precios", "unit": "%"},
+    1: {"name": "Reservas internacionales", "category": "Monetario", "unit": "Millones USD"},
+    4: {"name": "Tipo de cambio minorista", "category": "Cambiario", "unit": "ARS/USD"},
+    5: {"name": "Tipo de cambio mayorista (A3500)", "category": "Cambiario", "unit": "ARS/USD"},
+    28: {"name": "Inflación interanual", "category": "Precios", "unit": "%"},
     7: {"name": "Tasa BADLAR", "category": "Tasas", "unit": "%"},
-    27: {"name": "Inflación Mensual", "category": "Precios", "unit": "%"},
+    27: {"name": "Inflación intermensual", "category": "Precios", "unit": "%"},
     30: {"name": "CER", "category": "Precios", "unit": "Índice"},
     31: {"name": "UVA", "category": "Precios", "unit": "ARS"},
-    15: {"name": "Base Monetaria", "category": "Monetario", "unit": "Millones ARS"},
-    11: {"name": "Tasa BAIBAR Interbancaria", "category": "Tasas", "unit": "%"},
+    15: {"name": "Base monetaria", "category": "Monetario", "unit": "Millones ARS"},
+    11: {"name": "Tasa BAIBAR interbancaria", "category": "Tasas", "unit": "%"},
 }
 
 
@@ -50,11 +50,13 @@ class MacroService:
 
             raw_name = item.get("descripcion") or f"Variable {var_id}"
             if var_id == 1:
-                name = "Reservas Internacionales"
+                name = "Reservas internacionales"
             elif var_id == 77 and "variaci" not in raw_name.lower():
-                name = "Reservas Internacionales (Variación Diaria de Saldos)"
+                name = "Reservas internacionales (variación diaria de saldos)"
             elif var_id == 28:
-                name = "Inflación Interanual"
+                name = "Inflación interanual"
+            elif var_id == 27:
+                name = "Inflación intermensual"
             else:
                 name = raw_name.strip()
             category = item.get("categoria") or KEY_VARIABLES.get(var_id, {}).get("category", "General")
