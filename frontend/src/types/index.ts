@@ -206,3 +206,123 @@ export interface BatchPortfolioResponse {
   invalid_items: BatchInvalidItem[]
   timestamp: string
 }
+
+// -------------------------------------------------------------
+// REM (Relevamiento de Expectativas de Mercado) Interfaces
+// -------------------------------------------------------------
+
+export type RemCohort = 'todos' | 'top_10'
+
+export interface RemKpiItem {
+  value: number
+  period: string
+  unit: string
+  p25: number
+  p75: number
+  top10_divergence: number
+  divergence_flag: boolean
+}
+
+export interface RemDivergenceAlert {
+  indicador: string
+  periodo: string
+  todos_mediana: number
+  top10_mediana: number
+  divergence: number
+  unidad: string
+}
+
+export interface RemSummaryResponse {
+  report_period: string
+  report_date: string
+  cohort: RemCohort
+  kpis: {
+    cpi_next_month: RemKpiItem
+    cpi_12m: RemKpiItem
+    fx_year_end: RemKpiItem
+    policy_rate: RemKpiItem
+  }
+  divergence_alerts: RemDivergenceAlert[]
+  total_participants: number
+}
+
+export interface RemCpiComparisonPoint {
+  period: string
+  period_label: string
+  real_cpi: number
+  expected_cpi: number
+  surprise_delta: number
+  p25: number
+  p75: number
+  dispersion: number
+  direction: 'overshoot' | 'undershoot' | 'inline'
+}
+
+export interface RemCpiComparisonResponse {
+  cohort: RemCohort
+  lookback_months: number
+  summary: {
+    mean_absolute_error: number
+    average_bias: number
+    latest_month: string
+    latest_surprise: number
+    latest_direction: string
+  }
+  series: RemCpiComparisonPoint[]
+}
+
+export interface RemForecastConePoint {
+  period: string
+  mediana: number
+  promedio: number
+  p10: number
+  p25: number
+  p75: number
+  p90: number
+  minimo: number
+  maximo: number
+  iqr_lower: number
+  iqr_upper: number
+  band_iqr: number
+  p10_p90_lower: number
+  p10_p90_upper: number
+  participantes: number
+}
+
+export interface RemForecastConeResponse {
+  variable: string
+  indicator_name: string
+  unit: string
+  report_period: string
+  cohort: RemCohort
+  points: RemForecastConePoint[]
+}
+
+export interface RemTableRow {
+  indicador: string
+  categoria: string
+  periodo: string
+  periodoTipo: string
+  unidad: string
+  mediana: number
+  promedio: number
+  desvio: number
+  p10: number
+  p25: number
+  p75: number
+  p90: number
+  minimo: number
+  maximo: number
+  participantes: number
+  top10_divergence: number
+  divergence_flag: boolean
+}
+
+export interface RemTableResponse {
+  report_period: string
+  cohort: RemCohort
+  category_filter: string
+  total_records: number
+  categories: string[]
+  rows: RemTableRow[]
+}

@@ -12,12 +12,14 @@ import { FxSpreadChart } from './FxSpreadChart'
 import { MacroChart, type Timeframe, type ChartSeries } from './MacroChart'
 import { MetricCard } from './MetricCard'
 import { VariablePicker } from './VariablePicker'
+import { RemView } from './rem/RemView'
 import { formatGrammaticalTitle, isInflationMetric } from '../../utils/formatters'
 
 const PRIMARY_COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#38bdf8', '#14b8a6']
 const SECONDARY_COLORS = ['#8b5cf6', '#f59e0b', '#ec4899', '#a855f7', '#fb923c']
 
 export const MacroView: React.FC = () => {
+  const [subTab, setSubTab] = useState<'bcra_fx' | 'rem'>('bcra_fx')
   const [summary, setSummary] = useState<IndicatorsSummaryResponse | null>(null)
   const [catalog, setCatalog] = useState<VariableCatalogItem[]>([])
   const [fxData, setFxData] = useState<FxSpreadsResponse | null>(null)
@@ -311,68 +313,107 @@ export const MacroView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Indicators KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.isArray(summary?.indicators) &&
-          summary.indicators.slice(0, 8).map((ind) => {
-            const cached = seriesCache[ind.idVariable]
-            const formattedTitle = formatGrammaticalTitle(ind.descripcion)
-            const isInflation = isInflationMetric(ind.idVariable, ind.descripcion)
-            const { momDelta, yoyDelta, recentPoints } = computeDeltas(cached?.data || [])
-            return (
-              <MetricCard
-                key={ind.idVariable}
-                title={formattedTitle}
-                value={ind.valor}
-                date={ind.fecha}
-                category={ind.categoria}
-                unit={ind.unit}
-                momDelta={isInflation ? undefined : momDelta}
-                yoyDelta={isInflation ? undefined : yoyDelta}
-                recentPoints={recentPoints}
-                active={primaryIds.includes(ind.idVariable)}
-                onClick={() => handleSelectCard(ind.idVariable)}
-              />
-            )
-          })}
-      </div>
-
-      {/* Main Interactive Time-Series Section with Multi-Select */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900/40 p-3 rounded-lg border border-slate-800">
-          <VariablePicker
-            catalog={catalog}
-            selectedPrimaryIds={primaryIds}
-            selectedSecondaryIds={secondaryIds}
-            onTogglePrimary={handleTogglePrimary}
-            onToggleSecondary={handleToggleSecondary}
-            onRemovePrimary={handleRemovePrimary}
-            onRemoveSecondary={handleRemoveSecondary}
-          />
-
-          <span className="text-[11px] font-mono text-slate-500">
-            {chartSeries.length} variable{chartSeries.length > 1 ? 's' : ''} activa{chartSeries.length > 1 ? 's' : ''} • {totalObservations.toLocaleString('es-AR')} puntos
-          </span>
+      {/* Sub-Navigation Toggle: BCRA & FX vs. Expectativas REM */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="macro-subtab-bcra"
+            onClick={() => setSubTab('bcra_fx')}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
+              subTab === 'bcra_fx'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span>Variables BCRA & Mercado Cambiario</span>
+          </button>
+          <button
+            type="button"
+            data-testid="macro-subtab-rem"
+            onClick={() => setSubTab('rem')}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
+              subTab === 'rem'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span>Expectativas de Mercado (REM)</span>
+            <span className="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
+              Nuevo
+            </span>
+          </button>
         </div>
-
-        <MacroChart
-          series={chartSeries}
-          timeframe={timeframe}
-          onTimeframeChange={setTimeframe}
-          loading={chartLoading}
-        />
       </div>
 
-      {/* FX Monitor & Spreads Board */}
-      <FxSpreadChart
-        fxData={fxData}
-        timeframe={timeframe as any}
-        onTimeframeChange={(tf) => {
-          if (['1M', '3M', '6M', '1Y', '5Y', 'Max'].includes(tf)) {
-            setTimeframe(tf as Timeframe)
-          }
-        }}
-      />
+      {subTab === 'rem' ? (
+        <RemView />
+      ) : (
+        <>
+          {/* Top Indicators KPI Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.isArray(summary?.indicators) &&
+              summary.indicators.slice(0, 8).map((ind) => {
+                const cached = seriesCache[ind.idVariable]
+                const formattedTitle = formatGrammaticalTitle(ind.descripcion)
+                const isInflation = isInflationMetric(ind.idVariable, ind.descripcion)
+                const { momDelta, yoyDelta, recentPoints } = computeDeltas(cached?.data || [])
+                return (
+                  <MetricCard
+                    key={ind.idVariable}
+                    title={formattedTitle}
+                    value={ind.valor}
+                    date={ind.fecha}
+                    category={ind.categoria}
+                    unit={ind.unit}
+                    momDelta={isInflation ? undefined : momDelta}
+                    yoyDelta={isInflation ? undefined : yoyDelta}
+                    recentPoints={recentPoints}
+                    active={primaryIds.includes(ind.idVariable)}
+                    onClick={() => handleSelectCard(ind.idVariable)}
+                  />
+                )
+              })}
+          </div>
+
+          {/* Main Interactive Time-Series Section with Multi-Select */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900/40 p-3 rounded-lg border border-slate-800">
+              <VariablePicker
+                catalog={catalog}
+                selectedPrimaryIds={primaryIds}
+                selectedSecondaryIds={secondaryIds}
+                onTogglePrimary={handleTogglePrimary}
+                onToggleSecondary={handleToggleSecondary}
+                onRemovePrimary={handleRemovePrimary}
+                onRemoveSecondary={handleRemoveSecondary}
+              />
+
+              <span className="text-[11px] font-mono text-slate-500">
+                {chartSeries.length} variable{chartSeries.length > 1 ? 's' : ''} activa{chartSeries.length > 1 ? 's' : ''} • {totalObservations.toLocaleString('es-AR')} puntos
+              </span>
+            </div>
+
+            <MacroChart
+              series={chartSeries}
+              timeframe={timeframe}
+              onTimeframeChange={setTimeframe}
+              loading={chartLoading}
+            />
+          </div>
+
+          {/* FX Monitor & Spreads Board */}
+          <FxSpreadChart
+            fxData={fxData}
+            timeframe={timeframe as any}
+            onTimeframeChange={(tf) => {
+              if (['1M', '3M', '6M', '1Y', '5Y', 'Max'].includes(tf)) {
+                setTimeframe(tf as Timeframe)
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   )
 }

@@ -10,6 +10,11 @@ import type {
   IndicatorsSummaryResponse,
   MacroIndicator,
   MacroSeriesResponse,
+  RemCohort,
+  RemCpiComparisonResponse,
+  RemForecastConeResponse,
+  RemSummaryResponse,
+  RemTableResponse,
   SystemStatusResponse,
   VariableCatalogItem,
 } from '../types'
@@ -253,4 +258,22 @@ export const api = {
     }
     return response.blob()
   },
+
+  // -------------------------------------------------------------
+  // REM (Relevamiento de Expectativas de Mercado) Endpoints
+  // -------------------------------------------------------------
+  getRemReports: () =>
+    request<string[]>('/macro/rem/reports'),
+
+  getRemSummary: (period: string = 'ultimo', cohort: RemCohort = 'todos') =>
+    request<RemSummaryResponse>(`/macro/rem/summary?period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}`),
+
+  getRemCpiComparison: (lookback: number = 12, cohort: RemCohort = 'todos') =>
+    request<RemCpiComparisonResponse>(`/macro/rem/cpi-comparison?lookback=${lookback}&cohort=${encodeURIComponent(cohort)}`),
+
+  getRemForecastCone: (variable: string = 'ipc_nivel_general', period: string = 'ultimo', cohort: RemCohort = 'todos') =>
+    request<RemForecastConeResponse>(`/macro/rem/forecast-cone?variable=${encodeURIComponent(variable)}&period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}`),
+
+  getRemTable: (period: string = 'ultimo', cohort: RemCohort = 'todos', category: string = 'all') =>
+    request<RemTableResponse>(`/macro/rem/table?period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}&category=${encodeURIComponent(category)}`),
 }
