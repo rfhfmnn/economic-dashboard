@@ -175,6 +175,40 @@ class REMClient:
 
         return records
 
+    def get_indec_inflation(self) -> List[Dict[str, Any]]:
+        """Fetch historical monthly INDEC inflation series from ArgentinaDatos."""
+        if self.force_mock:
+            return self._get_mock_inflation()
+
+        try:
+            url = "https://api.argentinadatos.com/v1/finanzas/indices/inflacion"
+            response = self.client.get(url)
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                return data
+            return self._get_mock_inflation()
+        except Exception as exc:
+            logger.warning("Error fetching INDEC inflation series: %s. Using mock fallback.", exc)
+            return self._get_mock_inflation()
+
+    def _get_mock_inflation(self) -> List[Dict[str, Any]]:
+        return [
+            {"fecha": "2025-09-30", "valor": 3.5},
+            {"fecha": "2025-10-31", "valor": 2.7},
+            {"fecha": "2025-11-30", "valor": 2.5},
+            {"fecha": "2025-12-31", "valor": 2.8},
+            {"fecha": "2026-01-31", "valor": 2.3},
+            {"fecha": "2026-02-28", "valor": 2.2},
+            {"fecha": "2026-03-31", "valor": 2.4},
+            {"fecha": "2026-04-30", "valor": 2.1},
+            {"fecha": "2026-05-31", "valor": 2.0},
+            {"fecha": "2026-06-30", "valor": 1.8},
+            {"fecha": "2026-07-31", "valor": 2.1},
+            {"fecha": "2026-08-31", "valor": 1.7},
+            {"fecha": "2026-09-30", "valor": 1.9},
+        ]
+
     def close(self) -> None:
         """Close the HTTP connection pool."""
         self.client.close()
