@@ -14,6 +14,8 @@ import { api } from '../../../services/api'
 import { RemCohort, RemSummaryResponse } from '../../../types'
 import { RemMetricCard } from './RemMetricCard'
 import { CpiExpectationChart } from './CpiExpectationChart'
+import { FxProjectionChart } from './FxProjectionChart'
+import { RemTable } from './RemTable'
 
 export interface RemViewProps {
   onRefresh?: () => void
@@ -236,8 +238,12 @@ export const RemView: React.FC<RemViewProps> = () => {
       <div id="rem-visualizations-section" className="space-y-6">
         {/* Expectation vs Reality & Forecast Cone (Issue #20) */}
         <CpiExpectationChart period={selectedPeriod} cohort={cohort} />
-        {/* Placeholder for FX Trajectory and Table (Issue #21) */}
-        <div id="rem-fx-table-slot" />
+
+        {/* Nominal FX Trajectory (Issue #21) */}
+        <FxProjectionChart period={selectedPeriod} cohort={cohort} />
+
+        {/* Multi-Indicator Detailed Consensus Breakdown Table (Issue #21) */}
+        <RemTable period={selectedPeriod} cohort={cohort} />
       </div>
     </div>
   )
