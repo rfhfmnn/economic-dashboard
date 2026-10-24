@@ -13,6 +13,7 @@ import {
 import { api } from '../../../services/api'
 import { RemCohort, RemSummaryResponse } from '../../../types'
 import { RemMetricCard } from './RemMetricCard'
+import { CpiExpectationChart } from './CpiExpectationChart'
 
 export interface RemViewProps {
   onRefresh?: () => void
@@ -231,10 +232,10 @@ export const RemView: React.FC<RemViewProps> = () => {
         )}
       </div>
 
-      {/* Analytical Visualizations Placeholder (populated by Issues #20 and #21) */}
+      {/* Analytical Visualizations Section */}
       <div id="rem-visualizations-section" className="space-y-6">
-        {/* Placeholder for Expectation vs Reality Chart (Issue #20) */}
-        <div id="rem-cpi-chart-slot" />
+        {/* Expectation vs Reality & Forecast Cone (Issue #20) */}
+        <CpiExpectationChart period={selectedPeriod} cohort={cohort} />
         {/* Placeholder for FX Trajectory and Table (Issue #21) */}
         <div id="rem-fx-table-slot" />
       </div>
