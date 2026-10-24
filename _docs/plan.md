@@ -22,23 +22,26 @@ flowchart TD
         BCRA_CD["BCRA Central de Deudores API\n(api.bcra.gob.ar/centraldedeudores/v1.0)"]
         BCRA_EST["BCRA Estadísticas Monetarias API\n(api.bcra.gob.ar/estadisticas/v3.0)"]
         FX_PUB["Complementary Financial FX API\n(DolarApi - MEP / CCL / Blue)"]
+        ARG_DAT["ArgentinaDatos API\n(api.argentinadatos.com - REM & IPC)"]
     end
 
     subgraph Backend - FastAPI (Python)
-        Client["BCRA & FX Integration Engine\n(Resilient HTTPX + SSL Bypass + Mock Fallback)"]
-        Sync["Background Sync & Scheduler\n(Daily Macro Series Refresh)"]
+        Client["BCRA, FX & REM Integration Engine\n(Resilient HTTPX + SSL Bypass + Mock Fallback)"]
+        Sync["Background Sync & Scheduler\n(Daily Macro Series & REM Refresh)"]
         RiskEngine["Risk & Alert Engine\n(Early Warning Flags & Scoring)"]
+        RemEngine["REM Consensus Engine\n(CPI Expectation vs Reality & Fan Chart)"]
         ExportEngine["Export Engine\n(CSV, Excel, ReportLab / HTML-to-PDF)"]
-        API["FastAPI REST Endpoints\n(/api/macro, /api/risk, /api/batch, /api/export)"]
+        API["FastAPI REST Endpoints\n(/api/macro, /api/macro/rem, /api/risk, /api/batch, /api/export)"]
     end
 
     subgraph Database Layer
-        DB[("SQLite Database\n(macro_series, deudores_cache, cuit_portfolio)")]
+        DB[("SQLite Database\n(macro_series, deudores_cache, cuit_portfolio, rem_reports)")]
     end
 
     subgraph Frontend - React (Vite + Tailwind CSS)
         UI["Modern Financial Web UI\n(Lucide Icons + Recharts / Lightweight Charts)"]
         Tab1["Macro Monitor View\n(Time-Series, FX Spreads, Variable Picker)"]
+        Tab1B["REM Expectations View\n(CPI Expectation vs Reality, Fan Chart, Cohorts)"]
         Tab2["Credit Risk Single CUIT\n(24M Matrix, Entity Breakdown, Cheques, Alerts)"]
         Tab3["Batch Portfolio View\n(CSV/TXT Upload, Comparative Ranking)"]
         Dossier["1-Page Executive PDF Viewer"]
@@ -47,17 +50,22 @@ flowchart TD
     BCRA_CD --> Client
     BCRA_EST --> Client
     FX_PUB --> Client
+    ARG_DAT --> Client
 
     Client --> Sync
     Sync --> DB
     Client --> RiskEngine
+    Client --> RemEngine
     RiskEngine --> DB
+    RemEngine --> DB
     DB --> API
     RiskEngine --> API
+    RemEngine --> API
     ExportEngine --> API
 
     API <--> UI
     UI --> Tab1
+    UI --> Tab1B
     UI --> Tab2
     UI --> Tab3
     UI --> Dossier
@@ -80,6 +88,20 @@ flowchart TD
   - Date range filters (1M, 3M, 6M, 1Y, 5Y, Max).
   - Normalization & Dual-Axis comparisons (e.g., Base Monetaria vs. Reserves).
   - Dynamic Variable Catalog: Search and plot any BCRA official variable ID dynamically.
+
+### Sub-Module 1B: Market Expectations (REM — Relevamiento de Expectativas de Mercado)
+- **Data Ingestion (ArgentinaDatos API):**
+  - Monthly publication catalog (`/v1/finanzas/rem`) and granular report projections (`/v1/finanzas/rem/{año}/{mes}`).
+  - Consensus cohorts: "Todos los participantes" vs. "Top 10 Más Precisos".
+- **Expectativa vs. Realidad CPI (MoM Inflation):**
+  - Historical comparison aligning actual INDEC monthly inflation against market forecasts published 1 month prior.
+  - Surprise metric: $\Delta \text{ Real} - \text{Esperado}$ (basis points deviation).
+  - Forward-looking 6-month forecast cone (fan chart) with Interquartile ($P_{25} - P_{75}$) and 80% confidence ($P_{10} - P_{90}$) dispersion bands.
+- **FX & Interest Rate Projections:**
+  - Nominal exchange rate path vs. crawling peg baseline.
+  - Policy rate (TAMAR / Badlar) trajectory across future months.
+- **Detailed Consensus Table:**
+  - Multi-indicator breakdown (Precios, Moneda, Tasas, Actividad) with Median, Mean, Interquartile Range, Min/Max, and Participant counts.
 
 ### Module 2: Credit Risk Screener (Central de Deudores)
 - **Single CUIT/CUIL Inspection:**
@@ -121,8 +143,11 @@ flowchart TD
 | **Macro** | `/api/macro/series/{variable_id}` | GET | Historical time-series data with date filtering |
 | **Macro** | `/api/macro/fx-spreads` | GET | Official vs Financial FX (MEP/CCL/Blue) and spread % |
 | **Macro** | `/api/macro/catalog` | GET | List of available BCRA variables with search |
-| **Risk** | `/api/risk/deudores/{cuit}` | GET | Full credit report: current debts, history, cheques, risk flags |
-| **Risk** | `/api/risk/batch` | POST | Upload CSV/TXT list of CUITs and return portfolio summary |
+| **REM**   | `/api/macro/rem/reports` | GET | List of available published REM report periods |
+| **REM**   | `/api/macro/rem/report/{year}/{month}` | GET | Detailed indicator dataset for a specific report |
+| **REM**   | `/api/macro/rem/cpi-comparison` | GET | Joined actual INDEC CPI vs. REM consensus & projection cone |
+| **Risk**  | `/api/risk/deudores/{cuit}` | GET | Full credit report: current debts, history, cheques, risk flags |
+| **Risk**  | `/api/risk/batch` | POST | Upload CSV/TXT list of CUITs and return portfolio summary |
 | **Export**| `/api/export/cuit-dossier/{cuit}` | GET | Download 1-page PDF Dossier |
 | **Export**| `/api/export/batch-excel` | POST | Export portfolio table to `.xlsx` |
 | **System**| `/api/system/status` | GET | API connectivity, mock mode status, DB sync timestamp |
@@ -146,6 +171,15 @@ CREATE TABLE IF NOT EXISTS macro_variables (
     name TEXT NOT NULL,
     unit TEXT,
     category TEXT
+);
+
+-- Cached REM report publications
+CREATE TABLE IF NOT EXISTS rem_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period VARCHAR(7) NOT NULL, -- e.g. '2026-09'
+    raw_payload JSON NOT NULL,
+    cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(period)
 );
 
 -- Cached CUIT queries to prevent repetitive BCRA API hits

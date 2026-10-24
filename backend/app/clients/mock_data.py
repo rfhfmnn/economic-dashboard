@@ -373,3 +373,215 @@ def get_mock_cheques_rechazados(cuit: str) -> Dict[str, Any]:
             "causales": [],
         },
     }
+
+
+MOCK_REM_AVAILABLE_REPORTS: List[str] = [
+    "/finanzas/rem/ultimo",
+    "/finanzas/rem/2026/09",
+    "/finanzas/rem/2026/08",
+    "/finanzas/rem/2026/07",
+    "/finanzas/rem/2026/06",
+    "/finanzas/rem/2026/05",
+    "/finanzas/rem/2026/04",
+    "/finanzas/rem/2026/03",
+    "/finanzas/rem/2026/02",
+    "/finanzas/rem/2026/01",
+    "/finanzas/rem/2025/12",
+    "/finanzas/rem/2025/11",
+    "/finanzas/rem/2025/10",
+]
+
+
+def get_mock_rem_reports() -> List[str]:
+    """Return mock index of available REM publication endpoints."""
+    return list(MOCK_REM_AVAILABLE_REPORTS)
+
+
+def get_mock_rem_report(period: str = "2026-09") -> List[Dict[str, Any]]:
+    """Return realistic mock indicators for a given REM report publication period."""
+    clean_period = str(period).replace("/", "-").strip()
+    if clean_period.startswith("finanzas-rem-"):
+        clean_period = clean_period.replace("finanzas-rem-", "")
+    if clean_period == "ultimo":
+        clean_period = "2026-09"
+
+    # Default year and month parts
+    parts = clean_period.split("-")
+    year = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else 2026
+    month = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 9
+    report_tag = f"{year}-{month:02d}"
+    pub_date = f"{year}-{month:02d}-01"
+
+    results: List[Dict[str, Any]] = []
+
+    # Months ahead helper
+    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    def _period_name(m_offset: int) -> str:
+        target_m = (month - 1 + m_offset) % 12
+        target_y = year + ((month - 1 + m_offset) // 12)
+        return f"{month_names[target_m]}-{str(target_y)[2:]}"
+
+    indicators_config = [
+        {
+            "indicador": "Precios minoristas (IPC nivel general-Nacional; INDEC)",
+            "unidad": "% mensual",
+            "base_val": 1.9,
+            "monthly_decay": -0.05,
+            "unit_12m": "% i.a.",
+            "val_12m": 21.1,
+            "unit_annual": "% anual",
+            "val_annual": 30.0,
+        },
+        {
+            "indicador": "Precios minoristas (IPC núcleo-Nacional; INDEC)",
+            "unidad": "% mensual",
+            "base_val": 1.8,
+            "monthly_decay": -0.04,
+            "unit_12m": "% i.a.",
+            "val_12m": 21.2,
+            "unit_annual": "% anual",
+            "val_annual": 28.0,
+        },
+        {
+            "indicador": "Tipo de cambio nominal",
+            "unidad": "$/USD",
+            "base_val": 1055.0,
+            "monthly_decay": 21.0,  # crawling peg increment
+            "unit_12m": "$/USD",
+            "val_12m": 1320.0,
+            "unit_annual": "$/USD",
+            "val_annual": 1250.0,
+        },
+        {
+            "indicador": "Tasa de interés (TAMAR)",
+            "unidad": "% TNA",
+            "base_val": 35.0,
+            "monthly_decay": -0.4,
+            "unit_12m": "% TNA",
+            "val_12m": 28.5,
+            "unit_annual": "% TNA",
+            "val_annual": 32.0,
+        },
+        {
+            "indicador": "PIB a precios constantes",
+            "unidad": "Var. % anual",
+            "base_val": 3.5,
+            "monthly_decay": 0.0,
+            "unit_12m": "Var. % anual",
+            "val_12m": 4.0,
+            "unit_annual": "Var. % anual",
+            "val_annual": 3.5,
+        },
+        {
+            "indicador": "Desocupación abierta",
+            "unidad": "% de la PEA",
+            "base_val": 7.7,
+            "monthly_decay": -0.1,
+            "unit_12m": "% de la PEA",
+            "val_12m": 7.2,
+            "unit_annual": "% de la PEA",
+            "val_annual": 7.7,
+        },
+    ]
+
+    for cohort in ("todos", "top_10"):
+        cohort_factor = 0.98 if cohort == "top_10" else 1.0
+        participants = 10 if cohort == "top_10" else 38
+
+        for item in indicators_config:
+            ind_name = item["indicador"]
+            unit = item["unidad"]
+            base = item["base_val"] * cohort_factor
+            decay = item["monthly_decay"]
+
+            # Monthly projections (current month + 6 future months)
+            for offset in range(7):
+                val = round(base + (offset * decay), 2)
+                p_name = _period_name(offset)
+                results.append({
+                    "informe": report_tag,
+                    "fecha": pub_date,
+                    "muestra": cohort,
+                    "indicador": ind_name,
+                    "periodo": p_name,
+                    "periodoTipo": "mensual",
+                    "periodoDesde": pub_date,
+                    "periodoHasta": pub_date,
+                    "referencia": f"Periodo {p_name}",
+                    "referenciaFecha": pub_date,
+                    "unidad": unit,
+                    "mediana": val,
+                    "promedio": round(val * 1.01, 2),
+                    "desvio": round(abs(val) * 0.08, 2),
+                    "maximo": round(val * 1.15, 2),
+                    "minimo": round(val * 0.85, 2),
+                    "percentil90": round(val * 1.10, 2),
+                    "percentil75": round(val * 1.04, 2),
+                    "percentil25": round(val * 0.96, 2),
+                    "percentil10": round(val * 0.90, 2),
+                    "participantes": participants,
+                    "fuente": "BCRA REM",
+                    "publicacionUrl": "https://www.bcra.gob.ar/publicaciones/rem/",
+                    "xlsxUrl": "https://www.bcra.gob.ar/archivos/rem.xlsx",
+                })
+
+            # Proximos 12 meses
+            val_12m = round(item["val_12m"] * cohort_factor, 2)
+            results.append({
+                "informe": report_tag,
+                "fecha": pub_date,
+                "muestra": cohort,
+                "indicador": ind_name,
+                "periodo": "próx. 12 meses",
+                "periodoTipo": "proximos_12_meses",
+                "periodoDesde": pub_date,
+                "periodoHasta": pub_date,
+                "referencia": "Próximos 12 meses",
+                "referenciaFecha": pub_date,
+                "unidad": item.get("unit_12m", unit),
+                "mediana": val_12m,
+                "promedio": round(val_12m * 1.01, 2),
+                "desvio": round(abs(val_12m) * 0.08, 2),
+                "maximo": round(val_12m * 1.2, 2),
+                "minimo": round(val_12m * 0.8, 2),
+                "percentil90": round(val_12m * 1.1, 2),
+                "percentil75": round(val_12m * 1.05, 2),
+                "percentil25": round(val_12m * 0.95, 2),
+                "percentil10": round(val_12m * 0.90, 2),
+                "participantes": participants,
+                "fuente": "BCRA REM",
+                "publicacionUrl": "https://www.bcra.gob.ar/publicaciones/rem/",
+                "xlsxUrl": "https://www.bcra.gob.ar/archivos/rem.xlsx",
+            })
+
+            # Annual projection
+            val_ann = round(item["val_annual"] * cohort_factor, 2)
+            results.append({
+                "informe": report_tag,
+                "fecha": pub_date,
+                "muestra": cohort,
+                "indicador": ind_name,
+                "periodo": str(year),
+                "periodoTipo": "anual",
+                "periodoDesde": f"{year}-01-01",
+                "periodoHasta": f"{year}-12-31",
+                "referencia": f"Año {year}",
+                "referenciaFecha": f"{year}-12-31",
+                "unidad": item.get("unit_annual", unit),
+                "mediana": val_ann,
+                "promedio": round(val_ann * 1.01, 2),
+                "desvio": round(abs(val_ann) * 0.08, 2),
+                "maximo": round(val_ann * 1.15, 2),
+                "minimo": round(val_ann * 0.85, 2),
+                "percentil90": round(val_ann * 1.10, 2),
+                "percentil75": round(val_ann * 1.05, 2),
+                "percentil25": round(val_ann * 0.95, 2),
+                "percentil10": round(val_ann * 0.90, 2),
+                "participantes": participants,
+                "fuente": "BCRA REM",
+                "publicacionUrl": "https://www.bcra.gob.ar/publicaciones/rem/",
+                "xlsxUrl": "https://www.bcra.gob.ar/archivos/rem.xlsx",
+            })
+
+    return results

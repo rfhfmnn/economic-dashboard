@@ -94,6 +94,19 @@ class PortfolioItem(Base):
     )
 
 
+class RemReport(Base):
+    """Cached REM (Relevamiento de Expectativas de Mercado) report publications."""
+
+    __tablename__ = "rem_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    period: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
+    raw_payload: Mapped[Any] = mapped_column(JSON, nullable=False)
+    cached_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 def init_db(bind_engine=None) -> None:
     """Create all tables in the database."""
     target_engine = bind_engine or engine

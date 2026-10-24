@@ -31,8 +31,10 @@ economic-dashboard/
 │       ├── conftest.py               # Shared fixtures: in-memory DB, TestClient, mock data
 │       ├── test_bcra_client.py       # BCRA API client, SSL handling, retries & mock fallback
 │       ├── test_fx_client.py         # Parallel FX client & brecha calculation tests
+│       ├── test_rem_client.py        # ArgentinaDatos REM API client, caching & mock fallback
 │       ├── test_database.py          # SQLite schema, indexing, deduplication & CRUD
 │       ├── test_macro_service.py     # Macro time-series caching & normalization
+│       ├── test_rem_service.py       # REM consensus paths & CPI expectation vs reality join
 │       ├── test_risk_service.py      # CUIT Módulo 11, debt matrices & alert rule engine
 │       ├── test_macro_routes.py      # FastAPI endpoints: /api/macro/*
 │       ├── test_risk_routes.py       # FastAPI endpoints: /api/risk/* (single & batch)
@@ -42,7 +44,7 @@ economic-dashboard/
         ├── utils/__tests__/
         │   └── cuit.test.ts          # Client-side AFIP Módulo 11 validation
         └── components/
-            ├── macro/__tests__/      # MetricCard, MacroChart, FxSpreadChart
+            ├── macro/__tests__/      # MetricCard, MacroChart, FxSpreadChart, RemView, CpiExpectationChart
             ├── risk/__tests__/       # CuitSearchInput, RiskBadgeGrid, HistoryHeatmap
             └── batch/__tests__/      # FileUploadZone, PortfolioTable
 ```
@@ -180,6 +182,22 @@ $$\text{Brecha} (\%) = \frac{\text{Rate}_{\text{Parallel}} - \text{Rate}_{\text{
 | 4 | Con alto riesgo de insolvencia | High | Red (`text-rose-400`, `bg-rose-950/40`) |
 | 5 | Irrecuperable | Severe Default | Deep Red / Crimson (`text-red-500`, `bg-red-950/50`) |
 | 6 | Irrecuperable por disposición técnica | Technical Default | Purple / Dark Red (`text-purple-400`, `bg-purple-950/40`) |
+
+### 5.4 REM Consensus & Inflation Forecast Test Vectors
+
+**CPI Surprise Calculation:**
+$$\text{Surprise (pp)} = \text{Real CPI}_{\text{INDEC}} - \text{Expected Median}_{\text{REM}}$$
+
+- Example: Real INDEC MoM CPI = 2.1%, REM Prior Expected Median = 2.5% $\rightarrow$ Surprise = $-0.4\text{ pp}$ (favorable downward surprise, Emerald).
+- Example: Real INDEC MoM CPI = 3.5%, REM Prior Expected Median = 2.8% $\rightarrow$ Surprise = $+0.7\text{ pp}$ (inflation overshoot, Rose).
+
+**Percentile Monotonicity Invariant:**
+Every parsed REM indicator row must satisfy:
+$$P_{10} \le P_{25} \le \text{Mediana} \le P_{75} \le P_{90} \quad \text{and} \quad \text{Mínimo} \le P_{10} \le P_{90} \le \text{Máximo}$$
+
+**Top 10 Cohort Divergence:**
+$$\text{Divergence} = |\text{Mediana}_{\text{Top10}} - \text{Mediana}_{\text{Todos}}|$$
+- If $\text{Divergence} \ge 0.3\text{ pp}$, the indicator displays the `Top 10 Divergence Flag` badge.
 
 ---
 

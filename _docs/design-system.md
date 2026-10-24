@@ -95,6 +95,23 @@ When rendering multiple financial series in Recharts (Macro View & FX Spreads), 
 
 ---
 
+### 2.5 REM Expectations & Forecast Fan Chart Palette
+For the **Expectativas REM** sub-view and the **Expectativa vs. Realidad CPI** fan chart, assign colors strictly according to this palette:
+
+| Visual Element | Color Name | Hex / RGBA Code | Visual Treatment |
+|---|---|---|---|
+| **Real Inflation (INDEC IPC)** | Emerald Teal | `#10b981` | Solid bar or prominent solid line |
+| **REM Consensus (Prior Report)** | Amber Orange | `#f59e0b` | Dashed line (`strokeDasharray="4 4"`) |
+| **Projection Median ($M+1$ to $M+6$)** | Institutional Blue | `#3b82f6` | Solid line connecting historical to forward cone |
+| **Interquartile Band ($P_{25} - P_{75}$)** | Blue Alpha 15 | `rgba(59, 130, 246, 0.15)` | Shaded area fill representing core consensus |
+| **Percentile Spread ($P_{10} - P_{90}$)** | Blue Alpha 08 | `rgba(59, 130, 246, 0.08)` | Outer shaded area fill representing dispersion |
+| **Inflation Surprise (Down / Lower)** | Emerald | `#10b981` | Metric badge / tooltip: $\Delta \text{ Real} < \text{Esperado}$ |
+| **Inflation Surprise (Up / Higher)** | Rose | `#f43f5e` | Metric badge / tooltip: $\Delta \text{ Real} > \text{Esperado}$ |
+| **Top 10 Divergence Flag** | Purple Accent | `#a855f7` | Pill badge: `bg-purple-950/40 text-purple-300 border-purple-800` |
+| **Nominal FX Expected Path** | Sky Blue | `#0ea5e9` | Trendline with interquartile cone vs. crawling peg baseline |
+
+---
+
 ## 3. Typography & Numerical Formatting Standards
 
 ### 3.1 Font Families
