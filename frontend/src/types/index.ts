@@ -268,6 +268,24 @@ export interface RemAvailableHorizon {
   name: string
 }
 
+export interface RemExpectationVsRealityHistoryPoint {
+  period: string
+  real: number
+  forecast: number
+  delta: number
+}
+
+export interface RemExpectationVsReality {
+  variable_id?: string
+  latest_period: string
+  real_value: number
+  previous_forecast: number
+  surprise_delta: number
+  unit: string
+  status: 'favorable' | 'unfavorable' | 'inline'
+  history: RemExpectationVsRealityHistoryPoint[]
+}
+
 export interface RemModularVariableData {
   id: string
   name: string
@@ -277,6 +295,7 @@ export interface RemModularVariableData {
   default_horizon: string
   available_horizons: RemAvailableHorizon[]
   horizons: Record<string, RemModularHorizonData>
+  expectation_vs_reality?: RemExpectationVsReality
 }
 
 export interface RemModularKpisResponse {
