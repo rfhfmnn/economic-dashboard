@@ -246,6 +246,45 @@ export interface RemSummaryResponse {
   total_participants: number
 }
 
+export interface RemSparklinePoint {
+  period: string
+  value: number
+}
+
+export interface RemModularHorizonData {
+  value: number
+  unit: string
+  period: string
+  p25: number
+  p75: number
+  top10_divergence: number
+  divergence_flag: boolean
+  future_sparkline: RemSparklinePoint[]
+  historical_sparkline: RemSparklinePoint[]
+}
+
+export interface RemAvailableHorizon {
+  id: string
+  name: string
+}
+
+export interface RemModularVariableData {
+  id: string
+  name: string
+  category: string
+  is_monthly: boolean
+  is_quarterly: boolean
+  default_horizon: string
+  available_horizons: RemAvailableHorizon[]
+  horizons: Record<string, RemModularHorizonData>
+}
+
+export interface RemModularKpisResponse {
+  report_period: string
+  cohort: RemCohort
+  variables: Record<string, RemModularVariableData>
+}
+
 export interface RemCpiComparisonPoint {
   period: string
   period_label: string

@@ -13,6 +13,7 @@ import type {
   RemCohort,
   RemCpiComparisonResponse,
   RemForecastConeResponse,
+  RemModularKpisResponse,
   RemSummaryResponse,
   RemTableResponse,
   SystemStatusResponse,
@@ -276,4 +277,7 @@ export const api = {
 
   getRemTable: (period: string = 'ultimo', cohort: RemCohort = 'todos', category: string = 'all') =>
     request<RemTableResponse>(`/macro/rem/table?period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}&category=${encodeURIComponent(category)}`),
+
+  getRemModularKpis: (period: string = 'ultimo', cohort: RemCohort = 'todos') =>
+    request<RemModularKpisResponse>(`/macro/rem/modular-kpis?period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}`),
 }
