@@ -27,6 +27,16 @@ def get_rem_summary(
     return rem_service.get_rem_summary(period=period, cohort=cohort, db=db)
 
 
+@router.get("/modular-kpis")
+def get_rem_modular_kpis(
+    period: str = Query("ultimo", description="Report period ('ultimo' or 'YYYY-MM')"),
+    cohort: str = Query("todos", description="Cohort ('todos' or 'top_10')"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Get multi-variable modular KPI dataset with configurable horizons and dual sparklines (forecast trajectory & revision history)."""
+    return rem_service.get_rem_modular_kpis(period=period, cohort=cohort, db=db)
+
+
 @router.get("/cpi-comparison")
 def get_cpi_comparison(
     lookback: int = Query(12, ge=3, le=36, description="Number of historical months to compare"),

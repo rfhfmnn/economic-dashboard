@@ -152,3 +152,61 @@ def test_fastapi_rem_endpoints(client: TestClient):
     table_data = resp_table.json()
     assert "rows" in table_data
     assert table_data["total_records"] > 0
+
+    # 6. Modular KPIs Endpoint
+    resp_modular = client.get("/api/macro/rem/modular-kpis?period=ultimo&cohort=todos")
+    assert resp_modular.status_code == 200
+    mod_data = resp_modular.json()
+    assert "variables" in mod_data
+    assert "cpi_general" in mod_data["variables"]
+    assert "pib" in mod_data["variables"]
+    assert "exports" in mod_data["variables"]
+
+
+def test_rem_modular_kpis_all_variables_and_sparklines(rem_service):
+    """Verify all 8+ requested macroeconomic variables, horizons, and dual sparklines."""
+    res = rem_service.get_rem_modular_kpis(period="2026-09", cohort="todos")
+    assert res["report_period"] == "2026-09"
+    assert res["cohort"] == "todos"
+
+    vars_dict = res["variables"]
+    expected_vars = [
+        "cpi_general", "cpi_core", "exchange_rate", "interest_rate",
+        "pib", "unemployment", "fiscal_result", "exports", "imports"
+    ]
+    for ev in expected_vars:
+        assert ev in vars_dict, f"Variable '{ev}' missing from modular KPIs"
+        v_data = vars_dict[ev]
+        assert len(v_data["available_horizons"]) > 0
+        assert len(v_data["horizons"]) > 0
+
+        # Check default horizon
+        def_h = v_data["default_horizon"]
+        assert def_h in v_data["horizons"]
+        h_data = v_data["horizons"][def_h]
+
+        assert "value" in h_data
+        assert "p25" in h_data
+        assert "p75" in h_data
+        assert "future_sparkline" in h_data
+        assert "historical_sparkline" in h_data
+        assert len(h_data["future_sparkline"]) > 0
+        assert len(h_data["historical_sparkline"]) > 0
+
+        # Sparklines must have period and value
+        first_future = h_data["future_sparkline"][0]
+        assert "period" in first_future and "value" in first_future
+        first_hist = h_data["historical_sparkline"][0]
+        assert "period" in first_hist and "value" in first_hist
+
+    # Verify specific horizons for monthly vs quarterly
+    cpi = vars_dict["cpi_general"]
+    cpi_horizons = [h["id"] for h in cpi["available_horizons"]]
+    assert "next_month" in cpi_horizons
+    assert "12m" in cpi_horizons
+    assert "year_end_current" in cpi_horizons
+
+    pib = vars_dict["pib"]
+    pib_horizons = [h["id"] for h in pib["available_horizons"]]
+    assert "next_quarter" in pib_horizons
+    assert "year_end_current" in pib_horizons
