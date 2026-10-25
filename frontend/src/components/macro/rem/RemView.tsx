@@ -4,14 +4,16 @@ import {
   Users,
   AlertTriangle,
   RefreshCw,
+  RotateCcw,
+  Layers,
   TrendingUp,
   Percent,
   DollarSign,
   Activity,
-  Layers,
 } from 'lucide-react'
 import { api } from '../../../services/api'
-import { RemCohort, RemSummaryResponse } from '../../../types'
+import { RemCohort, RemModularKpisResponse, RemSummaryResponse } from '../../../types'
+import { RemModularKpiCard } from './RemModularKpiCard'
 import { RemMetricCard } from './RemMetricCard'
 import { CpiExpectationChart } from './CpiExpectationChart'
 import { FxProjectionChart } from './FxProjectionChart'
@@ -21,13 +23,50 @@ export interface RemViewProps {
   onRefresh?: () => void
 }
 
+interface CardConfig {
+  variableId: string
+  horizonId: string
+}
+
+const DEFAULT_CARDS: CardConfig[] = [
+  { variableId: 'cpi_general', horizonId: 'next_month' },
+  { variableId: 'cpi_general', horizonId: '12m' },
+  { variableId: 'exchange_rate', horizonId: 'year_end_current' },
+  { variableId: 'interest_rate', horizonId: '12m' },
+  { variableId: 'pib', horizonId: 'year_end_current' },
+  { variableId: 'exports', horizonId: 'year_end_current' },
+]
+
 export const RemView: React.FC<RemViewProps> = () => {
   const [reports, setReports] = useState<string[]>([])
   const [selectedPeriod, setSelectedPeriod] = useState<string>('ultimo')
   const [cohort, setCohort] = useState<RemCohort>('todos')
   const [summary, setSummary] = useState<RemSummaryResponse | null>(null)
+  const [modularKpis, setModularKpis] = useState<RemModularKpisResponse | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [cardsCount, setCardsCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('rem_cards_count')
+      return saved === '6' ? 6 : 4
+    } catch {
+      return 4
+    }
+  })
+
+  const [cardsConfig, setCardsConfig] = useState<CardConfig[]>(() => {
+    try {
+      const saved = localStorage.getItem('rem_cards_config')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length >= 4) {
+          return parsed
+        }
+      }
+    } catch {}
+    return DEFAULT_CARDS
+  })
 
   // 1. Fetch available reports catalog
   useEffect(() => {
@@ -48,13 +87,20 @@ export const RemView: React.FC<RemViewProps> = () => {
     }
   }, [])
 
-  // 2. Fetch summary when period or cohort changes
-  const fetchSummary = useCallback(async () => {
+  // 2. Fetch summary & modular KPIs when period or cohort changes
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await api.getRemSummary(selectedPeriod, cohort)
-      setSummary(data)
+      const [sumData, modData] = await Promise.all([
+        api.getRemSummary(selectedPeriod, cohort).catch(() => null),
+        api.getRemModularKpis(selectedPeriod, cohort).catch(() => null),
+      ])
+      if (sumData) setSummary(sumData)
+      if (modData) setModularKpis(modData)
+      if (!sumData && !modData) {
+        throw new Error('Error al obtener informe REM de ArgentinaDatos / BCRA')
+      }
     } catch (err: any) {
       setError(err?.message || 'Error al obtener informe REM de ArgentinaDatos / BCRA')
     } finally {
@@ -63,13 +109,51 @@ export const RemView: React.FC<RemViewProps> = () => {
   }, [selectedPeriod, cohort])
 
   useEffect(() => {
-    fetchSummary()
-  }, [fetchSummary])
+    fetchData()
+  }, [fetchData])
+
+  const handleVariableChange = (cardIndex: number, newVarId: string) => {
+    setCardsConfig((prev) => {
+      const next = [...prev]
+      const defaultH = modularKpis?.variables[newVarId]?.default_horizon || '12m'
+      next[cardIndex] = {
+        variableId: newVarId,
+        horizonId: defaultH,
+      }
+      try {
+        localStorage.setItem('rem_cards_config', JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
+
+  const handleHorizonChange = (cardIndex: number, newHorizonId: string) => {
+    setCardsConfig((prev) => {
+      const next = [...prev]
+      next[cardIndex] = {
+        ...next[cardIndex],
+        horizonId: newHorizonId,
+      }
+      try {
+        localStorage.setItem('rem_cards_config', JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
+
+  const handleResetConfig = () => {
+    setCardsConfig(DEFAULT_CARDS)
+    try {
+      localStorage.setItem('rem_cards_config', JSON.stringify(DEFAULT_CARDS))
+    } catch {}
+  }
+
+  const visibleCards = cardsConfig.slice(0, cardsCount)
 
   return (
     <div className="space-y-6" data-testid="rem-view-container">
-      {/* Control Bar: Report Period & Cohort Switcher */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-sm">
+      {/* Control Bar: Report Period, Cohort Switcher & Card Controls */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 backdrop-blur-sm">
         {/* Left: Report Period Dropdown */}
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor="rem-period-select" className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -92,41 +176,90 @@ export const RemView: React.FC<RemViewProps> = () => {
           </select>
         </div>
 
-        {/* Right: Cohort Pill Toggle */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Muestra:</span>
-          <div className="bg-slate-950 p-1 rounded-lg border border-slate-800 flex items-center gap-1">
+        {/* Right Controls: Cohort Toggle + Density Switcher + Reset + Refresh */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Cohort Pill Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Muestra:</span>
+            <div className="bg-slate-950 p-1 rounded-lg border border-slate-800 flex items-center gap-1">
+              <button
+                type="button"
+                data-testid="cohort-toggle-todos"
+                onClick={() => setCohort('todos')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                  cohort === 'todos'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                Todos los participantes
+              </button>
+              <button
+                type="button"
+                data-testid="cohort-toggle-top10"
+                onClick={() => setCohort('top_10')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                  cohort === 'top_10'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                Top 10 Más Precisos
+              </button>
+            </div>
+          </div>
+
+          {/* Density Switcher: 4 vs 6 Cards */}
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+            <span className="text-[11px] text-slate-400 font-medium px-1">Tarjetas:</span>
             <button
               type="button"
-              data-testid="cohort-toggle-todos"
-              onClick={() => setCohort('todos')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                cohort === 'todos'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              data-testid="cards-count-4"
+              onClick={() => {
+                setCardsCount(4)
+                try { localStorage.setItem('rem_cards_count', '4') } catch {}
+              }}
+              className={`px-2 py-0.5 rounded text-xs font-mono transition-all ${
+                cardsCount === 4
+                  ? 'bg-blue-600 text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Todos los participantes
+              4 KPIs
             </button>
             <button
               type="button"
-              data-testid="cohort-toggle-top10"
-              onClick={() => setCohort('top_10')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                cohort === 'top_10'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              data-testid="cards-count-6"
+              onClick={() => {
+                setCardsCount(6)
+                try { localStorage.setItem('rem_cards_count', '6') } catch {}
+              }}
+              className={`px-2 py-0.5 rounded text-xs font-mono transition-all ${
+                cardsCount === 6
+                  ? 'bg-blue-600 text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Top 10 Más Precisos
+              6 KPIs
             </button>
           </div>
+
+          {/* Reset Configuration Button */}
+          <button
+            type="button"
+            data-testid="rem-reset-cards-button"
+            onClick={handleResetConfig}
+            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg border border-slate-800 transition-colors"
+            title="Restablecer configuración predeterminada de tarjetas"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
 
           {/* Refresh Button */}
           <button
             type="button"
             data-testid="rem-refresh-button"
-            onClick={fetchSummary}
+            onClick={fetchData}
             disabled={loading}
             className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg border border-slate-800 transition-colors disabled:opacity-50"
             title="Actualizar datos REM"
@@ -172,8 +305,25 @@ export const RemView: React.FC<RemViewProps> = () => {
       )}
 
       {/* Executive KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="rem-kpi-grid">
-        {summary ? (
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 ${cardsCount === 6 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4`}
+        data-testid="rem-kpi-grid"
+      >
+        {modularKpis?.variables ? (
+          visibleCards.map((cfg, idx) => (
+            <RemModularKpiCard
+              key={`${idx}-${cfg.variableId}-${cfg.horizonId}`}
+              cardIndex={idx}
+              selectedVariableId={cfg.variableId}
+              selectedHorizonId={cfg.horizonId}
+              variablesData={modularKpis.variables}
+              cohort={cohort}
+              onVariableChange={(newVarId) => handleVariableChange(idx, newVarId)}
+              onHorizonChange={(newHId) => handleHorizonChange(idx, newHId)}
+            />
+          ))
+        ) : summary ? (
+          // Fallback to legacy summary cards if modular dataset is not present
           <>
             <RemMetricCard
               title="IPC Próximo Mes"
@@ -225,10 +375,10 @@ export const RemView: React.FC<RemViewProps> = () => {
             />
           </>
         ) : (
-          Array.from({ length: 4 }).map((_, i) => (
+          Array.from({ length: cardsCount }).map((_, i) => (
             <div
               key={i}
-              className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 h-36 animate-pulse"
+              className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 h-44 animate-pulse"
             />
           ))
         )}
@@ -236,13 +386,13 @@ export const RemView: React.FC<RemViewProps> = () => {
 
       {/* Analytical Visualizations Section */}
       <div id="rem-visualizations-section" className="space-y-6">
-        {/* Expectation vs Reality & Forecast Cone (Issue #20) */}
+        {/* Expectation vs Reality & Forecast Cone */}
         <CpiExpectationChart period={selectedPeriod} cohort={cohort} />
 
-        {/* Nominal FX Trajectory (Issue #21) */}
+        {/* Nominal FX Trajectory */}
         <FxProjectionChart period={selectedPeriod} cohort={cohort} />
 
-        {/* Multi-Indicator Detailed Consensus Breakdown Table (Issue #21) */}
+        {/* Multi-Indicator Detailed Consensus Breakdown Table */}
         <RemTable period={selectedPeriod} cohort={cohort} />
       </div>
     </div>
