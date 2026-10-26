@@ -4,14 +4,14 @@
 
 services:
   # ----------------------------------------------------------------------------
-  # 1. Development Web Service
+  # 1. Development Web Service (Pulls from Container Registry)
   # ----------------------------------------------------------------------------
   - type: web
     name: economic-dashboard-dev
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/rfhfmnn/economic-dashboard:dev-current
     plan: free
-    branch: develop
-    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -28,14 +28,14 @@ services:
         value: "10"
 
   # ----------------------------------------------------------------------------
-  # 2. Production Web Service (Independent Copy)
+  # 2. Production Web Service (Pulls Promoted Image from Container Registry)
   # ----------------------------------------------------------------------------
   - type: web
     name: economic-dashboard-prod
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/rfhfmnn/economic-dashboard:prod-current
     plan: starter
-    branch: main
-    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

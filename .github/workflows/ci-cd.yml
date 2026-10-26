@@ -156,11 +156,89 @@ jobs:
           docker compose down -v
 
   # ============================================================================
-  # Stage 3A: Deploy to Development Environment & Health Validation
+  # Stage 3: Build & Push Container Image to Registry
+  # ============================================================================
+  build-image:
+    name: Build & Push Image to Registry
+    needs: [integration-and-e2e]
+    if: |
+      ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/develop') && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_base: ${{ steps.meta.outputs.image_base }}
+      image_uri: ${{ steps.meta.outputs.image_uri }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute Image Tag and Registry Metadata
+        id: meta
+        run: |
+          # Compute short commit sha (7 characters)
+          SHORTSHA=$(git rev-parse --short=7 HEAD 2>/dev/null | cut -c1-7 || echo "${GITHUB_SHA:-0000000}" | cut -c1-7)
+          # Format UTC timestamp: YYYYMMDD-HHMMSS
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          # Tag pattern: YYYYMMDD-HHMMSS-shortsha (e.g., 20260818-163457-83242da)
+          IMAGE_TAG="${TIMESTAMP}-${SHORTSHA}"
+          
+          # Container registry repository in lowercase
+          IMAGE_BASE="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_URI="${IMAGE_BASE}:${IMAGE_TAG}"
+
+          echo "=========================================================="
+          echo "🏷️ Image Tag Generated: ${IMAGE_TAG}"
+          echo "📦 Image Target URI:     ${IMAGE_URI}"
+          echo "=========================================================="
+
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ steps.meta.outputs.image_uri }}
+            ${{ steps.meta.outputs.image_base }}:latest
+            ${{ (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/develop') && format('{0}:dev-latest', steps.meta.outputs.image_base) || '' }}
+            ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && format('{0}:prod-latest', steps.meta.outputs.image_base) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Record Build Summary
+        run: |
+          echo "## 📦 Image Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** \`${{ steps.meta.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry URI:** \`${{ steps.meta.outputs.image_uri }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag Pattern:** \`YYYYMMDD-HHMMSS-shortsha\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pushed to Registry:** ${{ github.event_name != 'pull_request' }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Stage 4A: Deploy to Development Environment (Pull & Serve Image)
   # ============================================================================
   deploy-dev:
-    name: Deploy to Development & Health Validation
-    needs: [integration-and-e2e]
+    name: Deploy to Development (Pull & Serve)
+    needs: [build-image]
     if: |
       ((github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/develop') && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.target_env == 'development' || github.event.inputs.target_env == 'all'))
@@ -168,6 +246,7 @@ jobs:
     environment: development
     permissions:
       contents: read
+      packages: write
       id-token: write
     env:
       RENDER_DEPLOY_ROLE_ARN: ${{ secrets.RENDER_DEPLOY_ROLE_ARN_DEV || secrets.RENDER_DEPLOY_ROLE_ARN }}
@@ -179,6 +258,27 @@ jobs:
 
       - name: Set Script Permissions
         run: chmod +x scripts/validate_deployment.sh
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Development Image from Registry
+        run: |
+          IMAGE_URI="${{ needs.build-image.outputs.image_uri }}"
+          IMAGE_BASE="${{ needs.build-image.outputs.image_base }}"
+
+          echo "=========================================================="
+          echo "📥 Pulling Dev Image from Registry: ${IMAGE_URI}"
+          echo "=========================================================="
+          docker pull "${IMAGE_URI}"
+
+          echo "🏷️ Tagging as dev-current in registry for tracking..."
+          docker tag "${IMAGE_URI}" "${IMAGE_BASE}:dev-current"
+          docker push "${IMAGE_BASE}:dev-current"
 
       # Optional Cloud OIDC Role Assumption (AWS / GCP / Cloud IAM)
       - name: Authenticate Cloud Role via GitHub OIDC
@@ -207,7 +307,7 @@ jobs:
             echo "token_acquired=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Trigger Render Development Deployment
+      - name: Trigger Render Development Deployment (Serve Pulled Image)
         id: trigger-deploy-dev
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL_DEV || secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -216,27 +316,34 @@ jobs:
         run: |
           echo "=========================================================="
           echo "🚀 Triggering Deployment on Render (DEVELOPMENT)..."
+          echo " Serving Image: ${{ needs.build-image.outputs.image_uri }}"
           echo "=========================================================="
 
           DEPLOY_TRIGGERED=false
+          IMAGE_URI="${{ needs.build-image.outputs.image_uri }}"
 
           if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "📡 Deploying via Render Deploy Hook URL..."
-            RESPONSE=$(curl -sS -X POST "$RENDER_DEPLOY_HOOK_URL")
+            echo "📡 Deploying via Render Deploy Hook URL with imgURL..."
+            ENCODED_IMAGE=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${IMAGE_URI}'))")
+            SEPARATOR="?"
+            if [[ "$RENDER_DEPLOY_HOOK_URL" == *"?"* ]]; then
+              SEPARATOR="&"
+            fi
+            RESPONSE=$(curl -sS -X POST "${RENDER_DEPLOY_HOOK_URL}${SEPARATOR}imgURL=${ENCODED_IMAGE}")
             echo "Response: $RESPONSE"
             DEPLOY_TRIGGERED=true
           elif [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then
-            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID)..."
+            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID) with imageUrl..."
             RESPONSE=$(curl -sS -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
               -H "Accept: application/json" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${RENDER_API_KEY}" \
-              -d '{"clearCache": "do_not_clear"}')
+              -d "{\"imageUrl\": \"${IMAGE_URI}\", \"clearCache\": \"do_not_clear\"}")
             echo "Response: $RESPONSE"
             DEPLOY_TRIGGERED=true
           else
             echo "ℹ️ Neither RENDER_DEPLOY_HOOK_URL_DEV nor (RENDER_API_KEY + RENDER_SERVICE_ID_DEV) configured."
-            echo "Assuming Render Git auto-deploy is enabled for development branch."
+            echo "Image pulled and tagged as dev-current."
             DEPLOY_TRIGGERED=true
           fi
 
@@ -259,11 +366,11 @@ jobs:
           ./scripts/validate_deployment.sh "$RENDER_APP_URL" "$TIMEOUT_SECONDS"
 
   # ============================================================================
-  # Stage 3B: Deploy to Production Environment & Health Validation
+  # Stage 4B: Deploy to Production Environment (Pull & Serve Image)
   # ============================================================================
   deploy-prod:
-    name: Deploy to Production & Health Validation
-    needs: [integration-and-e2e]
+    name: Deploy to Production (Pull & Serve)
+    needs: [build-image]
     if: |
       ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.target_env == 'production' || github.event.inputs.target_env == 'all'))
@@ -271,6 +378,7 @@ jobs:
     environment: production
     permissions:
       contents: read
+      packages: write
       id-token: write
     env:
       RENDER_DEPLOY_ROLE_ARN: ${{ secrets.RENDER_DEPLOY_ROLE_ARN_PROD || secrets.RENDER_DEPLOY_ROLE_ARN }}
@@ -282,6 +390,27 @@ jobs:
 
       - name: Set Script Permissions
         run: chmod +x scripts/validate_deployment.sh
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Production Image from Registry
+        run: |
+          IMAGE_URI="${{ needs.build-image.outputs.image_uri }}"
+          IMAGE_BASE="${{ needs.build-image.outputs.image_base }}"
+
+          echo "=========================================================="
+          echo "📥 Pulling Prod Image from Registry: ${IMAGE_URI}"
+          echo "=========================================================="
+          docker pull "${IMAGE_URI}"
+
+          echo "🏷️ Tagging as prod-current in registry for tracking..."
+          docker tag "${IMAGE_URI}" "${IMAGE_BASE}:prod-current"
+          docker push "${IMAGE_BASE}:prod-current"
 
       # Optional Cloud OIDC Role Assumption (AWS / GCP / Cloud IAM)
       - name: Authenticate Cloud Role via GitHub OIDC
@@ -310,7 +439,7 @@ jobs:
             echo "token_acquired=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Trigger Render Production Deployment
+      - name: Trigger Render Production Deployment (Serve Pulled Image)
         id: trigger-deploy-prod
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL_PROD || secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -319,27 +448,34 @@ jobs:
         run: |
           echo "=========================================================="
           echo "🚀 Triggering Deployment on Render (PRODUCTION)..."
+          echo " Serving Image: ${{ needs.build-image.outputs.image_uri }}"
           echo "=========================================================="
 
           DEPLOY_TRIGGERED=false
+          IMAGE_URI="${{ needs.build-image.outputs.image_uri }}"
 
           if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "📡 Deploying via Render Deploy Hook URL..."
-            RESPONSE=$(curl -sS -X POST "$RENDER_DEPLOY_HOOK_URL")
+            echo "📡 Deploying via Render Deploy Hook URL with imgURL..."
+            ENCODED_IMAGE=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${IMAGE_URI}'))")
+            SEPARATOR="?"
+            if [[ "$RENDER_DEPLOY_HOOK_URL" == *"?"* ]]; then
+              SEPARATOR="&"
+            fi
+            RESPONSE=$(curl -sS -X POST "${RENDER_DEPLOY_HOOK_URL}${SEPARATOR}imgURL=${ENCODED_IMAGE}")
             echo "Response: $RESPONSE"
             DEPLOY_TRIGGERED=true
           elif [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then
-            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID)..."
+            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID) with imageUrl..."
             RESPONSE=$(curl -sS -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
               -H "Accept: application/json" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${RENDER_API_KEY}" \
-              -d '{"clearCache": "do_not_clear"}')
+              -d "{\"imageUrl\": \"${IMAGE_URI}\", \"clearCache\": \"do_not_clear\"}")
             echo "Response: $RESPONSE"
             DEPLOY_TRIGGERED=true
           else
             echo "ℹ️ Neither RENDER_DEPLOY_HOOK_URL_PROD nor (RENDER_API_KEY + RENDER_SERVICE_ID_PROD) configured."
-            echo "Assuming Render Git auto-deploy is enabled for production branch."
+            echo "Image pulled and tagged as prod-current."
             DEPLOY_TRIGGERED=true
           fi
 

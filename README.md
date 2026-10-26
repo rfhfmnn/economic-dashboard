@@ -101,13 +101,12 @@ Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8
 This project is configured for multi-environment deployment to [Render](https://render.com) using Docker containers that serve both the built React SPA and the FastAPI backend.
 
 #### Option 1: Automated CI/CD via GitHub Actions (Recommended)
-The repository includes an institutional-grade GitHub Actions CI/CD pipeline defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) with independent deployment stages:
+The repository includes an institutional-grade GitHub Actions CI/CD pipeline defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) with a clean separation between **Build** and **Deploy** stages:
 1. **Parallel Test Stage:** Runs backend pytest suite (including infrastructure config validation) and frontend Vitest/lint/build checks concurrently in separate runner jobs.
 2. **Containerized E2E Stage:** Spins up the container stack on an ephemeral runner, validates production compose schemas, and executes end-to-end integration tests (`test_docker_compose.py` & `test_e2e_integration.py`).
-3. **Independent Deployment Stages:**
-   - **`deploy-dev`:** Triggered automatically on pushes to `dev`/`develop` (or via workflow dispatch), deploying to the Dev Render service and validating against the Dev health probe.
-   - **`deploy-prod`:** Triggered automatically on pushes to `main`/`master` (or via workflow dispatch), deploying to the Production Render service and validating against the Production health probe.
-4. **Automated Health Validation:** Continuously queries `${RENDER_APP_URL}/health` with exponential backoff until the live deployment answers HTTP 200 `{"status": "ok"}` and verifies database health at `/api/system/health`.
+3. **Build Stage (`build-image`):** Builds the Docker image once and pushes it to GitHub Container Registry (`ghcr.io`), tagged using the **`YYYYMMDD-HHMMSS-shortsha`** pattern (e.g. `20260818-163457-83242da`) alongside `latest`, `dev-latest`, and `prod-latest` references.
+4. **Deploy Stage (`deploy-dev` & `deploy-prod`):** Pulls the prebuilt image from the registry and serves it, passing the image URL to Render (`imageUrl` API / `imgURL` hook) or serving via container runtime. This decouples compilation from deployment and ensures reproducible, fast rollouts.
+5. **Automated Health Validation:** Continuously queries `${RENDER_APP_URL}/health` with exponential backoff until the live deployment answers HTTP 200 `{"status": "ok"}` and verifies database health at `/api/system/health`.
 
 To enable multi-environment deployments, configure the following in GitHub under **Settings > Secrets and variables > Actions**:
 
@@ -129,16 +128,18 @@ When dev changes have been tested and verified, promote them to production using
 3. Select your parameters:
    - **Source branch:** `dev` (or feature/staging branch)
    - **Target branch:** `master` (or `main`)
+   - **Specific dev image tag:** (Optional: specify an explicit tag; defaults to the currently deployed dev image `dev-current`)
    - **Optional release tag:** (e.g. `v1.2.0`)
    - **Deploy production:** `true` (automatically trigger Render deploy & health validation)
 4. The workflow:
    - Executes pre-promotion backend & frontend test suites and build checks.
-   - Merges source branch into target branch with a non-fast-forward merge commit and optional release tag.
-   - Pushes to the production branch.
-   - Deploys the new version to the Production Render service and validates live health probes.
+   - **Pulls the currently deployed dev image** from the container registry.
+   - Re-tags the verified dev image with a new production tag conforming to the **`YYYYMMDD-HHMMSS-shortsha`** pattern (and optional semantic release tag) and pushes it to the registry.
+   - Merges source branch into target branch with a non-fast-forward merge commit and optional git release tag.
+   - Deploys the promoted container image to the Production Render service and validates live health probes.
 
 #### Option 2: Render Infrastructure Blueprints
-The repository provides Infrastructure as Code blueprints for Render:
+The repository provides Infrastructure as Code blueprints for Render configured with `runtime: image` to pull prebuilt container images:
 - **`render.yaml`:** Full dual-environment blueprint defining both `economic-dashboard-dev` + `economic-dashboard-db-dev` and `economic-dashboard-prod` + `economic-dashboard-db-prod`.
 - **`render.dev.yaml`:** Dedicated development-only blueprint.
 - **`render.prod.yaml`:** Dedicated production-only blueprint.

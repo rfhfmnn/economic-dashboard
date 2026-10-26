@@ -22,6 +22,7 @@ services:
       - app-network
 
   app:
+    image: ${APP_IMAGE:-ghcr.io/rfhfmnn/economic-dashboard:latest}
     build:
       context: .
       dockerfile: Dockerfile

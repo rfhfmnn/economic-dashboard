@@ -5,10 +5,10 @@
 services:
   - type: web
     name: economic-dashboard-prod
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/rfhfmnn/economic-dashboard:prod-current
     plan: starter
-    branch: main
-    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

@@ -165,5 +165,96 @@ def test_promote_to_prod_workflow_configuration():
     # Verify key jobs exist
     jobs = wf_cfg.get("jobs", {})
     assert "validate-dev-branch" in jobs
+    assert "promote-dev-image" in jobs
     assert "merge-and-promote" in jobs
     assert "deploy-promoted-production" in jobs
+
+
+def test_ci_cd_workflow_build_and_deploy_split():
+    """Verify ci-cd.yml splits pipeline into Build (push to registry) and Deploy (pull & serve) stages."""
+    ci_cd_path = REPO_ROOT / ".github" / "workflows" / "ci-cd.yml"
+    assert ci_cd_path.exists(), "ci-cd.yml must exist"
+
+    with open(ci_cd_path, "r", encoding="utf-8") as f:
+        ci_cfg = yaml.safe_load(f)
+
+    jobs = ci_cfg.get("jobs", {})
+    assert "build-image" in jobs, "ci-cd.yml must contain a dedicated build-image job"
+    assert "deploy-dev" in jobs, "ci-cd.yml must contain deploy-dev job"
+    assert "deploy-prod" in jobs, "ci-cd.yml must contain deploy-prod job"
+
+    # Build stage verifies pushing to registry
+    build_job = jobs["build-image"]
+    assert "needs" in build_job
+    assert "integration-and-e2e" in build_job["needs"]
+    assert "outputs" in build_job
+    assert "image_tag" in build_job["outputs"]
+    assert "image_uri" in build_job["outputs"]
+
+    # Check tag pattern in build-image step
+    ci_text = ci_cd_path.read_text(encoding="utf-8")
+    assert "YYYYMMDD-HHMMSS-shortsha" in ci_text
+    assert "date -u +'%Y%m%d-%H%M%S'" in ci_text
+    assert "ghcr.io" in ci_text
+
+    # Deploy stages must depend on build-image and pull the image
+    deploy_dev = jobs["deploy-dev"]
+    assert "build-image" in deploy_dev.get("needs", [])
+    assert "docker pull" in str(deploy_dev.get("steps", []))
+
+    deploy_prod = jobs["deploy-prod"]
+    assert "build-image" in deploy_prod.get("needs", [])
+    assert "docker pull" in str(deploy_prod.get("steps", []))
+
+
+def test_promote_to_prod_pulls_dev_image():
+    """Verify promote-to-prod.yml pulls the currently deployed dev image to promote to prod."""
+    workflow_path = REPO_ROOT / ".github" / "workflows" / "promote-to-prod.yml"
+    assert workflow_path.exists()
+
+    with open(workflow_path, "r", encoding="utf-8") as f:
+        wf_cfg = yaml.safe_load(f)
+
+    jobs = wf_cfg.get("jobs", {})
+    assert "promote-dev-image" in jobs, "promote-to-prod.yml must contain promote-dev-image job"
+
+    promote_job = jobs["promote-dev-image"]
+    promote_steps_str = str(promote_job.get("steps", []))
+    assert "docker pull" in promote_steps_str
+    assert "dev-current" in promote_steps_str or "dev_image_tag" in promote_steps_str
+    assert "docker push" in promote_steps_str
+
+    # Deploy job depends on promote-dev-image and pulls the promoted image
+    deploy_job = jobs["deploy-promoted-production"]
+    assert "promote-dev-image" in deploy_job.get("needs", [])
+    deploy_steps_str = str(deploy_job.get("steps", []))
+    assert "docker pull" in deploy_steps_str
+
+
+def test_image_tag_regex_conformance():
+    """Verify the YYYYMMDD-HHMMSS-shortsha pattern matches the expected regex and sample."""
+    import re
+    from datetime import datetime, timezone
+
+    tag_pattern = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9a-f]{7,8}$")
+
+    # Sample from prompt: "20260818-163457-83242da"
+    assert tag_pattern.match("20260818-163457-83242da") is not None
+
+    # Dynamically generated sample
+    now_utc = datetime.now(timezone.utc)
+    test_tag = f"{now_utc.strftime('%Y%m%d-%H%M%S')}-83242da"
+    assert tag_pattern.match(test_tag) is not None
+
+
+def test_render_blueprints_use_runtime_image():
+    """Verify render.yaml, render.dev.yaml, and render.prod.yaml use runtime: image."""
+    for filename in ["render.yaml", "render.dev.yaml", "render.prod.yaml"]:
+        path = REPO_ROOT / filename
+        assert path.exists()
+        with open(path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        for svc in cfg.get("services", []):
+            assert svc.get("runtime") == "image", f"{filename} service {svc['name']} must use runtime: image"
+            assert "image" in svc and "url" in svc["image"], f"{filename} service {svc['name']} must have image.url"
+

@@ -28,6 +28,11 @@ on:
         required: false
         default: ""
         type: string
+      dev_image_tag:
+        description: "Specific dev image tag to promote (defaults to currently deployed dev image)"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: promote-dev-to-production
@@ -94,11 +99,104 @@ jobs:
           npm run build
 
   # ============================================================================
-  # Stage 2: Merge Dev into Production & Tag Release
+  # Stage 2: Pull Currently Deployed Dev Image & Promote to Production
+  # ============================================================================
+  promote-dev-image:
+    name: Pull Dev Image & Promote to Prod
+    needs: [validate-dev-branch]
+    if: always() && (needs.validate-dev-branch.result == 'success' || inputs.skip_tests)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      promoted_image_uri: ${{ steps.promote.outputs.promoted_image_uri }}
+      promoted_image_base: ${{ steps.promote.outputs.promoted_image_base }}
+      promoted_tag: ${{ steps.promote.outputs.promoted_tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Currently Deployed Dev Image and Tag for Production
+        id: promote
+        run: |
+          IMAGE_BASE="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+
+          # Determine target dev image to promote
+          if [ -n "${{ inputs.dev_image_tag }}" ]; then
+            DEV_IMAGE="${IMAGE_BASE}:${{ inputs.dev_image_tag }}"
+          else
+            DEV_IMAGE="${IMAGE_BASE}:dev-current"
+          fi
+
+          echo "=========================================================="
+          echo "📥 Pulling currently deployed dev image from registry:"
+          echo "   Target Dev Image: ${DEV_IMAGE}"
+          echo "=========================================================="
+
+          docker pull "${DEV_IMAGE}" || {
+            echo "⚠️ '${DEV_IMAGE}' not found; falling back to '${IMAGE_BASE}:dev-latest'..."
+            docker pull "${IMAGE_BASE}:dev-latest"
+            DEV_IMAGE="${IMAGE_BASE}:dev-latest"
+          }
+
+          echo "✅ Dev image successfully pulled: ${DEV_IMAGE}"
+
+          # Compute production tag conforming to YYYYMMDD-HHMMSS-shortsha pattern
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          SHORTSHA=$(git rev-parse --short=7 origin/${{ inputs.source_branch }} 2>/dev/null | cut -c1-7 || git rev-parse --short=7 HEAD | cut -c1-7)
+          PROD_TAG="${TIMESTAMP}-${SHORTSHA}"
+          PROD_IMAGE_URI="${IMAGE_BASE}:${PROD_TAG}"
+
+          echo "=========================================================="
+          echo "🏷️ Re-tagging image for Production:"
+          echo "   Primary Tag:   ${PROD_IMAGE_URI}"
+          echo "   Prod Current:  ${IMAGE_BASE}:prod-current"
+          echo "   Prod Latest:   ${IMAGE_BASE}:prod-latest"
+          echo "=========================================================="
+
+          docker tag "${DEV_IMAGE}" "${PROD_IMAGE_URI}"
+          docker tag "${DEV_IMAGE}" "${IMAGE_BASE}:prod-current"
+          docker tag "${DEV_IMAGE}" "${IMAGE_BASE}:prod-latest"
+
+          docker push "${PROD_IMAGE_URI}"
+          docker push "${IMAGE_BASE}:prod-current"
+          docker push "${IMAGE_BASE}:prod-latest"
+
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            echo "🏷️ Tagging and pushing semantic release: ${IMAGE_BASE}:${{ inputs.release_tag }}"
+            docker tag "${DEV_IMAGE}" "${IMAGE_BASE}:${{ inputs.release_tag }}"
+            docker push "${IMAGE_BASE}:${{ inputs.release_tag }}"
+          fi
+
+          echo "promoted_image_uri=${PROD_IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "promoted_image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "promoted_tag=${PROD_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Record Image Promotion Summary
+        run: |
+          echo "## 📦 Container Promotion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source Dev Image:** \`${{ steps.promote.outputs.promoted_image_uri }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Production Tag:** \`${{ steps.promote.outputs.promoted_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pattern:** \`YYYYMMDD-HHMMSS-shortsha\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Pulled from Dev & Pushed to Prod" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Stage 3: Merge Dev into Production & Tag Release
   # ============================================================================
   merge-and-promote:
     name: Merge Dev into Production
-    needs: [validate-dev-branch]
+    needs: [validate-dev-branch, promote-dev-image]
     if: always() && (needs.validate-dev-branch.result == 'success' || inputs.skip_tests)
     runs-on: ubuntu-latest
     permissions:
@@ -164,7 +262,7 @@ jobs:
 
       - name: Record Promotion Summary
         run: |
-          echo "## 🚀 Promotion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Git Promotion Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Source Branch:** \`${{ inputs.source_branch }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Target Branch:** \`${{ inputs.target_branch }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Release Tag:** \`${{ inputs.release_tag || 'None' }}\`" >> $GITHUB_STEP_SUMMARY
@@ -172,16 +270,17 @@ jobs:
           echo "- **Triggered By:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
-  # Stage 3: Trigger Production Deployment on Render & Validate Health
+  # Stage 4: Trigger Production Deployment on Render & Validate Health
   # ============================================================================
   deploy-promoted-production:
     name: Deploy & Validate Promoted Production
-    needs: [merge-and-promote]
+    needs: [promote-dev-image, merge-and-promote]
     if: inputs.deploy_production
     runs-on: ubuntu-latest
     environment: production
     permissions:
       contents: read
+      packages: write
       id-token: write
     env:
       RENDER_DEPLOY_ROLE_ARN: ${{ secrets.RENDER_DEPLOY_ROLE_ARN_PROD || secrets.RENDER_DEPLOY_ROLE_ARN }}
@@ -195,6 +294,21 @@ jobs:
 
       - name: Set Script Permissions
         run: chmod +x scripts/validate_deployment.sh
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Promoted Production Image from Registry
+        run: |
+          IMAGE_URI="${{ needs.promote-dev-image.outputs.promoted_image_uri }}"
+          echo "=========================================================="
+          echo "📥 Pulling Promoted Production Image: ${IMAGE_URI}"
+          echo "=========================================================="
+          docker pull "${IMAGE_URI}"
 
       # Optional Cloud OIDC Role Assumption
       - name: Authenticate Cloud Role via GitHub OIDC
@@ -223,7 +337,7 @@ jobs:
             echo "token_acquired=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Trigger Render Production Deployment
+      - name: Trigger Render Production Deployment (Serve Promoted Image)
         id: trigger-deploy-prod
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL_PROD || secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -232,27 +346,34 @@ jobs:
         run: |
           echo "=========================================================="
           echo "🚀 Triggering Deployment on Render (PRODUCTION)..."
+          echo " Serving Promoted Image: ${{ needs.promote-dev-image.outputs.promoted_image_uri }}"
           echo "=========================================================="
 
           DEPLOY_TRIGGERED=false
+          IMAGE_URI="${{ needs.promote-dev-image.outputs.promoted_image_uri }}"
 
           if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "📡 Deploying via Render Deploy Hook URL..."
-            RESPONSE=$(curl -sS -X POST "$RENDER_DEPLOY_HOOK_URL")
+            echo "📡 Deploying via Render Deploy Hook URL with imgURL..."
+            ENCODED_IMAGE=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${IMAGE_URI}'))")
+            SEPARATOR="?"
+            if [[ "$RENDER_DEPLOY_HOOK_URL" == *"?"* ]]; then
+              SEPARATOR="&"
+            fi
+            RESPONSE=$(curl -sS -X POST "${RENDER_DEPLOY_HOOK_URL}${SEPARATOR}imgURL=${ENCODED_IMAGE}")
             echo "Response: $RESPONSE"
             DEPLOY_TRIGGERED=true
           elif [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then
-            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID)..."
+            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID) with imageUrl..."
             RESPONSE=$(curl -sS -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
               -H "Accept: application/json" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${RENDER_API_KEY}" \
-              -d '{"clearCache": "do_not_clear"}')
+              -d "{\"imageUrl\": \"${IMAGE_URI}\", \"clearCache\": \"do_not_clear\"}")
             echo "Response: $RESPONSE"
             DEPLOY_TRIGGERED=true
           else
             echo "ℹ️ Neither RENDER_DEPLOY_HOOK_URL_PROD nor (RENDER_API_KEY + RENDER_SERVICE_ID_PROD) configured."
-            echo "Assuming Render Git auto-deploy is enabled for branch: ${{ inputs.target_branch }}."
+            echo "Image ${IMAGE_URI} pulled and ready to serve."
             DEPLOY_TRIGGERED=true
           fi
 

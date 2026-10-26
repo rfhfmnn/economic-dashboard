@@ -5,10 +5,10 @@
 services:
   - type: web
     name: economic-dashboard-dev
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/rfhfmnn/economic-dashboard:dev-current
     plan: free
-    branch: develop
-    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
