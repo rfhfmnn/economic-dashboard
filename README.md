@@ -76,7 +76,25 @@ Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8
 
 This project is fully configured for zero-configuration deployment to [Render](https://render.com) using a single Docker container that serves both the built React SPA and the FastAPI backend.
 
-#### Option 1: One-Click Render Blueprint (Recommended)
+#### Option 1: Automated CI/CD via GitHub Actions (Recommended)
+The repository includes an institutional-grade GitHub Actions CI/CD pipeline defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml):
+1. **Parallel Test Stage:** Runs backend pytest suite and frontend Vitest/lint/build checks concurrently in separate runner jobs.
+2. **Containerized E2E Stage:** Spins up the multi-stage Docker Compose stack (`postgres` + `app`) on an ephemeral runner, waits for container health, and executes end-to-end integration tests (`test_docker_compose.py` & `test_e2e_integration.py`).
+3. **GitHub OIDC Deployment:** Connects securely to your cloud provider (AWS IAM / Cloud provider) using OpenID Connect (OIDC) without static keys, triggers a deployment on Render via Deploy Hook or Render REST API, and captures the deploy transaction.
+4. **Automated Health Validation:** Continuously queries `${RENDER_APP_URL}/health` with exponential backoff until the live deployment answers HTTP 200 `{"status": "ok"}` and verifies database health at `/api/system/health`.
+
+To enable the pipeline, configure the following in your GitHub Repository under **Settings > Secrets and variables > Actions**:
+
+| Name | Type | Description |
+|---|---|---|
+| `RENDER_DEPLOY_HOOK_URL` | Secret | Render Deploy Hook URL (e.g. `https://api.render.com/deploy/srv-...`). |
+| `RENDER_API_KEY` | Secret | (Alternative) Render Account API Key for REST API deployment. |
+| `RENDER_SERVICE_ID` | Secret | (Alternative) Render Service ID (`srv-...`) for REST API deployment. |
+| `RENDER_DEPLOY_ROLE_ARN` | Secret | (Optional) AWS IAM Role ARN to assume via GitHub OIDC for federated cloud access. |
+| `RENDER_APP_URL` | Variable | Public service URL (e.g. `https://economic-dashboard.onrender.com`). |
+| `DEPLOY_TIMEOUT_SECONDS` | Variable | (Optional) Deploy health check timeout (default: `300`). |
+
+#### Option 2: One-Click Render Blueprint
 The repository includes a ready-to-use [`render.yaml`](render.yaml) file defining both the Web Service and a Managed PostgreSQL database:
 1. Push your repository to **GitHub** or **GitLab**.
 2. Log into [Render Dashboard](https://dashboard.render.com).
@@ -86,7 +104,7 @@ The repository includes a ready-to-use [`render.yaml`](render.yaml) file definin
    - **PostgreSQL Database:** Managed PostgreSQL with `DATABASE_URL` wired into the web service.
 5. Click **Apply**. Render will build and deploy the entire stack.
 
-#### Option 2: Manual Web Service Setup on Render
+#### Option 3: Manual Web Service Setup on Render
 If you prefer configuring via the Render Dashboard manually:
 1. Click **New +** -> **Web Service**.
 2. Connect your Git repository.

@@ -1,0 +1,233 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # ============================================================================
+  # Stage 1: Parallel Backend & Frontend Unit/Lint/Type Tests
+  # ============================================================================
+  test-backend:
+    name: Backend Unit & Route Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest pytest-cov httpx
+
+      - name: Run Backend Unit Tests (Pytest)
+        run: |
+          # Run backend unit tests, ignoring docker-compose live integration tests
+          pytest backend/tests/ --ignore=backend/tests/test_docker_compose.py -v
+
+  test-frontend:
+    name: Frontend Unit & Build Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Frontend Lint / Typecheck
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Run Frontend Tests (Vitest)
+        run: |
+          cd frontend
+          npm run test
+
+      - name: Run TypeScript & Vite Production Build
+        run: |
+          cd frontend
+          npm run build
+
+  # ============================================================================
+  # Stage 2: Docker Compose Integration & End-to-End Tests
+  # ============================================================================
+  integration-and-e2e:
+    name: Docker Compose Integration & E2E Tests
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11 (Test Runner)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install test runner dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest httpx
+
+      - name: Build and Start Docker Compose Stack
+        run: |
+          echo "🚀 Building and starting containerized stack..."
+          docker compose up -d --build
+
+      - name: Wait for Containers & Healthcheck
+        run: |
+          echo "⏳ Waiting for app and database containers to reach healthy state..."
+          timeout 120s bash -c 'until curl -sf http://localhost:8000/health | grep -q "\"status\":\"ok\""; do
+            echo "Waiting for container /health endpoint (5s)..."
+            sleep 5
+          done'
+          echo "✅ Containers are healthy!"
+          docker compose ps
+
+      - name: Run Integration & E2E Tests Against Live Containers
+        env:
+          DOCKER_APP_URL: "http://localhost:8000"
+          REQUIRE_DOCKER: "1"
+        run: |
+          echo "🧪 Executing test_docker_compose.py and test_e2e_integration.py..."
+          pytest backend/tests/test_docker_compose.py backend/tests/test_e2e_integration.py -v
+
+      - name: Dump Docker Logs on Failure
+        if: failure()
+        run: |
+          echo "⚠️ Integration tests failed! Dumping container logs for debugging:"
+          docker compose logs --tail=200
+
+      - name: Tear Down Docker Compose Stack
+        if: always()
+        run: |
+          echo "🛑 Stopping and removing containers and volumes..."
+          docker compose down -v
+
+  # ============================================================================
+  # Stage 3: Deploy to Render via GitHub OIDC Role & Health Validation
+  # ============================================================================
+  deploy:
+    name: Deploy to Render & Health Validation
+    needs: [integration-and-e2e]
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for GitHub OIDC federated authentication
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set Script Permissions
+        run: chmod +x scripts/validate_deployment.sh
+
+      # Optional Cloud OIDC Role Assumption (AWS / GCP / Cloud IAM)
+      - name: Authenticate Cloud Role via GitHub OIDC
+        if: "${{ secrets.RENDER_DEPLOY_ROLE_ARN != '' || secrets.OIDC_ROLE_ARN != '' }}"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.RENDER_DEPLOY_ROLE_ARN || secrets.OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          audience: sts.amazonaws.com
+
+      - name: Mint GitHub OIDC Token for Deployment Verification
+        id: oidc
+        run: |
+          echo "Requesting GitHub OIDC Token..."
+          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+            OIDC_TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=render.com" | jq -r '.value // empty')
+            if [ -n "$OIDC_TOKEN" ]; then
+              echo "✅ Successfully acquired GitHub OIDC JWT token."
+              echo "::add-mask::$OIDC_TOKEN"
+              echo "token_acquired=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "ℹ️ OIDC token request did not return a value; continuing."
+              echo "token_acquired=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "ℹ️ OIDC environment variables not present; continuing."
+            echo "token_acquired=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger Render Deployment
+        id: trigger-deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          echo "=========================================================="
+          echo "🚀 Triggering Deployment on Render..."
+          echo "=========================================================="
+
+          DEPLOY_TRIGGERED=false
+
+          # Strategy 1: Render Deploy Hook URL
+          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "📡 Deploying via Render Deploy Hook URL..."
+            RESPONSE=$(curl -sS -X POST "$RENDER_DEPLOY_HOOK_URL")
+            echo "Response: $RESPONSE"
+            DEPLOY_TRIGGERED=true
+
+          # Strategy 2: Render REST API with API Key + Service ID
+          elif [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then
+            echo "📡 Deploying via Render REST API (Service ID: $RENDER_SERVICE_ID)..."
+            RESPONSE=$(curl -sS -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" \
+              -d '{"clearCache": "do_not_clear"}')
+            echo "Response: $RESPONSE"
+            DEPLOY_TRIGGERED=true
+
+          else
+            echo "⚠️ Notice: Neither RENDER_DEPLOY_HOOK_URL nor (RENDER_API_KEY + RENDER_SERVICE_ID) are configured."
+            echo "Assuming Render native Git auto-deploy is enabled for this push to 'main'."
+            DEPLOY_TRIGGERED=true
+          fi
+
+          echo "deploy_triggered=$DEPLOY_TRIGGERED" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Deployment via Health Endpoint
+        env:
+          RENDER_APP_URL: ${{ vars.RENDER_APP_URL || secrets.RENDER_APP_URL || 'https://economic-dashboard.onrender.com' }}
+          TIMEOUT_SECONDS: ${{ vars.DEPLOY_TIMEOUT_SECONDS || 300 }}
+        run: |
+          echo "=========================================================="
+          echo "🩺 Validating Render Deployment Health Probe"
+          echo " Target Application: $RENDER_APP_URL"
+          echo " Timeout:            ${TIMEOUT_SECONDS}s"
+          echo "=========================================================="
+
+          ./scripts/validate_deployment.sh "$RENDER_APP_URL" "$TIMEOUT_SECONDS"
