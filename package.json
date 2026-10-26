@@ -9,6 +9,7 @@
     "test": "npm --prefix frontend run test",
     "lint": "npm --prefix frontend run lint",
     "backend": "python -m uvicorn backend.app.main:app --reload --port 8000",
-    "backend:test": "python -m pytest backend/tests/ -v"
+    "backend:test": "python -m pytest backend/tests/ -v",
+    "test:docker": "python -m pytest backend/tests/test_docker_compose.py -v"
   }
 }
