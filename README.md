@@ -72,6 +72,35 @@ Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8
 
 ---
 
+### 🌐 Deploying to Render
+
+This project is fully configured for zero-configuration deployment to [Render](https://render.com) using a single Docker container that serves both the built React SPA and the FastAPI backend.
+
+#### Option 1: One-Click Render Blueprint (Recommended)
+The repository includes a ready-to-use [`render.yaml`](render.yaml) file defining both the Web Service and a Managed PostgreSQL database:
+1. Push your repository to **GitHub** or **GitLab**.
+2. Log into [Render Dashboard](https://dashboard.render.com).
+3. Click **New +** -> **Blueprint**.
+4. Select your repository. Render will automatically parse `render.yaml` and configure:
+   - **Web Service:** Multi-stage Docker build, binding dynamically to Render's `$PORT`, with health check probe at `/health`.
+   - **PostgreSQL Database:** Managed PostgreSQL with `DATABASE_URL` wired into the web service.
+5. Click **Apply**. Render will build and deploy the entire stack.
+
+#### Option 2: Manual Web Service Setup on Render
+If you prefer configuring via the Render Dashboard manually:
+1. Click **New +** -> **Web Service**.
+2. Connect your Git repository.
+3. Choose **Docker** as the Runtime (Environment).
+4. Select your Region and Plan (Free or Starter).
+5. (Optional) Under **Advanced** -> **Add Environment Variable**:
+   - `DATABASE_URL`: Your PostgreSQL connection string (from a Render PostgreSQL instance, Neon, Supabase, etc.). If omitted, the app will fall back to local SQLite.
+   - `FORCE_MOCK`: `false` (or `true` if you wish to run fully synthetic data).
+   - `BCRA_USE_MOCKS`: `false`
+6. Set **Health Check Path** to `/health`.
+7. Click **Create Web Service**. Render will execute the multi-stage build, compile the frontend, start the server, and assign your public `*.onrender.com` URL.
+
+---
+
 ### Manual Service Commands
 
 #### 1. Backend Service & Tests
