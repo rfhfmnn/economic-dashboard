@@ -1,0 +1,67 @@
+# ==============================================================================
+# Development Environment Docker Compose Stack
+# Usage: docker compose -f docker-compose.dev.yaml up -d --build
+# ==============================================================================
+
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: economic-dashboard-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-economic_dashboard_dev}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-economic_dashboard_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - app-network-dev
+
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: economic-dashboard-app-dev
+    restart: unless-stopped
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-dev:5432/${POSTGRES_DB:-economic_dashboard_dev}
+      PORT: "8000"
+      HOST: "0.0.0.0"
+      STATIC_DIR: /app/frontend/dist
+      FORCE_MOCK: ${FORCE_MOCK:-false}
+      BCRA_USE_MOCKS: ${BCRA_USE_MOCKS:-false}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "${PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network-dev
+
+volumes:
+  postgres_data_dev:
+    name: economic_dashboard_postgres_data_dev
+    driver: local
+
+networks:
+  app-network-dev:
+    name: economic_dashboard_network_dev
+    driver: bridge

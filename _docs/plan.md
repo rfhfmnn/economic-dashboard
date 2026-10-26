@@ -303,3 +303,29 @@ economic-dashboad/
 - **Phase 6: Integration, Verification & Polish**
   - Test real BCRA API connectivity vs mock fallback switch.
   - Validate against actual Argentine test CUITs and edge cases.
+
+---
+
+## 7. Infrastructure Architecture & Multi-Environment Isolation
+
+The platform establishes two independent, isolated infrastructure environments designed for parallel local operation and automated cloud staging:
+
+### Environment Topology
+
+| Dimension | Development (`dev`) | Production (`prod`) |
+|---|---|---|
+| **App Port** | `8000` | `8080` (containerized default) |
+| **Database Port** | `5432` | `5433` (isolated port mapping) |
+| **PostgreSQL Database** | `economic_dashboard_dev` | `economic_dashboard_prod` |
+| **Docker Compose** | `docker-compose.yaml` / `docker-compose.dev.yaml` | `docker-compose.prod.yaml` |
+| **App Container** | `economic-dashboard-app` / `economic-dashboard-app-dev` | `economic-dashboard-app-prod` |
+| **Database Container** | `economic-dashboard-postgres` / `economic-dashboard-postgres-dev` | `economic-dashboard-postgres-prod` |
+| **Volume Persistence** | `postgres_data` / `postgres_data_dev` | `postgres_data_prod` (isolated volume) |
+| **Bridge Network** | `app-network` / `app-network-dev` | `app-network-prod` (isolated network) |
+| **Render Web Service** | `economic-dashboard-dev` | `economic-dashboard-prod` |
+| **Render Database** | `economic-dashboard-db-dev` | `economic-dashboard-db-prod` |
+| **Render Blueprint** | `render.dev.yaml` / `render.yaml` | `render.prod.yaml` / `render.yaml` |
+| **Git Deployment Branch** | `develop` / `dev` | `main` / `master` |
+| **CI/CD Job** | `deploy-dev` | `deploy-prod` |
+| **Connection Pool** | `DB_POOL_SIZE=5`, `DB_MAX_OVERFLOW=10` | `DB_POOL_SIZE=15`, `DB_MAX_OVERFLOW=30` |
+| **Restart Policy** | `unless-stopped` | `always` |

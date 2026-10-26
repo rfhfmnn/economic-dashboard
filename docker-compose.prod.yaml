@@ -1,0 +1,62 @@
+services:
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: economic-dashboard-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-economic_dashboard_prod}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-economic_dashboard_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - app-network-prod
+
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: economic-dashboard-app-prod
+    restart: always
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-prod:5432/${POSTGRES_DB:-economic_dashboard_prod}
+      PORT: "8000"
+      HOST: "0.0.0.0"
+      STATIC_DIR: /app/frontend/dist
+      FORCE_MOCK: "false"
+      BCRA_USE_MOCKS: "false"
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-15}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-30}
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "${PORT:-8080}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network-prod
+
+volumes:
+  postgres_data_prod:
+    name: economic_dashboard_postgres_data_prod
+    driver: local
+
+networks:
+  app-network-prod:
+    name: economic_dashboard_network_prod
+    driver: bridge

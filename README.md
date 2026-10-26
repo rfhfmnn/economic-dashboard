@@ -40,24 +40,48 @@ npm run backend:test # Runs backend pytest suite
 
 ### 🐳 Docker & Docker Compose Launch
 
-#### Option A: Full-Stack Multi-Service Stack (PostgreSQL + App via Docker Compose)
-Run the entire stack with a dedicated PostgreSQL database and unified application container:
+The repository provides two independent, isolated containerized environments that can run simultaneously on the same host without port or volume collisions:
+
+#### Development Environment (`docker-compose.yaml` / `docker-compose.dev.yaml`)
+- **App URL:** `http://localhost:8000` (FastAPI + React SPA)
+- **PostgreSQL:** Port `5432` | Database: `economic_dashboard_dev`
+- **Containers:** `economic-dashboard-app` / `economic-dashboard-postgres`
+- **Volume:** `postgres_data` / `postgres_data_dev`
 
 ```bash
-# Start all services in the background (builds images automatically if not present)
+# Start development stack
 docker compose up -d --build
+# or explicitly with dev compose:
+docker compose -f docker-compose.dev.yaml up -d --build
 
-# View container logs
+# View dev logs and status
 docker compose logs -f
-
-# Check container status and healthchecks
 docker compose ps
 
-# Stop all services
+# Stop development stack
 docker compose down
 ```
 
-#### Option B: Standalone Container Launch (SQLite fallback)
+#### Production Environment (`docker-compose.prod.yaml`)
+- **App URL:** `http://localhost:8080` (FastAPI + React SPA)
+- **PostgreSQL:** Port `5433` | Database: `economic_dashboard_prod`
+- **Containers:** `economic-dashboard-app-prod` / `economic-dashboard-postgres-prod`
+- **Volume:** `postgres_data_prod` (isolated persistent volume)
+- **Settings:** High-performance connection pool (`DB_POOL_SIZE=15`, `DB_MAX_OVERFLOW=30`), restart policy `always`.
+
+```bash
+# Start independent production stack
+docker compose -f docker-compose.prod.yaml --env-file .env.production up -d --build
+
+# View production logs and status
+docker compose -f docker-compose.prod.yaml ps
+docker compose -f docker-compose.prod.yaml logs -f
+
+# Stop production stack
+docker compose -f docker-compose.prod.yaml down
+```
+
+#### Option C: Standalone Container Launch (SQLite fallback)
 Build and run the unified application container with local SQLite storage:
 
 ```bash
@@ -72,50 +96,56 @@ Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8
 
 ---
 
-### 🌐 Deploying to Render
+### 🌐 Deploying to Render (Dev & Prod Environments)
 
-This project is fully configured for zero-configuration deployment to [Render](https://render.com) using a single Docker container that serves both the built React SPA and the FastAPI backend.
+This project is configured for multi-environment deployment to [Render](https://render.com) using Docker containers that serve both the built React SPA and the FastAPI backend.
 
 #### Option 1: Automated CI/CD via GitHub Actions (Recommended)
-The repository includes an institutional-grade GitHub Actions CI/CD pipeline defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml):
-1. **Parallel Test Stage:** Runs backend pytest suite and frontend Vitest/lint/build checks concurrently in separate runner jobs.
-2. **Containerized E2E Stage:** Spins up the multi-stage Docker Compose stack (`postgres` + `app`) on an ephemeral runner, waits for container health, and executes end-to-end integration tests (`test_docker_compose.py` & `test_e2e_integration.py`).
-3. **GitHub OIDC Deployment:** Connects securely to your cloud provider (AWS IAM / Cloud provider) using OpenID Connect (OIDC) without static keys, triggers a deployment on Render via Deploy Hook or Render REST API, and captures the deploy transaction.
+The repository includes an institutional-grade GitHub Actions CI/CD pipeline defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) with independent deployment stages:
+1. **Parallel Test Stage:** Runs backend pytest suite (including infrastructure config validation) and frontend Vitest/lint/build checks concurrently in separate runner jobs.
+2. **Containerized E2E Stage:** Spins up the container stack on an ephemeral runner, validates production compose schemas, and executes end-to-end integration tests (`test_docker_compose.py` & `test_e2e_integration.py`).
+3. **Independent Deployment Stages:**
+   - **`deploy-dev`:** Triggered automatically on pushes to `dev`/`develop` (or via workflow dispatch), deploying to the Dev Render service and validating against the Dev health probe.
+   - **`deploy-prod`:** Triggered automatically on pushes to `main`/`master` (or via workflow dispatch), deploying to the Production Render service and validating against the Production health probe.
 4. **Automated Health Validation:** Continuously queries `${RENDER_APP_URL}/health` with exponential backoff until the live deployment answers HTTP 200 `{"status": "ok"}` and verifies database health at `/api/system/health`.
 
-To enable the pipeline, configure the following in your GitHub Repository under **Settings > Secrets and variables > Actions**:
+To enable multi-environment deployments, configure the following in GitHub under **Settings > Secrets and variables > Actions**:
 
-| Name | Type | Description |
+| Name | Scope / Environment | Description |
 |---|---|---|
-| `RENDER_DEPLOY_HOOK_URL` | Secret | Render Deploy Hook URL (e.g. `https://api.render.com/deploy/srv-...`). |
-| `RENDER_API_KEY` | Secret | (Alternative) Render Account API Key for REST API deployment. |
-| `RENDER_SERVICE_ID` | Secret | (Alternative) Render Service ID (`srv-...`) for REST API deployment. |
-| `RENDER_DEPLOY_ROLE_ARN` | Secret | (Optional) AWS IAM Role ARN to assume via GitHub OIDC for federated cloud access. |
-| `RENDER_APP_URL` | Variable | Public service URL (e.g. `https://economic-dashboard.onrender.com`). |
-| `DEPLOY_TIMEOUT_SECONDS` | Variable | (Optional) Deploy health check timeout (default: `300`). |
+| `RENDER_DEPLOY_HOOK_URL_PROD` | Production | Render Deploy Hook URL for production service. |
+| `RENDER_SERVICE_ID_PROD` | Production | Render Service ID (`srv-...`) for production service. |
+| `RENDER_APP_URL_PROD` | Production | Public production URL (e.g. `https://economic-dashboard-prod.onrender.com`). |
+| `RENDER_DEPLOY_HOOK_URL_DEV` | Development | Render Deploy Hook URL for development service. |
+| `RENDER_SERVICE_ID_DEV` | Development | Render Service ID (`srv-...`) for development service. |
+| `RENDER_APP_URL_DEV` | Development | Public development URL (e.g. `https://economic-dashboard-dev.onrender.com`). |
+| `RENDER_API_KEY` | Global | Render Account API Key for REST API deployment. |
+| `DEPLOY_TIMEOUT_SECONDS` | Global | (Optional) Deploy health check timeout (default: `300`). |
 
-#### Option 2: One-Click Render Blueprint
-The repository includes a ready-to-use [`render.yaml`](render.yaml) file defining both the Web Service and a Managed PostgreSQL database:
+#### Option 2: Render Infrastructure Blueprints
+The repository provides Infrastructure as Code blueprints for Render:
+- **`render.yaml`:** Full dual-environment blueprint defining both `economic-dashboard-dev` + `economic-dashboard-db-dev` and `economic-dashboard-prod` + `economic-dashboard-db-prod`.
+- **`render.dev.yaml`:** Dedicated development-only blueprint.
+- **`render.prod.yaml`:** Dedicated production-only blueprint.
+
+To apply via Render:
 1. Push your repository to **GitHub** or **GitLab**.
 2. Log into [Render Dashboard](https://dashboard.render.com).
 3. Click **New +** -> **Blueprint**.
-4. Select your repository. Render will automatically parse `render.yaml` and configure:
-   - **Web Service:** Multi-stage Docker build, binding dynamically to Render's `$PORT`, with health check probe at `/health`.
-   - **PostgreSQL Database:** Managed PostgreSQL with `DATABASE_URL` wired into the web service.
-5. Click **Apply**. Render will build and deploy the entire stack.
+4. Select your repository (Render will parse `render.yaml` or you can point to `render.prod.yaml`).
+5. Click **Apply** to provision the isolated services and managed PostgreSQL databases.
 
 #### Option 3: Manual Web Service Setup on Render
 If you prefer configuring via the Render Dashboard manually:
 1. Click **New +** -> **Web Service**.
-2. Connect your Git repository.
+2. Connect your Git repository (branch `develop` for Dev, `main` for Production).
 3. Choose **Docker** as the Runtime (Environment).
-4. Select your Region and Plan (Free or Starter).
-5. (Optional) Under **Advanced** -> **Add Environment Variable**:
-   - `DATABASE_URL`: Your PostgreSQL connection string (from a Render PostgreSQL instance, Neon, Supabase, etc.). If omitted, the app will fall back to local SQLite.
-   - `FORCE_MOCK`: `false` (or `true` if you wish to run fully synthetic data).
+4. Under **Environment Variables**:
+   - `DATABASE_URL`: Connection string from your target PostgreSQL database.
+   - `FORCE_MOCK`: `false`
    - `BCRA_USE_MOCKS`: `false`
-6. Set **Health Check Path** to `/health`.
-7. Click **Create Web Service**. Render will execute the multi-stage build, compile the frontend, start the server, and assign your public `*.onrender.com` URL.
+   - `DB_POOL_SIZE`: `15` (for Production) or `5` (for Dev)
+5. Set **Health Check Path** to `/health`.
 
 ---
 
@@ -157,6 +187,16 @@ npm --prefix frontend run test
 economic-dashboard/
 ├── AGENTS.md                           # Operational manual and agent instructions
 ├── README.md                           # Human-facing project documentation
+├── Dockerfile                          # Multi-stage production container build
+├── docker-compose.yaml                 # Development container stack (default)
+├── docker-compose.dev.yaml             # Development container stack (explicit)
+├── docker-compose.prod.yaml            # Independent Production container stack
+├── render.yaml                         # Dual-environment Render blueprint (Dev & Prod)
+├── render.dev.yaml                     # Development-only Render blueprint
+├── render.prod.yaml                    # Independent Production-only Render blueprint
+├── .env.development.example            # Development environment variables template
+├── .env.production.example             # Production environment variables template
+├── .github/workflows/ci-cd.yml         # GitHub Actions CI/CD (Dev & Prod deploy stages)
 ├── _docs/
 │   ├── plan.md                         # Comprehensive architecture blueprint & data specifications
 │   ├── tasks.md                        # Implementation task backlog

@@ -1,0 +1,31 @@
+# ==============================================================================
+# Render Infrastructure Blueprint - Development Environment Only
+# ==============================================================================
+
+services:
+  - type: web
+    name: economic-dashboard-dev
+    runtime: docker
+    plan: free
+    branch: develop
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: economic-dashboard-db-dev
+          property: connectionString
+      - key: FORCE_MOCK
+        value: "false"
+      - key: BCRA_USE_MOCKS
+        value: "false"
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "10"
+
+databases:
+  - name: economic-dashboard-db-dev
+    plan: free
+    databaseName: economic_dashboard_dev
+    user: postgres
