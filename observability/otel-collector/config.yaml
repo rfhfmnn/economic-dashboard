@@ -33,7 +33,6 @@ exporters:
   # Expose Prometheus scraping endpoint for Prometheus to pull metrics
   prometheus:
     endpoint: 0.0.0.0:8889
-    namespace: "economic_dashboard"
     send_timestamps: true
     metric_expiration: 180m
 

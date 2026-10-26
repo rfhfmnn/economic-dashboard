@@ -74,7 +74,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 1
       },
@@ -115,6 +115,85 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Active backend service status, environment, and deployed version",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "OFFLINE"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "ONLINE"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 102,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "economic_dashboard_app_info{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}",
+          "legendFormat": "{{environment}} (v{{deployed_version}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Backend Telemetry Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -135,8 +214,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 16,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 1
       },
       "id": 2,
@@ -757,7 +836,7 @@
           "qryType": 1,
           "query": "label_values(environment)"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -785,7 +864,7 @@
           "qryType": 1,
           "query": "label_values(deployed_version)"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -809,5 +888,5 @@
   "timezone": "browser",
   "title": "Observability Stack Overview",
   "uid": "economic-dashboard-overview",
-  "version": 2
+  "version": 3
 }

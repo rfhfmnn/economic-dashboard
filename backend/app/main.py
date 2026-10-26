@@ -19,6 +19,12 @@ from backend.app.telemetry import init_telemetry
 async def lifespan(app: FastAPI):
     # Initialize SQLite database schema on startup
     init_db()
+    # Emit baseline application info metric for telemetry discovery
+    try:
+        from backend.app.metrics import record_app_info
+        record_app_info()
+    except Exception:
+        pass
     yield
 
 

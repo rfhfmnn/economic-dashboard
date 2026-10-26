@@ -113,22 +113,25 @@ def _setup_span_exporter(provider: TracerProvider) -> None:
         provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
         return
 
-    # Check for OTLP exporter endpoints
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
-    if otlp_endpoint or traces_exporter == "otlp":
+    # Check for OTLP exporter endpoints (defaults to local collector HTTP endpoint)
+    otlp_endpoint = (
+        os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+        or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        or "http://localhost:4318/v1/traces"
+    )
+    try:
+        # Try HTTP protobuf exporter first, then standard OTLP
         try:
-            # Try HTTP protobuf exporter first, then standard OTLP
-            try:
-                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-                exporter = OTLPSpanExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPSpanExporter()
-            except ImportError:
-                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-                exporter = OTLPSpanExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPSpanExporter()
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+            exporter = OTLPSpanExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPSpanExporter()
+        except ImportError:
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            exporter = OTLPSpanExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPSpanExporter()
 
-            provider.add_span_processor(BatchSpanProcessor(exporter))
-            logger.info("OpenTelemetry OTLP exporter registered for traces.")
-        except Exception as exc:
-            logger.warning("Could not initialize OpenTelemetry OTLP exporter: %s", exc)
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+        logger.info("OpenTelemetry OTLP exporter registered for traces pointing to %s.", otlp_endpoint)
+    except Exception as exc:
+        logger.warning("Could not initialize OpenTelemetry OTLP exporter: %s", exc)
 
 
 def _setup_metric_readers() -> list:
@@ -138,27 +141,30 @@ def _setup_metric_readers() -> list:
     if metrics_exporter == "none":
         return []
 
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if otlp_endpoint or metrics_exporter == "otlp":
+    # Default to local OTel collector HTTP endpoint if not explicitly provided
+    otlp_endpoint = (
+        os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
+        or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        or "http://localhost:4318/v1/metrics"
+    )
+    try:
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
         try:
-            from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+            exporter = OTLPMetricExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPMetricExporter()
+        except ImportError:
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+            exporter = OTLPMetricExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPMetricExporter()
 
-            try:
-                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-                exporter = OTLPMetricExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPMetricExporter()
-            except ImportError:
-                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-                exporter = OTLPMetricExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPMetricExporter()
-
-            interval_ms = int(os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "10000"))
-            reader = PeriodicExportingMetricReader(exporter, export_interval_millis=interval_ms)
-            logger.info("OpenTelemetry OTLP metric reader registered.")
-            return [reader]
-        except Exception as exc:
-            logger.warning("Could not initialize OpenTelemetry OTLP metric exporter: %s", exc)
-            return []
-
-    return []
+        # Default to 5 seconds for responsive dashboard updates
+        interval_ms = int(os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "5000"))
+        reader = PeriodicExportingMetricReader(exporter, export_interval_millis=interval_ms)
+        logger.info("OpenTelemetry OTLP metric reader registered pointing to %s.", otlp_endpoint)
+        return [reader]
+    except Exception as exc:
+        logger.warning("Could not initialize OpenTelemetry OTLP metric exporter: %s", exc)
+        return []
 
 
 def get_tracer_provider() -> Optional[TracerProvider]:

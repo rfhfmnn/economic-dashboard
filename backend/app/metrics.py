@@ -205,3 +205,26 @@ def track_report_export(format_type: str, duration: float, success: bool = True)
     })
     report_export_requests_total.add(1, attrs)
     report_export_duration_seconds.record(max(0.0, duration), attrs)
+
+
+# ==============================================================================
+# 5. Application Service & Telemetry Discovery Metadata
+# ==============================================================================
+app_info_gauge = meter.create_gauge(
+    name="economic_dashboard_app_info",
+    description="Application metadata, deployed version, and environment status",
+    unit="",
+)
+
+
+def record_app_info() -> None:
+    """Emit heartbeat metric with environment and version metadata."""
+    app_info_gauge.set(1, get_metric_attributes({"status": "running"}))
+
+
+# Record initial metadata on module import so labels are discoverable immediately
+try:
+    record_app_info()
+except Exception:
+    pass
+
