@@ -2,14 +2,14 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
 
 jobs:
   # ============================================================================
@@ -138,11 +138,14 @@ jobs:
   deploy:
     name: Deploy to Render & Health Validation
     needs: [integration-and-e2e]
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
+    if: ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write # Required for GitHub OIDC federated authentication
+    env:
+      RENDER_DEPLOY_ROLE_ARN: ${{ secrets.RENDER_DEPLOY_ROLE_ARN }}
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
 
     steps:
       - name: Checkout repository
@@ -153,10 +156,10 @@ jobs:
 
       # Optional Cloud OIDC Role Assumption (AWS / GCP / Cloud IAM)
       - name: Authenticate Cloud Role via GitHub OIDC
-        if: "${{ secrets.RENDER_DEPLOY_ROLE_ARN != '' || secrets.OIDC_ROLE_ARN != '' }}"
+        if: env.RENDER_DEPLOY_ROLE_ARN != '' || env.OIDC_ROLE_ARN != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.RENDER_DEPLOY_ROLE_ARN || secrets.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ env.RENDER_DEPLOY_ROLE_ARN || env.OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
           audience: sts.amazonaws.com
 
