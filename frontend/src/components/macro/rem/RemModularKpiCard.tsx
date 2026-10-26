@@ -104,8 +104,31 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
   const areaD = `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
   const gradId = `proj-grad-${varId}`
 
+  const getTooltipStyle = () => {
+    if (!hoverPos) return {}
+    const ratio = hoverPos.x / width
+    if (ratio < 0.22) {
+      return { left: '0px', transform: 'none' }
+    }
+    if (ratio > 0.78) {
+      return { right: '0px', left: 'auto', transform: 'none' }
+    }
+    return { left: `${ratio * 100}%`, transform: 'translateX(-50%)' }
+  }
+
   return (
-    <div className="relative mt-1.5" onMouseLeave={() => { setHoveredPoint(null); setHoverPos(null) }}>
+    <div className="relative mt-1" onMouseLeave={() => { setHoveredPoint(null); setHoverPos(null) }}>
+      {/* Y-Axis (Measurement Unit & Scale Range) */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+        <span className="flex items-center gap-1">
+          <span className="text-slate-500 text-[9px] uppercase tracking-wider font-sans">Eje Y:</span>
+          <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
+        </span>
+        <span className="text-[10px] text-slate-400">
+          Rango: {minVal.toLocaleString('es-AR', { maximumFractionDigits: 1 })} — {maxVal.toLocaleString('es-AR', { maximumFractionDigits: 1 })}
+        </span>
+      </div>
+
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="w-full h-11 overflow-visible cursor-crosshair"
@@ -146,10 +169,11 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
         ))}
       </svg>
 
+      {/* Floating Tooltip with Elevated Stacking */}
       {hoveredPoint && hoverPos && (
         <div
-          className="absolute pointer-events-none -top-7 transform -translate-x-1/2 bg-slate-950 border border-slate-700/80 px-2 py-0.5 rounded shadow-xl text-[10px] font-mono text-slate-200 z-20 whitespace-nowrap"
-          style={{ left: `${(hoverPos.x / width) * 100}%` }}
+          className="absolute pointer-events-none -top-8 bg-slate-950 border border-slate-700/90 px-2.5 py-0.5 rounded shadow-2xl text-[10px] font-mono text-slate-200 z-50 whitespace-nowrap"
+          style={getTooltipStyle()}
         >
           <span className="text-slate-400 mr-1">{hoveredPoint.period}:</span>
           <strong className="text-slate-100">
@@ -158,6 +182,13 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
           <span className="text-slate-400 ml-0.5">{unit.includes('%') ? '%' : ''}</span>
         </div>
       )}
+
+      {/* X-Axis (Date / Timeline Labels) */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-1 pt-1 border-t border-slate-800/50">
+        <span className="text-slate-300 font-medium">{data[0].period}</span>
+        <span className="text-[9px] text-slate-500 uppercase tracking-wider font-sans">Eje X: Fecha</span>
+        <span className="text-slate-300 font-medium">{data[data.length - 1].period}</span>
+      </div>
     </div>
   )
 }
@@ -194,7 +225,7 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
 
   const width = 240
   const height = 44
-  const paddingX = 12
+  const paddingX = 14
   const paddingY = 6
 
   const realPts = history.map((d, index) => {
@@ -212,8 +243,36 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
   const realPath = realPts.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '')
   const forecastPath = forecastPts.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '')
 
+  const getTooltipStyle = () => {
+    if (!hoverPos) return {}
+    const ratio = hoverPos.x / width
+    if (ratio < 0.22) {
+      return { left: '0px', transform: 'none' }
+    }
+    if (ratio > 0.78) {
+      return { right: '0px', left: 'auto', transform: 'none' }
+    }
+    return { left: `${ratio * 100}%`, transform: 'translateX(-50%)' }
+  }
+
   return (
-    <div className="relative mt-1.5" onMouseLeave={() => { setHovered(null); setHoverPos(null) }}>
+    <div className="relative mt-1" onMouseLeave={() => { setHovered(null); setHoverPos(null) }}>
+      {/* Y-Axis (Measurement Unit & Dual Legend) */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+        <span className="flex items-center gap-1">
+          <span className="text-slate-500 text-[9px] uppercase tracking-wider font-sans">Eje Y:</span>
+          <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
+        </span>
+        <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-0.5 bg-emerald-400 rounded-full inline-block"></span> Real
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-0.5 border-t border-dashed border-amber-400 inline-block"></span> Previsto
+          </span>
+        </div>
+      </div>
+
       <svg
         data-testid={`real-vs-forecast-svg-${varId}`}
         viewBox={`0 0 ${width} ${height}`}
@@ -270,11 +329,11 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
         ))}
       </svg>
 
-      {/* Floating Tooltip */}
+      {/* Floating Tooltip with Elevated Stacking */}
       {hovered && hoverPos && (
         <div
-          className="absolute pointer-events-none -top-9 transform -translate-x-1/2 bg-slate-950 border border-slate-700/90 px-2.5 py-1 rounded shadow-xl text-[10px] font-mono text-slate-200 z-20 whitespace-nowrap"
-          style={{ left: `${(hoverPos.x / width) * 100}%` }}
+          className="absolute pointer-events-none -top-9 bg-slate-950 border border-slate-700/90 px-2.5 py-1 rounded shadow-2xl text-[10px] font-mono text-slate-200 z-50 whitespace-nowrap"
+          style={getTooltipStyle()}
         >
           <span className="text-slate-400 font-semibold mr-1.5">{hovered.period}:</span>
           <span className="text-emerald-400 mr-2">Real: <strong>{hovered.real}{unit.includes('%') ? '%' : ''}</strong></span>
@@ -284,6 +343,23 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
           </span>
         </div>
       )}
+
+      {/* X-Axis (Date / Period Labels) */}
+      <div className="mt-1 pt-1 border-t border-slate-800/50">
+        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+          {history.map((h, i) => (
+            <span
+              key={i}
+              className={`text-[10px] ${i === history.length - 1 ? 'text-emerald-400 font-semibold' : 'text-slate-400'}`}
+            >
+              {h.period}
+            </span>
+          ))}
+        </div>
+        <div className="text-center text-[9px] font-mono text-slate-500 mt-0.5 uppercase tracking-wider font-sans">
+          Eje X: Fecha observada
+        </div>
+      </div>
     </div>
   )
 }
@@ -347,7 +423,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
   return (
     <div
       data-testid={`rem-kpi-card-${variableData.id}`}
-      className="bg-slate-900/80 border border-slate-800/90 hover:border-slate-700/80 rounded-xl p-4 sm:p-5 shadow-lg backdrop-blur-sm transition-all duration-200 flex flex-col justify-between"
+      className="bg-slate-900/80 border border-slate-800/90 hover:border-slate-700/80 rounded-xl p-4 sm:p-5 shadow-lg backdrop-blur-sm transition-all duration-200 flex flex-col justify-between relative hover:z-30 focus-within:z-30"
     >
       <div>
         {/* Top Header: Fixed Variable Name on Left, Horizon Select on Right */}
@@ -509,14 +585,6 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
 
               {/* Comparative Dual Line Chart */}
               <div>
-                <div className="flex items-center justify-end gap-3 text-[9px] font-mono text-slate-400 mb-0.5">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-0.5 bg-emerald-400 rounded-full inline-block"></span> Real
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-0.5 border-t border-dashed border-amber-400 inline-block"></span> Pronóstico
-                  </span>
-                </div>
                 <RealVsForecastChart
                   history={expReality.history}
                   unit={expReality.unit}
