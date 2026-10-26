@@ -1,4 +1,10 @@
-"""Shared test fixtures for backend test suite."""
+import sys
+from pathlib import Path
+
+# Ensure root workspace directory is on sys.path regardless of execution context
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 import pytest
 from starlette.testclient import TestClient

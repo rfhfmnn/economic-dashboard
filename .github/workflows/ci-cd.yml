@@ -35,9 +35,11 @@ jobs:
           pip install -r backend/requirements.txt pytest pytest-cov httpx
 
       - name: Run Backend Unit Tests (Pytest)
+        env:
+          PYTHONPATH: .
         run: |
           # Run backend unit tests, ignoring docker-compose live integration tests
-          pytest backend/tests/ --ignore=backend/tests/test_docker_compose.py -v
+          python -m pytest backend/tests/ --ignore=backend/tests/test_docker_compose.py -v
 
   test-frontend:
     name: Frontend Unit & Build Tests
@@ -114,11 +116,12 @@ jobs:
 
       - name: Run Integration & E2E Tests Against Live Containers
         env:
+          PYTHONPATH: .
           DOCKER_APP_URL: "http://localhost:8000"
           REQUIRE_DOCKER: "1"
         run: |
           echo "🧪 Executing test_docker_compose.py and test_e2e_integration.py..."
-          pytest backend/tests/test_docker_compose.py backend/tests/test_e2e_integration.py -v
+          python -m pytest backend/tests/test_docker_compose.py backend/tests/test_e2e_integration.py -v
 
       - name: Dump Docker Logs on Failure
         if: failure()
