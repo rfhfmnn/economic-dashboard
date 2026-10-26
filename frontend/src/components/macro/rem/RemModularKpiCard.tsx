@@ -117,14 +117,7 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
   }
 
   return (
-    <div className="relative mt-1" onMouseLeave={() => { setHoveredPoint(null); setHoverPos(null) }}>
-      {/* Measurement Unit & Scale Range */}
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-        <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
-        <span className="text-[10px] text-slate-400">
-          Rango: {minVal.toLocaleString('es-AR', { maximumFractionDigits: 1 })} — {maxVal.toLocaleString('es-AR', { maximumFractionDigits: 1 })}
-        </span>
-      </div>
+    <div className="relative mt-1.5" onMouseLeave={() => { setHoveredPoint(null); setHoverPos(null) }}>
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -267,10 +260,9 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
 
   return (
     <div className="relative mt-1" onMouseLeave={() => { setHovered(null); setHoverPos(null) }}>
-      {/* Measurement Unit & Dual Legend */}
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-        <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
-        <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
+      {/* Dual Legend */}
+      <div className="flex items-center justify-end text-[10px] font-mono text-slate-400 mb-1">
+        <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-0.5 bg-emerald-400 rounded-full inline-block"></span> Real
           </span>
