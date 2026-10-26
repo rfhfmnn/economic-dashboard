@@ -38,9 +38,27 @@ npm test           # Runs frontend tests
 npm run backend:test # Runs backend pytest suite
 ```
 
-### 🐳 Docker Container Launch (Unified Backend + Frontend)
+### 🐳 Docker & Docker Compose Launch
 
-Build and run the entire application in a single container (FastAPI serving the React SPA bundle):
+#### Option A: Full-Stack Multi-Service Stack (PostgreSQL + App via Docker Compose)
+Run the entire stack with a dedicated PostgreSQL database and unified application container:
+
+```bash
+# Start all services in the background (builds images automatically if not present)
+docker compose up -d --build
+
+# View container logs
+docker compose logs -f
+
+# Check container status and healthchecks
+docker compose ps
+
+# Stop all services
+docker compose down
+```
+
+#### Option B: Standalone Container Launch (SQLite fallback)
+Build and run the unified application container with local SQLite storage:
 
 ```bash
 # Build the Docker image (multi-stage build with Node & Python)
@@ -49,6 +67,7 @@ docker build -t economic-dashboard .
 # Run the container
 docker run -p 8000:8000 economic-dashboard
 ```
+
 Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8000/docs`).
 
 ---
