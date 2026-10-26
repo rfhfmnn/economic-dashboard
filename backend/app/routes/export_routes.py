@@ -31,19 +31,26 @@ class BatchExcelRequest(BaseModel):
 @router.get("/cuit-dossier/{cuit}")
 def export_cuit_pdf(cuit: str, db: Session = Depends(get_db)):
     """Generate and download a 1-page executive PDF credit dossier."""
+    import time
+    from backend.app.metrics import track_report_export, track_cuit_validation_failure
+
     clean = clean_cuit(cuit)
     if not validate_cuit(clean):
+        track_cuit_validation_failure("modulo_11")
         raise HTTPException(
             status_code=400,
             detail=f"CUIT inválido '{cuit}' según el algoritmo Módulo 11 de AFIP.",
         )
 
+    start_time = time.perf_counter()
     try:
         report = risk_service.get_debtor_report(clean, db=db)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     pdf_bytes = generate_cuit_pdf_dossier(report)
+    duration = time.perf_counter() - start_time
+    track_report_export("pdf", duration, success=True)
 
     return Response(
         content=pdf_bytes,
@@ -115,7 +122,13 @@ async def export_batch_excel(request: Request, db: Session = Depends(get_db)):
             detail="Debe proveer una lista de CUITs ('cuits') o resultados evaluados ('results').",
         )
 
+    import time
+    from backend.app.metrics import track_report_export
+
+    start_time = time.perf_counter()
     excel_bytes = generate_batch_excel_portfolio(batch_data)
+    duration = time.perf_counter() - start_time
+    track_report_export("excel", duration, success=True)
 
     return Response(
         content=excel_bytes,

@@ -30,6 +30,8 @@ def get_debtor_report(
     """Retrieve full credit report, bank debt distribution, history, and risk badges for a single CUIT."""
     cleaned = clean_cuit(cuit)
     if not validate_cuit(cleaned):
+        from backend.app.metrics import track_cuit_validation_failure
+        track_cuit_validation_failure("modulo_11")
         raise HTTPException(
             status_code=400,
             detail=f"CUIT inválido '{cuit}' según el algoritmo Módulo 11 de AFIP.",
@@ -90,12 +92,17 @@ async def evaluate_batch_portfolio(
             detail="No se proporcionaron CUITs válidos en la solicitud. Suba un archivo CSV/TXT o envíe un JSON con la lista de CUITs.",
         )
 
+    import time
+    from backend.app.metrics import track_cuit_screen, track_cuit_validation_failure
+
+    start_batch_time = time.perf_counter()
     debtors: List[Dict[str, Any]] = []
     invalid_items: List[Dict[str, Any]] = []
 
     for raw in raw_cuits:
         clean = clean_cuit(raw)
         if not validate_cuit(clean):
+            track_cuit_validation_failure("modulo_11")
             invalid_items.append(
                 {
                     "raw": raw,
@@ -128,6 +135,8 @@ async def evaluate_batch_portfolio(
 
     total_debt = round(sum(d["deuda_total"] for d in debtors), 2)
     worst_portfolio_sit = max((d["peor_situacion"] for d in debtors), default=1)
+    batch_duration = time.perf_counter() - start_batch_time
+    track_cuit_screen("batch", batch_duration, worst_situation=worst_portfolio_sit)
 
     return {
         "portfolio_name": portfolio_name,

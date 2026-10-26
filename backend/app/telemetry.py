@@ -131,9 +131,44 @@ def _setup_span_exporter(provider: TracerProvider) -> None:
             logger.warning("Could not initialize OpenTelemetry OTLP exporter: %s", exc)
 
 
+def _setup_metric_readers() -> list:
+    """Configure metric readers and exporters according to environment configuration."""
+    metrics_exporter = os.getenv("OTEL_METRICS_EXPORTER", "").strip().lower()
+
+    if metrics_exporter == "none":
+        return []
+
+    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if otlp_endpoint or metrics_exporter == "otlp":
+        try:
+            from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+            try:
+                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+                exporter = OTLPMetricExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPMetricExporter()
+            except ImportError:
+                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+                exporter = OTLPMetricExporter(endpoint=otlp_endpoint) if otlp_endpoint else OTLPMetricExporter()
+
+            interval_ms = int(os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "10000"))
+            reader = PeriodicExportingMetricReader(exporter, export_interval_millis=interval_ms)
+            logger.info("OpenTelemetry OTLP metric reader registered.")
+            return [reader]
+        except Exception as exc:
+            logger.warning("Could not initialize OpenTelemetry OTLP metric exporter: %s", exc)
+            return []
+
+    return []
+
+
 def get_tracer_provider() -> Optional[TracerProvider]:
     """Return the active TracerProvider instance."""
     return _active_tracer_provider
+
+
+def get_meter_provider() -> Optional[MeterProvider]:
+    """Return the active MeterProvider instance."""
+    return _active_meter_provider
 
 
 def add_span_processor(processor: Any) -> None:
@@ -166,7 +201,8 @@ def init_telemetry(
     _active_tracer_provider = tracer_provider
 
     # Configure MeterProvider
-    meter_provider = MeterProvider(resource=resource)
+    metric_readers = _setup_metric_readers()
+    meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
     metrics.set_meter_provider(meter_provider)
     _active_meter_provider = meter_provider
 
@@ -218,3 +254,17 @@ def init_telemetry(
 def get_tracer(name: str = "economic-dashboard") -> trace.Tracer:
     """Return an OpenTelemetry tracer for manual instrumentation spans."""
     return trace.get_tracer(name)
+
+
+def get_meter(name: str = "economic-dashboard") -> metrics.Meter:
+    """Return an OpenTelemetry meter for application metrics instruments."""
+    return metrics.get_meter(name)
+
+
+def reset_telemetry_for_testing() -> None:
+    """Reset telemetry initialization state for unit testing suites."""
+    global _is_instrumented, _active_tracer_provider, _active_meter_provider
+    _is_instrumented = False
+    _active_tracer_provider = None
+    _active_meter_provider = None
+

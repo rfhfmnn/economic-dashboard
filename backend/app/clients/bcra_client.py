@@ -57,14 +57,22 @@ class BCRAClient:
         params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         """Executes HTTP GET and seamlessly falls back to synthetic mock data on error."""
+        import time
+        from backend.app.metrics import track_external_call, track_fallback_invocation
+
         if self.force_mock:
             logger.info("force_mock is active; returning synthetic fallback data for %s", url)
+            track_fallback_invocation(provider="bcra", reason="force_mock")
             return fallback_fn()
 
+        start_time = time.perf_counter()
         try:
             response = self.client.get(url, params=params)
+            duration = time.perf_counter() - start_time
+
             # If BCRA returns 400 or 404 for an invalid variable ID, return empty rather than fabricating mock data
             if response.status_code in (400, 404):
+                track_external_call("bcra", url, duration, success=False, error_type=f"HTTP_{response.status_code}")
                 try:
                     err_payload = response.json()
                     if err_payload.get("status") == 404 or "IdVariable" in str(err_payload.get("errorMessages", [])):
@@ -72,16 +80,19 @@ class BCRAClient:
                         # Always fall back to synthetic data for key macro variables and known series
                         url_clean = url.rstrip("/")
                         if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 28, 30, 31, 74, 77)):
+                            track_fallback_invocation(provider="bcra", reason="variable_not_found_fallback")
                             return fallback_fn()
                         return []
                 except Exception:
                     pass
 
             response.raise_for_status()
+            track_external_call("bcra", url, duration, success=True)
             data = response.json()
             # If BCRA returned empty or error status inside JSON payload
             if isinstance(data, dict) and data.get("status") in (404, 500):
                 logger.warning("BCRA endpoint %s returned status %s", url, data.get("status"))
+                track_fallback_invocation(provider="bcra", reason=f"payload_status_{data.get('status')}")
                 if data.get("status") == 404:
                     url_clean = url.rstrip("/")
                     if any(url_clean.endswith(f"/{vid}") for vid in (1, 4, 5, 6, 7, 11, 15, 27, 28, 30, 31, 74, 77)):
@@ -90,6 +101,9 @@ class BCRAClient:
                 return fallback_fn()
             return data
         except (httpx.HTTPError, httpx.TimeoutException, Exception) as exc:
+            duration = time.perf_counter() - start_time
+            track_external_call("bcra", url, duration, success=False, error_type=type(exc).__name__)
+            track_fallback_invocation(provider="bcra", reason="network_or_api_error")
             logger.warning(
                 "BCRA API request to %s failed (%s: %s). Seamlessly falling back to mock data.",
                 url,

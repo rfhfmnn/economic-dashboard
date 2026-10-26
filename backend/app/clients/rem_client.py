@@ -100,6 +100,8 @@ class REMClient:
         Falls back to synthetic mock data on network errors.
         """
         norm_period = self.normalize_period(period)
+        import time
+        from backend.app.metrics import track_cache_access, track_external_call, track_fallback_invocation
 
         # 1. Check local SQLite cache
         if db is not None:
@@ -118,30 +120,35 @@ class REMClient:
                     age = (now - cached_time).total_seconds()
                     if age < self.cache_ttl_seconds and isinstance(cached.raw_payload, list) and len(cached.raw_payload) > 0:
                         logger.debug("Serving REM report '%s' from SQLite cache (age: %ds).", norm_period, age)
+                        track_cache_access(hit=True, cache_type="rem")
                         return cached.raw_payload
+                track_cache_access(hit=False, cache_type="rem")
             except Exception as exc:
                 logger.warning("Error reading REM cache from SQLite: %s", exc)
 
         # 2. Fetch from remote or generate mock
         records: List[Dict[str, Any]] = []
         if self.force_mock:
+            track_fallback_invocation(provider="rem", reason="force_mock")
             records = get_mock_rem_report(norm_period)
         else:
+            target_url = f"{self.base_url}/ultimo" if norm_period == "ultimo" else f"{self.base_url}/{norm_period.split('-')[0]}/{norm_period.split('-')[1]}"
+            start_time = time.perf_counter()
             try:
-                if norm_period == "ultimo":
-                    target_url = f"{self.base_url}/ultimo"
-                else:
-                    parts = norm_period.split("-")
-                    target_url = f"{self.base_url}/{parts[0]}/{parts[1]}"
-
                 response = self.client.get(target_url)
+                duration = time.perf_counter() - start_time
                 response.raise_for_status()
+                track_external_call("rem", target_url, duration, success=True)
                 data = response.json()
                 if isinstance(data, list) and len(data) > 0:
                     records = data
                 else:
+                    track_fallback_invocation(provider="rem", reason="empty_payload")
                     records = get_mock_rem_report(norm_period)
             except Exception as exc:
+                duration = time.perf_counter() - start_time
+                track_external_call("rem", target_url, duration, success=False, error_type=type(exc).__name__)
+                track_fallback_invocation(provider="rem", reason="network_or_api_error")
                 logger.warning(
                     "REM request for period '%s' failed (%s: %s). Falling back to mock data.",
                     norm_period,

@@ -73,7 +73,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 8,
         "x": 0,
         "y": 1
@@ -134,7 +134,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 16,
         "x": 8,
         "y": 1
@@ -177,7 +177,7 @@
           "refId": "B"
         }
       ],
-      "title": "OpenTelemetry Span Throughput",
+      "title": "OpenTelemetry Ingestion Throughput",
       "type": "timeseries"
     },
     {
@@ -186,10 +186,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 6
       },
-      "id": 101,
-      "title": "Application Metrics & Log Telemetry",
+      "id": 200,
+      "title": "Credit Risk Screener & Central de Deudores Metrics",
       "type": "row"
     },
     {
@@ -197,17 +197,15 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Rate of single CUIT vs. batch portfolio screening evaluations filtered by environment and deployed version",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisPlacement": "auto",
-            "fillOpacity": 15,
+            "axisLabel": "Evaluations / sec",
+            "fillOpacity": 20,
             "lineWidth": 2
           },
           "unit": "reqps"
@@ -215,23 +213,17 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 7,
+        "w": 9,
         "x": 0,
-        "y": 8
+        "y": 7
       },
-      "id": 3,
+      "id": 201,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "table",
           "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
         }
       },
       "targets": [
@@ -241,14 +233,460 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total[1m])) by (handler, status) or sum(rate(economic_dashboard_http_server_duration_count[1m])) by (http_route, http_status_code)",
-          "legendFormat": "{{http_route}} [{{http_status_code}}]",
+          "expr": "sum by (screen_type, environment) (rate(economic_dashboard_cuit_screen_requests_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[1m]))",
+          "legendFormat": "{{screen_type}} [{{environment}}]",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "HTTP Request Rates",
+      "title": "CUIT Screening Velocity",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Distribution of debtors evaluated by BCRA Situación (1 Normal to 6 Irrecuperable por disposición técnica)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Debtors / sec",
+            "fillOpacity": 30,
+            "lineWidth": 2
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 9,
+        "x": 9,
+        "y": 7
+      },
+      "id": 202,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (situation) (rate(economic_dashboard_debtor_risk_distribution_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m]))",
+          "legendFormat": "Situación {{situation}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Debtor Risk Classification (Situación 1-6)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Percentage of debtor lookups satisfied by local database cache without hitting external BCRA APIs",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 3,
+        "x": 18,
+        "y": 7
+      },
+      "id": 203,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "clamp_max((sum(rate(economic_dashboard_cuit_cache_hits_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) / (sum(rate(economic_dashboard_cuit_cache_hits_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) + sum(rate(economic_dashboard_cuit_cache_misses_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) + 0.00001)) * 100, 100)",
+          "legendFormat": "Cache Hit %",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CUIT Cache Hit %",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Tax ID validation rejections caught by AFIP Módulo 11 checksum algorithm in the selected environment",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 3,
+        "x": 21,
+        "y": 7
+      },
+      "id": 204,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(economic_dashboard_cuit_validation_failures_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[1h])) or vector(0)",
+          "legendFormat": "Rejections (1h)",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Módulo 11 Rejections",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 300,
+      "title": "External Resilience & Government API Fallback Monitoring",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Outbound HTTP requests and error rates to BCRA, DolarApi, and ArgentinaDatos APIs",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Requests / sec",
+            "fillOpacity": 15,
+            "lineWidth": 2
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 301,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (provider) (rate(economic_dashboard_external_api_requests_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[1m]))",
+          "legendFormat": "{{provider}} [requests]",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (provider) (rate(economic_dashboard_external_api_errors_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[1m]))",
+          "legendFormat": "{{provider}} [errors]",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "External API Invocations & Errors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Invocations of synthetic mock data fallbacks due to upstream downtime or force_mock",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Invocations (1h)",
+            "fillOpacity": 25,
+            "lineWidth": 2
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 302,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (provider, reason) (increase(economic_dashboard_telemetry_fallback_invocations_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[1h]))",
+          "legendFormat": "{{provider}} ({{reason}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Synthetic Mock Fallback Activations (1h)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 400,
+      "title": "Early Warning Risk Alerts & Executive Export Pipelines",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Frequency of early warning badges (deterioration, non-bank concentration, unpaid checks, debt acceleration)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Badges / sec",
+            "fillOpacity": 20,
+            "lineWidth": 2
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 401,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (badge_type) (rate(economic_dashboard_risk_early_warning_badges_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m]))",
+          "legendFormat": "{{badge_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Early Warning Alert Badges Triggered",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Throughput and p95 latency for 1-page PDF dossiers and batch Excel portfolio exports",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Latency (s)",
+            "fillOpacity": 15,
+            "lineWidth": 2
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 402,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, format) (rate(economic_dashboard_report_export_duration_seconds_bucket{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])))",
+          "legendFormat": "{{format}} [p95 latency]",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (format) (rate(economic_dashboard_report_export_requests_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m]))",
+          "legendFormat": "{{format}} [rate/s]",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Executive Report Export Performance (PDF & Excel)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 500,
+      "title": "Structured Application Logs (Loki)",
+      "type": "row"
     },
     {
       "datasource": {
@@ -256,12 +694,12 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 31
       },
-      "id": 4,
+      "id": 501,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
@@ -284,7 +722,7 @@
           "refId": "A"
         }
       ],
-      "title": "Structured Application Logs (Loki)",
+      "title": "Live Application Logs",
       "type": "logs"
     }
   ],
@@ -296,7 +734,64 @@
     "opentelemetry"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(environment)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Environment",
+        "multi": true,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(environment)"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(deployed_version)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Deployed Version",
+        "multi": true,
+        "name": "deployed_version",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(deployed_version)"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
@@ -314,5 +809,5 @@
   "timezone": "browser",
   "title": "Observability Stack Overview",
   "uid": "economic-dashboard-overview",
-  "version": 1
+  "version": 2
 }

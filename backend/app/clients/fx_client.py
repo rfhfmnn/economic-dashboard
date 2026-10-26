@@ -106,17 +106,28 @@ class FXClient:
 
     def get_all_rates(self) -> List[Dict[str, Any]]:
         """Fetch all current dollar quotations."""
+        import time
+        from backend.app.metrics import track_external_call, track_fallback_invocation
+
         if self.force_mock:
+            track_fallback_invocation(provider="dolarapi", reason="force_mock")
             return MOCK_FX_RATES
 
+        start_time = time.perf_counter()
         try:
             response = self.client.get(self.base_url)
+            duration = time.perf_counter() - start_time
             response.raise_for_status()
+            track_external_call("dolarapi", self.base_url, duration, success=True)
             data = response.json()
             if isinstance(data, list) and len(data) > 0:
                 return data
+            track_fallback_invocation(provider="dolarapi", reason="empty_payload")
             return MOCK_FX_RATES
         except Exception as exc:
+            duration = time.perf_counter() - start_time
+            track_external_call("dolarapi", self.base_url, duration, success=False, error_type=type(exc).__name__)
+            track_fallback_invocation(provider="dolarapi", reason="network_or_api_error")
             logger.warning(
                 "FX API request to %s failed (%s: %s). Falling back to mock FX rates.",
                 self.base_url,

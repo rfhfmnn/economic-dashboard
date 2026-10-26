@@ -75,9 +75,19 @@ class RiskService:
         bypass_cache: bool = False,
     ) -> Dict[str, Any]:
         """Fetch, consolidate, and parse Central de Deudores credit report for a given CUIT."""
+        import time
+        from backend.app.metrics import (
+            track_cache_access,
+            track_cuit_screen,
+            track_cuit_validation_failure,
+        )
+
         clean = clean_cuit(cuit)
         if not validate_cuit(clean):
+            track_cuit_validation_failure("modulo_11")
             raise ValueError(f"CUIT inválido '{cuit}' según el algoritmo Módulo 11 de AFIP.")
+
+        start_time = time.perf_counter()
 
         # Check local SQLite cache first if db session is provided
         if db is not None and not bypass_cache:
@@ -100,8 +110,18 @@ class RiskService:
                 )
                 if not is_mock_payload:
                     logger.info("Serving debtor report for CUIT %s from database cache", clean)
+                    track_cache_access(hit=True, cache_type="cuit")
+                    duration = time.perf_counter() - start_time
+                    track_cuit_screen(
+                        "single_cached",
+                        duration,
+                        worst_situation=cached.raw_payload.get("peor_situacion"),
+                        badges=cached.raw_payload.get("alertas_tempranas"),
+                    )
                     return cached.raw_payload
                 logger.info("Bypassing stale mock cache for CUIT %s to fetch live BCRA data", clean)
+
+        track_cache_access(hit=False, cache_type="cuit")
 
         # Fetch from external BCRA client (with automatic synthetic fallback)
         raw_deudas = self.bcra_client.get_deudas(clean)
@@ -133,6 +153,13 @@ class RiskService:
             db.execute(stmt)
             db.commit()
 
+        duration = time.perf_counter() - start_time
+        track_cuit_screen(
+            "single",
+            duration,
+            worst_situation=parsed_report.get("peor_situacion"),
+            badges=parsed_report.get("alertas_tempranas"),
+        )
         return parsed_report
 
     def _parse_debtor_data(
