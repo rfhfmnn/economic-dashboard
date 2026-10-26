@@ -1,0 +1,42 @@
+# Version control
+.git
+.gitignore
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node and frontend artifacts
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+.npm
+
+# SQLite databases & local data
+*.db
+*.sqlite
+*.sqlite3
+economic_dashboard.db
+backend/economic_dashboard.db
+
+# Logs and environment files
+*.log
+.env
+.env.*
+
+# Project documentation & agent tooling
+.agent/
+_docs/
+.idea/
+.vscode/
+.DS_Store

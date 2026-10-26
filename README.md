@@ -38,6 +38,19 @@ npm test           # Runs frontend tests
 npm run backend:test # Runs backend pytest suite
 ```
 
+### 🐳 Docker Container Launch (Unified Backend + Frontend)
+
+Build and run the entire application in a single container (FastAPI serving the React SPA bundle):
+
+```bash
+# Build the Docker image (multi-stage build with Node & Python)
+docker build -t economic-dashboard .
+
+# Run the container
+docker run -p 8000:8000 economic-dashboard
+```
+Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8000/docs`).
+
 ---
 
 ### Manual Service Commands
