@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.services.macro_service import MacroService
+from backend.app.telemetry import get_telemetry_info
 
 router = APIRouter(prefix="/api/system", tags=["System"])
 macro_service = MacroService()
@@ -15,7 +16,7 @@ macro_service = MacroService()
 
 @router.get("/status")
 def get_system_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Check system operational status, database connectivity, and mock mode configuration."""
+    """Check system operational status, database connectivity, mock mode, and telemetry configuration."""
     db_connected = False
     try:
         db.execute(text("SELECT 1"))
@@ -31,6 +32,7 @@ def get_system_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
             "bcra_api": "active",
             "fx_api": "active",
         },
+        "telemetry": get_telemetry_info(),
         "timestamp": datetime.now().isoformat(),
     }
 
@@ -39,3 +41,9 @@ def get_system_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
 def get_system_health(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Healthcheck endpoint returning system health and connectivity."""
     return get_system_status(db=db)
+
+
+@router.get("/telemetry")
+def get_system_telemetry() -> Dict[str, Any]:
+    """Return OpenTelemetry metadata including service name, environment, and deployed version."""
+    return get_telemetry_info()

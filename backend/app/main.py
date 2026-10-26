@@ -6,12 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.app.database import init_db
+from backend.app.database import engine, init_db
 from backend.app.routes.export_routes import router as export_router
 from backend.app.routes.macro_routes import router as macro_router
 from backend.app.routes.rem_routes import router as rem_router
 from backend.app.routes.risk_routes import router as risk_router
 from backend.app.routes.system_routes import router as system_router
+from backend.app.telemetry import init_telemetry
 
 
 @asynccontextmanager
@@ -27,6 +28,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Instrument FastAPI, HTTPX, and SQLAlchemy with OpenTelemetry
+init_telemetry(app=app, engine=engine)
 
 # Configure CORS for local development and frontend access
 app.add_middleware(

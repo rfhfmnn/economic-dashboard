@@ -38,6 +38,9 @@ services:
       STATIC_DIR: /app/frontend/dist
       FORCE_MOCK: ${FORCE_MOCK:-false}
       PYTHONUNBUFFERED: "1"
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-economic-dashboard-backend-dev}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEPLOYED_VERSION: ${DEPLOYED_VERSION:-0.1.0-dev}
     ports:
       - "${PORT:-8000}:8000"
     healthcheck:
