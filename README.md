@@ -1,13 +1,54 @@
 # Economic & Credit Risk Dashboard (BCRA)
 
-An institutional-grade financial and credit risk intelligence dashboard powered by public data from the **Banco Central de la República Argentina (BCRA)** and complementary financial FX sources (DolarApi).
+> 🌐 **Live Public Deployment:** [Economic & Credit Risk Dashboard (BCRA)](https://economic-dashboard-p91x.onrender.com/)
+
+An institutional-grade financial and credit risk intelligence dashboard powered by public data from the **Banco Central de la República Argentina (BCRA)**, **ArgentinaDatos (REM)**, and complementary financial FX sources (**DolarApi**).
+
+---
+
+## 📌 Problem Description
+
+Financial analysts, credit risk officers, and treasury desks operating in Argentina confront unique, severe structural challenges:
+1. **Severe Data Fragmentation & Currency Volatility:** Tracking monetary policy, high-inflation dynamics, and parallel exchange rate regimes (*brecha cambiaria* between the official rate and financial rates like MEP, CCL, and Blue) requires querying multiple disparate and disconnected sources.
+2. **Opaque Credit Risk & Central de Deudores Complexity:** Evaluating debtor solvency requires analyzing the BCRA *Central de Deudores*, which presents debtor classifications (*Situación 1 to 6*), historical credit deterioration, and unpaid bounced checks across the banking system in fragmented formats without automated risk alerting.
+3. **External API Instability & Public Certificate Quirks:** Argentine public financial APIs (`api.bcra.gob.ar`) frequently experience non-standard SSL certificate chains, rate limiting, and intermittent downtime, causing mission-critical risk workflows to crash without resilient fallback mechanisms.
+4. **Lack of Automated Batch Screening:** Credit committees evaluating dozens of corporate clients simultaneously are forced to run manual, one-by-one queries without batch AFIP Módulo 11 checksum validation or comparative risk ranking.
+
+---
+
+## ⚡ System Functionality & Expected Behavior
+
+This platform delivers an institutional-grade analytical cockpit structured around four core analytical workflows:
+
+### 1. Macro & FX Monitor
+- **Monetary Aggregates & Rates:** Real-time and historical tracking of Monetary Base, Central Bank International Reserves, LELIQ / Policy Rates, Badlar, CER, UVA, and inflation indices.
+- **Financial FX & Brecha Cambiaria:** Side-by-side comparison of Official Wholesale and Retail exchange rates against parallel financial quotations (MEP, CCL, and Blue), automatically calculating the exchange rate spread (*brecha cambiaria*).
+- **Dynamic Variable Catalog:** Interactive search across the complete BCRA series catalog with multi-timeframe filtering (1M, 3M, 6M, 1Y, 5Y, Max) and dual-axis comparison charts.
+
+### 2. REM Macroeconomic Expectations (Relevamiento de Expectativas de Mercado)
+- **Consensus Projections:** Automated ingestion of market expectations from top financial institutions and consulting firms via ArgentinaDatos REM API.
+- **Inflation Fan Chart:** Expected vs. Actual CPI inflation comparison cone, analyzing monthly projections and annual trajectories against actual INDEC inflation.
+- **FX Expectations & Dispersion:** Nominal exchange rate projections with statistical breakdowns across Top 10 forecasters vs. general survey consensus.
+
+### 3. Credit Risk Screener (Central de Deudores)
+- **Single CUIT/CUIL Lookup:** Instant tax ID query with automated AFIP Módulo 11 checksum validation and local caching.
+- **24-Month Classification Matrix:** Visual month-by-month history detailing borrower credit status across BCRA ratings (*Situación 1: Normal* to *Situación 6: Irrecuperable por disposición técnica*).
+- **Entity Exposure & Bounced Checks:** Breakdown of debt held by each financial institution, non-bank lender concentration metrics, and rejected checks (*cheques rechazados* by lack of funds or technical defects).
+- **Automated Early-Warning Engine:** Real-time badge indicators for credit rating downgrades within 6 months, debt acceleration (>50% YoY growth), high concentration in non-bank fintech lenders, and recent unpaid checks.
+
+### 4. Batch Portfolio Assessment & Executive Reporting
+- **Multi-Debtor Upload:** Drag-and-drop ingestion of CSV or TXT debtor lists with instant client-side CUIT validation.
+- **Comparative Risk Board:** Portfolio ranking by worst credit situation, aggregate debt volume, and alert severity.
+- **1-Click Executive Export:** Generation of printable 1-page Executive PDF Credit Dossiers (formatted with dedicated `@media print` stylesheets for credit committee review) and Excel workbook exports.
 
 ---
 
 ## Architecture Overview
 
-- **Backend:** Python 3.11+, FastAPI, SQLite (SQLAlchemy), HTTPX with custom SSL handling, Pytest.
+- **Backend:** Python 3.11+, FastAPI, SQLite / PostgreSQL (SQLAlchemy), HTTPX with custom SSL handling & synthetic mock fallback, OpenTelemetry, Pytest.
 - **Frontend:** React 18+, Vite, TypeScript, Tailwind CSS, Lucide React, Recharts.
+- **Observability:** OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana.
+- **Incident Response:** Automated On-Call Engineer agent polling alert endpoints and triggering headless coding remediation.
 - **Documentation & Standards:** See `_docs/plan.md`, `_docs/tasks.md`, `_docs/design-system.md`, and `_docs/testing-guidelines.md`.
 
 ---
@@ -114,7 +155,7 @@ To enable multi-environment deployments, configure the following in GitHub under
 |---|---|---|
 | `RENDER_DEPLOY_HOOK_URL_PROD` | Production | Render Deploy Hook URL for production service. |
 | `RENDER_SERVICE_ID_PROD` | Production | Render Service ID (`srv-...`) for production service. |
-| `RENDER_APP_URL_PROD` | Production | Public production URL (e.g. `https://economic-dashboard-prod.onrender.com`). |
+| `RENDER_APP_URL_PROD` | Production | Public production URL (`https://economic-dashboard-p91x.onrender.com`). |
 | `RENDER_DEPLOY_HOOK_URL_DEV` | Development | Render Deploy Hook URL for development service. |
 | `RENDER_SERVICE_ID_DEV` | Development | Render Service ID (`srv-...`) for development service. |
 | `RENDER_APP_URL_DEV` | Development | Public development URL (e.g. `https://economic-dashboard-dev.onrender.com`). |
