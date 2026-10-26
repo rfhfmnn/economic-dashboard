@@ -1,0 +1,83 @@
+groups:
+  - name: economic_dashboard_api_alerts
+    rules:
+      - alert: HighAPIFailureRate
+        expr: |
+          (
+            sum by (service_name, environment, deployed_version, provider) (
+              rate(economic_dashboard_external_api_errors_total[5m])
+            )
+            /
+            sum by (service_name, environment, deployed_version, provider) (
+              rate(economic_dashboard_external_api_requests_total[5m])
+            )
+          ) * 100 > 10
+        for: 5m
+        labels:
+          severity: critical
+          owner: financial-data-platform-team
+          service: "{{ $labels.service_name }}"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.deployed_version }}"
+        annotations:
+          summary: "High API failure rate on {{ $labels.service_name }} ({{ $labels.provider }})"
+          description: "Outbound API failure rate for provider '{{ $labels.provider }}' on service '{{ $labels.service_name }}' (environment: {{ $labels.environment }}, deployed version: {{ $labels.deployed_version }}) is {{ $value | printf \"%.2f\" }}% over the last 5 minutes. Sustained failure rate exceeding 10% directly impacts real users by degrading debtor risk lookups and monetary series accuracy."
+          service: "{{ $labels.service_name }}"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.deployed_version }}"
+          owner: "financial-data-platform-team"
+          dashboard_url: "http://localhost:3000/d/economic-dashboard-overview?var-environment={{ $labels.environment }}&var-deployed_version={{ $labels.deployed_version }}"
+          action: "1. Inspect upstream financial provider status (BCRA, DolarApi, REM). 2. Check Loki logs for HTTP 5xx/Timeout errors with TraceID. 3. Validate SSL certificate validity. 4. Verify synthetic mock fallback and database cache are serving requests."
+          runbook_url: "https://github.com/rfhfmnn/economic-dashboard/blob/master/observability/README.md#incident-response-api-failures"
+
+      - alert: CriticalAPIFailureRate
+        expr: |
+          (
+            sum by (service_name, environment, deployed_version, provider) (
+              rate(economic_dashboard_external_api_errors_total[2m])
+            )
+            /
+            sum by (service_name, environment, deployed_version, provider) (
+              rate(economic_dashboard_external_api_requests_total[2m])
+            )
+          ) * 100 > 50
+        for: 2m
+        labels:
+          severity: page
+          owner: financial-data-platform-team
+          service: "{{ $labels.service_name }}"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.deployed_version }}"
+        annotations:
+          summary: "CRITICAL: Major API outage on {{ $labels.service_name }} ({{ $labels.provider }})"
+          description: "Severe API failure rate (>50%) detected on provider '{{ $labels.provider }}' on service '{{ $labels.service_name }}' (environment: {{ $labels.environment }}, deployed version: {{ $labels.deployed_version }}). Current failure rate is {{ $value | printf \"%.2f\" }}% over 2 minutes."
+          service: "{{ $labels.service_name }}"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.deployed_version }}"
+          owner: "financial-data-platform-team"
+          dashboard_url: "http://localhost:3000/d/economic-dashboard-overview?var-environment={{ $labels.environment }}&var-deployed_version={{ $labels.deployed_version }}"
+          action: "Immediate investigation required. Upstream API is completely unavailable or timing out. Ensure fallback mode is enabled if production data cannot be reached."
+          runbook_url: "https://github.com/rfhfmnn/economic-dashboard/blob/master/observability/README.md#incident-response-api-failures"
+
+      - alert: APIFallbackActivationHigh
+        expr: |
+          sum by (service_name, environment, deployed_version, provider) (
+            rate(economic_dashboard_telemetry_fallback_invocations_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          owner: financial-data-platform-team
+          service: "{{ $labels.service_name }}"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.deployed_version }}"
+        annotations:
+          summary: "High synthetic fallback activation rate for {{ $labels.provider }}"
+          description: "Service '{{ $labels.service_name }}' (env: {{ $labels.environment }}, version: {{ $labels.deployed_version }}) is heavily falling back to synthetic mock data for provider '{{ $labels.provider }}' at rate {{ $value | printf \"%.3f\" }}/s over 5 minutes."
+          service: "{{ $labels.service_name }}"
+          environment: "{{ $labels.environment }}"
+          deployed_version: "{{ $labels.deployed_version }}"
+          owner: "financial-data-platform-team"
+          dashboard_url: "http://localhost:3000/d/economic-dashboard-overview?var-environment={{ $labels.environment }}&var-deployed_version={{ $labels.deployed_version }}"
+          action: "Check why remote API requests are failing and forcing mock data fallback in the application."
+          runbook_url: "https://github.com/rfhfmnn/economic-dashboard/blob/master/observability/README.md#incident-response-api-failures"

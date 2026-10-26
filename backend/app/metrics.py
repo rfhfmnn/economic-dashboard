@@ -116,6 +116,7 @@ def get_metric_attributes(extra_attrs: Optional[Dict[str, Any]] = None) -> Dict[
         "environment": get_environment(),
         "deployed_version": get_deployed_version(),
         "service_name": get_service_name(),
+        "service": get_service_name(),
     }
     if extra_attrs:
         attrs.update(extra_attrs)

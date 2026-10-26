@@ -1,0 +1,102 @@
+rule_files:
+  - /tmp/alert_rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # 1. High API Failure Rate Test (Threshold: > 10% for 5m)
+  - interval: 1m
+    input_series:
+      - series: 'economic_dashboard_external_api_requests_total{service_name="economic-dashboard-backend-prod", environment="production", deployed_version="0.1.0", provider="bcra"}'
+        values: '0+10x10'
+      - series: 'economic_dashboard_external_api_errors_total{service_name="economic-dashboard-backend-prod", environment="production", deployed_version="0.1.0", provider="bcra"}'
+        values: '0+2x10' # 20% failure rate (> 10%)
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: HighAPIFailureRate
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: HighAPIFailureRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: financial-data-platform-team
+              service: economic-dashboard-backend-prod
+              environment: production
+              deployed_version: "0.1.0"
+              service_name: economic-dashboard-backend-prod
+              provider: bcra
+            exp_annotations:
+              summary: "High API failure rate on economic-dashboard-backend-prod (bcra)"
+              description: "Outbound API failure rate for provider 'bcra' on service 'economic-dashboard-backend-prod' (environment: production, deployed version: 0.1.0) is 20.00% over the last 5 minutes. Sustained failure rate exceeding 10% directly impacts real users by degrading debtor risk lookups and monetary series accuracy."
+              service: economic-dashboard-backend-prod
+              environment: production
+              deployed_version: "0.1.0"
+              owner: financial-data-platform-team
+              dashboard_url: "http://localhost:3000/d/economic-dashboard-overview?var-environment=production&var-deployed_version=0.1.0"
+              action: "1. Inspect upstream financial provider status (BCRA, DolarApi, REM). 2. Check Loki logs for HTTP 5xx/Timeout errors with TraceID. 3. Validate SSL certificate validity. 4. Verify synthetic mock fallback and database cache are serving requests."
+              runbook_url: "https://github.com/rfhfmnn/economic-dashboard/blob/master/observability/README.md#incident-response-api-failures"
+
+  # 2. Critical API Failure Rate Test (Threshold: > 50% for 2m)
+  - interval: 1m
+    input_series:
+      - series: 'economic_dashboard_external_api_requests_total{service_name="economic-dashboard-backend-prod", environment="production", deployed_version="0.1.0", provider="dolarapi"}'
+        values: '0+10x5'
+      - series: 'economic_dashboard_external_api_errors_total{service_name="economic-dashboard-backend-prod", environment="production", deployed_version="0.1.0", provider="dolarapi"}'
+        values: '0+8x5' # 80% failure rate (> 50%)
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: CriticalAPIFailureRate
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: CriticalAPIFailureRate
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              owner: financial-data-platform-team
+              service: economic-dashboard-backend-prod
+              environment: production
+              deployed_version: "0.1.0"
+              service_name: economic-dashboard-backend-prod
+              provider: dolarapi
+            exp_annotations:
+              summary: "CRITICAL: Major API outage on economic-dashboard-backend-prod (dolarapi)"
+              description: "Severe API failure rate (>50%) detected on provider 'dolarapi' on service 'economic-dashboard-backend-prod' (environment: production, deployed version: 0.1.0). Current failure rate is 80.00% over 2 minutes."
+              service: economic-dashboard-backend-prod
+              environment: production
+              deployed_version: "0.1.0"
+              owner: financial-data-platform-team
+              dashboard_url: "http://localhost:3000/d/economic-dashboard-overview?var-environment=production&var-deployed_version=0.1.0"
+              action: "Immediate investigation required. Upstream API is completely unavailable or timing out. Ensure fallback mode is enabled if production data cannot be reached."
+              runbook_url: "https://github.com/rfhfmnn/economic-dashboard/blob/master/observability/README.md#incident-response-api-failures"
+
+  # 3. API Fallback Activation Rate Test (Threshold: > 0.05/s for 5m)
+  - interval: 1m
+    input_series:
+      - series: 'economic_dashboard_telemetry_fallback_invocations_total{service_name="economic-dashboard-backend-dev", environment="development", deployed_version="0.1.0-dev", provider="bcra"}'
+        values: '0+6x10' # 6 per minute = 0.1/s (> 0.05/s)
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: APIFallbackActivationHigh
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: APIFallbackActivationHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: financial-data-platform-team
+              service: economic-dashboard-backend-dev
+              environment: development
+              deployed_version: "0.1.0-dev"
+              service_name: economic-dashboard-backend-dev
+              provider: bcra
+            exp_annotations:
+              summary: "High synthetic fallback activation rate for bcra"
+              description: "Service 'economic-dashboard-backend-dev' (env: development, version: 0.1.0-dev) is heavily falling back to synthetic mock data for provider 'bcra' at rate 0.100/s over 5 minutes."
+              service: economic-dashboard-backend-dev
+              environment: development
+              deployed_version: "0.1.0-dev"
+              owner: financial-data-platform-team
+              dashboard_url: "http://localhost:3000/d/economic-dashboard-overview?var-environment=development&var-deployed_version=0.1.0-dev"
+              action: "Check why remote API requests are failing and forcing mock data fallback in the application."
+              runbook_url: "https://github.com/rfhfmnn/economic-dashboard/blob/master/observability/README.md#incident-response-api-failures"

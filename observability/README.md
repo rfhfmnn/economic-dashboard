@@ -70,7 +70,9 @@ observability/
 ├── otel-collector/
 │   └── config.yaml                 # OpenTelemetry Collector pipelines & routing
 ├── prometheus/
-│   └── prometheus.yaml             # Prometheus scrape target configurations
+│   ├── prometheus.yaml             # Prometheus scrape target configurations
+│   ├── alert_rules.yaml            # Actionable Prometheus alerting rules
+│   └── test_alert_rules.yaml       # Promtool unit tests for alerting rules
 ├── loki/
 │   └── loki-config.yaml            # Loki 3.x storage, schema & indexing config
 ├── tempo/
@@ -169,6 +171,36 @@ networks:
     name: observability-net
     external: true
 ```
+
+---
+
+## Alerting & Incident Response (API Failures)
+
+The observability stack includes automated, actionable alerts for external and backend financial API failures configured in `observability/prometheus/alert_rules.yaml`.
+
+### 1. Alert Architecture & Rationale
+
+| Alert Name | Severity | Threshold | Duration | Rationale (Real User Impact) |
+|---|---|---|---|---|
+| `HighAPIFailureRate` | `critical` | `> 10%` error rate | `5m` | Sustained error rate over 10% directly impacts real users by failing debtor risk evaluations, currency rate checks, and monetary series updates. The 5m window eliminates noise from transient gateway restarts or single network timeouts. |
+| `CriticalAPIFailureRate` | `page` | `> 50%` error rate | `2m` | Severe API outage where the majority of outbound financial requests fail immediately. Requires immediate incident mitigation. |
+| `APIFallbackActivationHigh` | `warning` | `> 0.05` events/s | `5m` | Indicates persistent failure to reach live providers, forcing silent fallback to synthetic mock data. |
+
+### 2. Standardized Alert Context & Metadata
+
+Every alert carries comprehensive diagnostic labels and annotations:
+- `service`: Target microservice (`{{ $labels.service_name }}`)
+- `environment`: Deployment tier (`development`, `production`, etc.)
+- `deployed_version`: Deployed release version (`{{ $labels.deployed_version }}`)
+- `owner`: Responsible engineering team (`financial-data-platform-team`)
+- `dashboard_url`: Direct link to Grafana dashboard with active filters pre-populated (`http://localhost:3000/d/economic-dashboard-overview?var-environment=...`)
+- `action`: Prescriptive triage and runbook steps for on-call responders.
+
+### 3. Incident Response Runbook (API Failures)
+1. **Open Dashboard:** Click `dashboard_url` to inspect request throughput, error codes, and fallback rates.
+2. **Verify Upstream Status:** Confirm whether BCRA (`api.bcra.gob.ar`) or DolarApi (`dolarapi.com`) are undergoing scheduled maintenance or outages.
+3. **Inspect Logs & Traces:** Jump to Loki in Grafana using trace IDs to see underlying HTTP client exceptions (e.g., SSL certificate errors, timeouts).
+4. **Fallback & Cache Health:** Verify SQLite `cuit_cache` and synthetic fallbacks are serving cached records to end users.
 
 ---
 

@@ -108,6 +108,8 @@ def test_prometheus_config_validity():
     job_names = {s["job_name"] for s in cfg["scrape_configs"]}
     assert "prometheus" in job_names
     assert any("otel" in j for j in job_names), "Prometheus must scrape OpenTelemetry Collector metrics"
+    assert "rule_files" in cfg, "Prometheus config must declare rule_files"
+    assert any("alert_rules.yaml" in str(r) for r in cfg["rule_files"]), "rule_files must include alert_rules.yaml"
 
 
 def test_loki_config_validity():
@@ -230,3 +232,64 @@ def test_dev_and_prod_connected_to_observability_stack():
         assert "OTEL_SERVICE_NAME" in str(env_dict)
         assert svc_name_expected in str(env_dict)
         assert env_expected in str(env_dict)
+
+
+def test_prometheus_alert_rules_exist_and_actionable():
+    """Verify Prometheus alert rules define actionable API failure alerts with required metadata."""
+    alert_rules_path = OBSERVABILITY_DIR / "prometheus" / "alert_rules.yaml"
+    assert alert_rules_path.exists(), "observability/prometheus/alert_rules.yaml must exist"
+
+    with open(alert_rules_path, "r", encoding="utf-8") as f:
+        alert_cfg = yaml.safe_load(f)
+
+    assert "groups" in alert_cfg
+    groups = alert_cfg["groups"]
+    assert len(groups) > 0
+
+    api_group = next((g for g in groups if "api" in g["name"].lower()), None)
+    assert api_group is not None, "Rule group for API alerts must exist"
+
+    rules = {r["alert"]: r for r in api_group.get("rules", [])}
+    assert "HighAPIFailureRate" in rules, "HighAPIFailureRate alert must be defined"
+
+    high_fail_alert = rules["HighAPIFailureRate"]
+
+    # 1. Verify threshold and duration represent real user impact
+    assert high_fail_alert.get("for") == "5m", "Duration must be 5m to represent sustained user impact and prevent flapping"
+    expr = high_fail_alert.get("expr", "")
+    assert "economic_dashboard_external_api_errors_total" in expr
+    assert "economic_dashboard_external_api_requests_total" in expr
+    assert "> 10" in expr, "Error rate threshold must be set to > 10%"
+
+    # 2. Verify service, environment, deployed_version, owner, and dashboard URL are included
+    labels = high_fail_alert.get("labels", {})
+    annotations = high_fail_alert.get("annotations", {})
+
+    # In labels
+    assert "service" in labels or "service_name" in labels
+    assert "environment" in labels
+    assert "deployed_version" in labels
+    assert "owner" in labels
+    assert labels["owner"] == "financial-data-platform-team"
+    assert labels.get("severity") == "critical"
+
+    # In annotations
+    assert "service" in annotations
+    assert "environment" in annotations
+    assert "deployed_version" in annotations
+    assert "owner" in annotations
+    assert "dashboard_url" in annotations
+    assert "economic-dashboard-overview" in annotations["dashboard_url"]
+    assert "var-environment=" in annotations["dashboard_url"]
+    assert "var-deployed_version=" in annotations["dashboard_url"]
+    assert "action" in annotations, "Alert must be actionable with prescribed triage actions"
+    assert "summary" in annotations
+    assert "description" in annotations
+
+    # 3. Verify Docker Compose mounts alert_rules.yaml into Prometheus
+    compose_path = OBSERVABILITY_DIR / "docker-compose.yaml"
+    with open(compose_path, "r", encoding="utf-8") as f:
+        compose_cfg = yaml.safe_load(f)
+    prom_volumes = compose_cfg["services"]["prometheus"].get("volumes", [])
+    assert any("alert_rules.yaml" in str(v) for v in prom_volumes), "docker-compose.yaml must mount alert_rules.yaml"
+
