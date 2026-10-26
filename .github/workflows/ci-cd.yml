@@ -232,9 +232,17 @@ jobs:
 
       - name: Validate Deployment via Health Endpoint
         env:
-          RENDER_APP_URL: ${{ vars.RENDER_APP_URL || secrets.RENDER_APP_URL || 'https://economic-dashboard.onrender.com' }}
+          RENDER_APP_URL: ${{ vars.RENDER_APP_URL || secrets.RENDER_APP_URL }}
           TIMEOUT_SECONDS: ${{ vars.DEPLOY_TIMEOUT_SECONDS || 300 }}
         run: |
+          if [ -z "$RENDER_APP_URL" ]; then
+            echo "=========================================================="
+            echo "ℹ️ Notice: RENDER_APP_URL is not configured in repository variables/secrets."
+            echo "Skipping external health probe validation. Configure RENDER_APP_URL to enable live verification."
+            echo "=========================================================="
+            exit 0
+          fi
+
           echo "=========================================================="
           echo "🩺 Validating Render Deployment Health Probe"
           echo " Target Application: $RENDER_APP_URL"
