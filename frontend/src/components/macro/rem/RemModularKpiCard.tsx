@@ -351,12 +351,12 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
     >
       <div>
         {/* Top Header: Fixed Variable Name on Left, Horizon Select on Right */}
-        <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-start justify-between gap-3 mb-3 min-h-[2.5rem]">
           {/* Dedicated Variable Title & Icon */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="flex-shrink-0">{getVariableIcon(variableData.id)}</span>
+          <div className="flex items-start gap-2 min-w-0 flex-1">
+            <span className="flex-shrink-0 mt-0.5">{getVariableIcon(variableData.id)}</span>
             <span
-              className="text-xs sm:text-[13px] font-semibold text-slate-200 uppercase tracking-wide truncate"
+              className="text-xs sm:text-[13px] font-semibold text-slate-200 uppercase tracking-wide break-words leading-tight"
               title={variableData.name}
             >
               {variableData.name}
@@ -364,7 +364,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
           </div>
 
           {/* Horizon Selector Dropdown */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 mt-0.5">
             <select
               aria-label={`Horizonte para ${variableData.name}`}
               data-testid={`horizon-select-${variableData.id}`}

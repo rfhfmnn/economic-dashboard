@@ -47,14 +47,14 @@ export const RemMetricCard: React.FC<RemMetricCardProps> = ({
     >
       <div>
         {/* Header: Title and Period Tag */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2">
-            {icon && <span className="text-blue-400">{icon}</span>}
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+        <div className="flex items-start justify-between gap-2 mb-2 min-h-[2.25rem]">
+          <div className="flex items-start gap-2 min-w-0 flex-1">
+            {icon && <span className="text-blue-400 flex-shrink-0 mt-0.5">{icon}</span>}
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider break-words leading-tight">
               {title}
             </span>
           </div>
-          <span className="text-xs font-mono bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded border border-slate-700/50">
+          <span className="text-xs font-mono bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded border border-slate-700/50 flex-shrink-0 mt-0.5">
             {period}
           </span>
         </div>
