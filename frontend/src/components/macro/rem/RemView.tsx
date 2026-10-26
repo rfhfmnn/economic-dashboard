@@ -284,9 +284,9 @@ export const RemView: React.FC<RemViewProps> = () => {
         </div>
       )}
 
-      {/* Dedicated Macroeconomic Variables KPI Grid */}
+      {/* Dedicated Macroeconomic Variables KPI Grid (3 per row) */}
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
         data-testid="rem-kpi-grid"
       >
         {modularKpis?.variables ? (

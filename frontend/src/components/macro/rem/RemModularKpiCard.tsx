@@ -347,16 +347,16 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
   return (
     <div
       data-testid={`rem-kpi-card-${variableData.id}`}
-      className="bg-slate-900/75 border border-slate-800/90 hover:border-slate-700/80 rounded-xl p-4 shadow-lg backdrop-blur-sm transition-all duration-200 flex flex-col justify-between"
+      className="bg-slate-900/80 border border-slate-800/90 hover:border-slate-700/80 rounded-xl p-4 sm:p-5 shadow-lg backdrop-blur-sm transition-all duration-200 flex flex-col justify-between"
     >
       <div>
         {/* Top Header: Fixed Variable Name on Left, Horizon Select on Right */}
-        <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center justify-between gap-3 mb-3">
           {/* Dedicated Variable Title & Icon */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <span className="flex-shrink-0">{getVariableIcon(variableData.id)}</span>
             <span
-              className="text-xs font-semibold text-slate-200 uppercase tracking-wider truncate"
+              className="text-xs sm:text-[13px] font-semibold text-slate-200 uppercase tracking-wide truncate"
               title={variableData.name}
             >
               {variableData.name}
@@ -364,13 +364,13 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
           </div>
 
           {/* Horizon Selector Dropdown */}
-          <div className="flex-shrink-0 max-w-[50%]">
+          <div className="flex-shrink-0">
             <select
               aria-label={`Horizonte para ${variableData.name}`}
               data-testid={`horizon-select-${variableData.id}`}
               value={activeHorizonKey}
               onChange={(e) => onHorizonChange(e.target.value)}
-              className="bg-slate-950/90 border border-slate-700/80 rounded-lg px-2 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer hover:border-slate-600 transition-colors"
+              className="bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer hover:border-slate-600 transition-colors"
             >
               {variableData.available_horizons.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -403,16 +403,16 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
 
         {/* Confidence Interquartile Band (P25 - P75) */}
         {formattedP25 && formattedP75 && (
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 bg-slate-950/40 px-2 py-1 rounded border border-slate-800/60 font-mono">
-            <span className="text-slate-400 text-[10px]">Rango intercuartil (P25 - P75):</span>
-            <span className="text-slate-200 tabular-nums">
+          <div className="mt-2.5 flex items-center justify-between text-xs text-slate-400 bg-slate-950/40 px-2.5 py-1.5 rounded-lg border border-slate-800/60 font-mono">
+            <span className="text-slate-400 text-[11px]">Rango intercuartil (P25 - P75):</span>
+            <span className="text-slate-200 font-semibold tabular-nums">
               {formattedP25} — {formattedP75}
             </span>
           </div>
         )}
 
         {/* Micro-Visualization Zone with Mode Switcher */}
-        <div className="mt-3 pt-2.5 border-t border-slate-800/60">
+        <div className="mt-3.5 pt-2.5 border-t border-slate-800/60">
           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
             <span className="font-medium text-slate-400 flex items-center gap-1">
               {viewMode === 'future' ? (
