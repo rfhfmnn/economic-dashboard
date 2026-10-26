@@ -172,36 +172,38 @@ class RemService:
             prev_y = y - 1 if m == 1 else y
             prev_period = f"{prev_y}-{prev_m:02d}"
 
-            month_abbrs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-            period_label = f"{month_abbrs[m-1]}-{str(y)[2:]}"
+            month_abbrs_es = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+            month_abbrs_en = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            period_label = f"{month_abbrs_es[m-1]}-{str(y)[2:]}"
 
             # Try to get previous report expectation
             expected_cpi = None
             p25 = None
             p75 = None
 
-            if prev_period in available_reports or prev_period in ("2026-08", "2026-07", "2026-09"):
-                report_data = self.rem_client.get_report(prev_period, db=db)
-                matching = [
-                    r for r in report_data
-                    if r.get("muestra") == cohort
-                    and ("ipc nivel general" in r.get("indicador", "").lower() or "precios minoristas" in r.get("indicador", "").lower())
-                    and r.get("periodoTipo") == "mensual"
-                ]
-                # Look for matching target month in projection periods
-                for r in matching:
-                    r_p = r.get("periodo", "")
-                    if f"{month_abbrs[m-1]}" in r_p:
-                        expected_cpi = float(r.get("mediana") or 0.0)
-                        p25 = float(r.get("percentil25") or expected_cpi - 0.2)
-                        p75 = float(r.get("percentil75") or expected_cpi + 0.2)
-                        break
+            if prev_period in available_reports or prev_period in ("2026-08", "2026-07", "2026-09", "2026-06", "2026-05", "2026-04", "2026-03", "2026-02", "2026-01"):
+                try:
+                    report_data = self.rem_client.get_report(prev_period, db=db)
+                    matching = [
+                        r for r in report_data
+                        if r.get("muestra") == cohort
+                        and ("ipc nivel general" in r.get("indicador", "").lower() or "precios minoristas" in r.get("indicador", "").lower())
+                        and r.get("periodoTipo") == "mensual"
+                    ]
+                    # Look for matching target month in projection periods
+                    for r in matching:
+                        r_p = r.get("periodo", "")
+                        if month_abbrs_es[m-1].lower() in r_p.lower() or month_abbrs_en[m-1].lower() in r_p.lower():
+                            expected_cpi = float(r.get("mediana") or 0.0)
+                            p25 = float(r.get("percentil25") or expected_cpi - 0.2)
+                            p75 = float(r.get("percentil75") or expected_cpi + 0.2)
+                            break
+                except Exception as exc:
+                    logger.debug("Failed fetching prior REM report for %s: %s", prev_period, exc)
 
-            # Fallback for synthetic consistency if preceding report wasn't available
+            # Fallback only when report is truly missing in historical catalog
             if expected_cpi is None:
-                # Plausible market consensus slightly offset from reality
-                pseudo_noise = ((y * 12 + m) % 5 - 2) * 0.15
-                expected_cpi = round((real_val + pseudo_noise) * cohort_factor, 2)
+                expected_cpi = round(real_val * cohort_factor, 2)
                 p25 = round(expected_cpi - 0.2, 2)
                 p75 = round(expected_cpi + 0.2, 2)
 
@@ -506,7 +508,12 @@ class RemService:
 
         # Preload recent historical reports for revision trend (up to 6 reports)
         available_reps = [r for r in self.rem_client.get_available_reports() if r != "ultimo"]
-        recent_rep_tags = list(reversed(available_reps[:6])) if len(available_reps) >= 6 else list(reversed(available_reps))
+        if norm_period != "ultimo" and norm_period in available_reps:
+            idx = available_reps.index(norm_period)
+            reps_window = available_reps[idx:idx + 6]
+        else:
+            reps_window = available_reps[:6]
+        recent_rep_tags = list(reversed(reps_window))
         past_reports_cache: Dict[str, List[Dict[str, Any]]] = {}
         for r_tag in recent_rep_tags:
             try:
@@ -633,8 +640,18 @@ class RemService:
                     next_ann_other = next((r for r in var_other_rows if r.get("periodoTipo") == "anual" and r.get("periodo") == next_ann_row.get("periodo")), None)
                     horizons["year_end_next"] = _build_horizon(next_ann_row, next_ann_other, "year_end_next", def_unit)
 
-            # Expectation vs reality data for this variable
-            exp_vs_real = self._get_variable_expectation_vs_reality(v_id, cohort=cohort)
+            # Expectation vs reality data for this variable computed dynamically
+            exp_vs_real = self._get_variable_expectation_vs_reality(
+                v_id=v_id,
+                cohort=cohort,
+                rep_tags=recent_rep_tags,
+                past_cache=past_reports_cache,
+                kws=kws,
+                def_unit=def_unit,
+                is_monthly=v_cfg["is_monthly"],
+                is_quarterly=v_cfg["is_quarterly"],
+                db=db,
+            )
 
             result_variables[v_id] = {
                 "id": v_id,
@@ -654,86 +671,214 @@ class RemService:
             "variables": result_variables,
         }
 
-    @staticmethod
-    def _get_variable_expectation_vs_reality(v_id: str, cohort: str = "todos") -> Dict[str, Any]:
-        """Return expectation vs reality (actual official value vs preceding REM forecast) for a given variable."""
+    def _get_variable_expectation_vs_reality(
+        self,
+        v_id: str,
+        cohort: str = "todos",
+        rep_tags: Optional[List[str]] = None,
+        past_cache: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+        kws: Optional[List[str]] = None,
+        def_unit: str = "",
+        is_monthly: bool = True,
+        is_quarterly: bool = False,
+        db: Optional[Session] = None,
+    ) -> Dict[str, Any]:
+        """Compute real observed values vs prior REM forecasts dynamically from cached reports and official series."""
         cohort_factor = 0.98 if cohort == "top_10" else 1.0
+        favorable_when_lower = v_id not in ("pib", "fiscal_result", "exports")
 
-        if v_id in ("cpi_general", "cpi_core"):
-            is_core = v_id == "cpi_core"
-            base_real = 1.8 if is_core else 1.9
-            base_fc = 2.0 if is_core else 2.1
-            hist = [
-                {"period": "May-26", "real": round((base_real + 0.4), 2), "forecast": round((base_fc + 0.4) * cohort_factor, 2)},
-                {"period": "Jun-26", "real": round((base_real + 0.2), 2), "forecast": round((base_fc + 0.2) * cohort_factor, 2)},
-                {"period": "Jul-26", "real": round((base_real + 0.1), 2), "forecast": round((base_fc + 0.05) * cohort_factor, 2)},
-                {"period": "Ago-26", "real": base_real, "forecast": round(base_fc * cohort_factor, 2)},
-            ]
-            unit = "% mensual"
-            favorable_when_lower = True
-        elif v_id == "exchange_rate":
-            hist = [
-                {"period": "May-26", "real": 980.0, "forecast": round(985.0 * cohort_factor, 1)},
-                {"period": "Jun-26", "real": 1000.0, "forecast": round(1005.0 * cohort_factor, 1)},
-                {"period": "Jul-26", "real": 1020.0, "forecast": round(1025.0 * cohort_factor, 1)},
-                {"period": "Ago-26", "real": 1040.0, "forecast": round(1045.0 * cohort_factor, 1)},
-            ]
-            unit = "$/USD"
-            favorable_when_lower = True
-        elif v_id == "interest_rate":
-            hist = [
-                {"period": "May-26", "real": 38.0, "forecast": round(39.0 * cohort_factor, 1)},
-                {"period": "Jun-26", "real": 36.5, "forecast": round(37.0 * cohort_factor, 1)},
-                {"period": "Jul-26", "real": 35.5, "forecast": round(36.0 * cohort_factor, 1)},
-                {"period": "Ago-26", "real": 35.0, "forecast": round(35.5 * cohort_factor, 1)},
-            ]
-            unit = "% TNA"
-            favorable_when_lower = True
-        elif v_id == "pib":
-            hist = [
-                {"period": "III Trim 25", "real": 1.5, "forecast": round(1.2 * cohort_factor, 1)},
-                {"period": "IV Trim 25", "real": 2.1, "forecast": round(1.8 * cohort_factor, 1)},
-                {"period": "I Trim 26", "real": 2.8, "forecast": round(2.5 * cohort_factor, 1)},
-                {"period": "II Trim 26", "real": 3.2, "forecast": round(3.0 * cohort_factor, 1)},
-            ]
-            unit = "Var. % i.a."
-            favorable_when_lower = False
-        elif v_id == "unemployment":
-            hist = [
-                {"period": "III Trim 25", "real": 8.3, "forecast": round(8.5 * cohort_factor, 1)},
-                {"period": "IV Trim 25", "real": 8.0, "forecast": round(8.1 * cohort_factor, 1)},
-                {"period": "I Trim 26", "real": 7.9, "forecast": round(8.0 * cohort_factor, 1)},
-                {"period": "II Trim 26", "real": 7.7, "forecast": round(7.8 * cohort_factor, 1)},
-            ]
-            unit = "% de la PEA"
-            favorable_when_lower = True
+        if rep_tags is None:
+            available = [r for r in self.rem_client.get_available_reports() if r != "ultimo"]
+            rep_tags = list(reversed(available[:6]))
+        if past_cache is None:
+            past_cache = {}
+            for r_tag in rep_tags:
+                try:
+                    past_cache[r_tag] = self.rem_client.get_report(r_tag, db=db)
+                except Exception:
+                    past_cache[r_tag] = []
+
+        standard_kws = {
+            "cpi_general": ["ipc nivel general", "precios minoristas"],
+            "cpi_core": ["precios minoristas", "ipc núcleo", "ipc nucleo", "núcleo", "nucleo"],
+            "exchange_rate": ["tipo de cambio nominal", "tipo de cambio"],
+            "interest_rate": ["tasa de interés", "tasa de interes", "tamar", "tasa"],
+            "pib": ["pib a precios constantes", "pib"],
+            "unemployment": ["desocupación abierta", "desocupacion abierta", "desocupación", "desocupacion"],
+            "fiscal_result": ["resultado primario", "spnf"],
+            "exports": ["exportaciones (fob)", "exportaciones"],
+            "imports": ["importaciones (cif)", "importaciones"],
+        }
+        if kws is None:
+            kws = standard_kws.get(v_id, [v_id])
+
+        standard_units = {
+            "cpi_general": "% mensual",
+            "cpi_core": "% mensual",
+            "exchange_rate": "$/USD",
+            "interest_rate": "% TNA",
+            "pib": "Var. % trim. s.e.",
+            "unemployment": "% de la PEA",
+            "fiscal_result": "Billones $",
+            "exports": "Mill. USD",
+            "imports": "Mill. USD",
+        }
+        if not def_unit:
+            def_unit = standard_units.get(v_id, "")
+
+        def _find_rows(rows: List[Dict[str, Any]], ptype: Optional[str] = None) -> List[Dict[str, Any]]:
+            matched = []
+            for r in rows:
+                if r.get("muestra") != cohort:
+                    continue
+                ind = r.get("indicador", "").lower()
+                # Special robust check for cpi_core
+                if v_id == "cpi_core":
+                    if "precios minoristas" in ind and "general" not in ind:
+                        if not ptype or r.get("periodoTipo") == ptype:
+                            matched.append(r)
+                    elif any(k in ind for k in ("núcleo", "nucleo", "n\ufffdcleo")):
+                        if not ptype or r.get("periodoTipo") == ptype:
+                            matched.append(r)
+                elif v_id == "cpi_general":
+                    if "general" in ind or any(k in ind for k in kws):
+                        if not ptype or r.get("periodoTipo") == ptype:
+                            matched.append(r)
+                else:
+                    if any(k in ind for k in kws):
+                        if not ptype or r.get("periodoTipo") == ptype:
+                            matched.append(r)
+            return matched
+
+        hist: List[Dict[str, Any]] = []
+
+        # 1. Monthly variables
+        if is_monthly or v_id in ("cpi_general", "cpi_core", "exchange_rate", "interest_rate", "exports", "imports"):
+            # If cpi_general, fetch indec inflation to cross-reference exact official published CPI
+            indec_map: Dict[str, float] = {}
+            if v_id == "cpi_general":
+                try:
+                    raw_inf = self.rem_client.get_indec_inflation()
+                    month_es_short = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+                    month_en_short = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                    for inf in raw_inf:
+                        f = inf.get("fecha", "")
+                        if len(f) >= 7:
+                            m_idx = int(f[5:7]) - 1
+                            y_short = f[2:4]
+                            v = float(inf.get("valor", 0.0))
+                            indec_map[f"{month_es_short[m_idx]}-{y_short}"] = v
+                            indec_map[f"{month_en_short[m_idx]}-{y_short}"] = v
+                except Exception as exc:
+                    logger.debug("Could not build indec map: %s", exc)
+
+            for r_curr, r_prev in zip(rep_tags[1:], rep_tags[:-1]):
+                curr_rows = past_cache.get(r_curr, [])
+                prev_rows = past_cache.get(r_prev, [])
+
+                curr_m = _find_rows(curr_rows, "mensual")
+                if not curr_m:
+                    continue
+
+                target_p = curr_m[0].get("periodo", "")
+                prev_m = [
+                    r for r in _find_rows(prev_rows, "mensual")
+                    if r.get("periodo", "").strip().lower() == target_p.strip().lower()
+                ]
+
+                # Real closed value for target_p
+                real_val = float(curr_m[0].get("mediana") or 0.0)
+                if v_id == "cpi_general" and target_p in indec_map:
+                    real_val = indec_map[target_p]
+
+                # Forecast from preceding report
+                if prev_m:
+                    fc_val = float(prev_m[0].get("mediana") or real_val)
+                else:
+                    fc_val = real_val
+
+                # Format period in Spanish if month is English (e.g. Aug-26 -> Ago-26, Apr-26 -> Abr-26)
+                disp_period = (
+                    target_p.replace("Aug-", "Ago-")
+                    .replace("Apr-", "Abr-")
+                    .replace("Jan-", "Ene-")
+                    .replace("Dec-", "Dic-")
+                )
+
+                hist.append({
+                    "period": disp_period,
+                    "real": round(real_val, 2),
+                    "forecast": round(fc_val, 2),
+                })
+
+        # 2. Quarterly variables (pib, unemployment)
+        elif is_quarterly and v_id in ("pib", "unemployment"):
+            seen_quarters = set()
+            for r_curr, r_prev in zip(rep_tags[1:], rep_tags[:-1]):
+                curr_rows = past_cache.get(r_curr, [])
+                prev_rows = past_cache.get(r_prev, [])
+
+                curr_q = _find_rows(curr_rows, "trimestral")
+                if not curr_q:
+                    continue
+
+                target_q = curr_q[0].get("periodo", "")
+                if target_q in seen_quarters:
+                    continue
+                seen_quarters.add(target_q)
+
+                prev_q = [
+                    r for r in _find_rows(prev_rows, "trimestral")
+                    if r.get("periodo", "").strip().lower() == target_q.strip().lower()
+                ]
+                real_val = float(curr_q[0].get("mediana") or 0.0)
+                fc_val = float(prev_q[0].get("mediana") or real_val) if prev_q else real_val
+
+                hist.append({
+                    "period": target_q,
+                    "real": round(real_val, 2),
+                    "forecast": round(fc_val, 2),
+                })
+
+        # 3. Fiscal Result (SPNF - annual tracking in Billones $)
         elif v_id == "fiscal_result":
-            hist = [
-                {"period": "III Trim 25", "real": 2.1, "forecast": round(1.9 * cohort_factor, 2)},
-                {"period": "IV Trim 25", "real": 2.4, "forecast": round(2.2 * cohort_factor, 2)},
-                {"period": "I Trim 26", "real": 2.7, "forecast": round(2.5 * cohort_factor, 2)},
-                {"period": "II Trim 26", "real": 2.85, "forecast": round(2.7 * cohort_factor, 2)},
-            ]
-            unit = "Billones $"
-            favorable_when_lower = False
-        elif v_id == "exports":
-            hist = [
-                {"period": "May-26", "real": 6600.0, "forecast": round(6450.0 * cohort_factor, 1)},
-                {"period": "Jun-26", "real": 6720.0, "forecast": round(6600.0 * cohort_factor, 1)},
-                {"period": "Jul-26", "real": 6790.0, "forecast": round(6700.0 * cohort_factor, 1)},
-                {"period": "Ago-26", "real": 6830.0, "forecast": round(6750.0 * cohort_factor, 1)},
-            ]
-            unit = "Mill. USD"
-            favorable_when_lower = False
-        else:
-            hist = [
-                {"period": "May-26", "real": 5200.0, "forecast": round(5350.0 * cohort_factor, 1)},
-                {"period": "Jun-26", "real": 5350.0, "forecast": round(5400.0 * cohort_factor, 1)},
-                {"period": "Jul-26", "real": 5420.0, "forecast": round(5450.0 * cohort_factor, 1)},
-                {"period": "Ago-26", "real": 5500.0, "forecast": round(5520.0 * cohort_factor, 1)},
-            ]
-            unit = "Mill. USD"
-            favorable_when_lower = True
+            for r_curr, r_prev in zip(rep_tags[1:], rep_tags[:-1]):
+                curr_rows = past_cache.get(r_curr, [])
+                prev_rows = past_cache.get(r_prev, [])
+
+                curr_ann = _find_rows(curr_rows, "anual")
+                prev_ann = _find_rows(prev_rows, "anual")
+                if not curr_ann or not prev_ann:
+                    continue
+
+                real_val = round(float(curr_ann[0].get("mediana") or 0.0) / 1000.0, 2)
+                fc_val = round(float(prev_ann[0].get("mediana") or 0.0) / 1000.0, 2)
+
+                parts = r_curr.split("-")
+                month_labels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+                if len(parts) == 2 and parts[1].isdigit():
+                    m_num = int(parts[1])
+                    p_label = f"{month_labels[m_num - 1]}-{parts[0][2:]}"
+                else:
+                    p_label = r_curr
+
+                hist.append({
+                    "period": p_label,
+                    "real": real_val,
+                    "forecast": fc_val,
+                })
+
+        # Fallback if fewer than 2 points
+        if len(hist) < 2 and rep_tags:
+            latest_rows = past_cache.get(rep_tags[-1], [])
+            m_rows = _find_rows(latest_rows, "mensual" if is_monthly else ("trimestral" if is_quarterly else None))
+            for r in m_rows[:2]:
+                val = float(r.get("mediana") or 0.0)
+                hist.append({
+                    "period": r.get("periodo", "N/A"),
+                    "real": round(val, 2),
+                    "forecast": round(val * cohort_factor, 2),
+                })
 
         for item in hist:
             item["delta"] = round(item["real"] - item["forecast"], 2)
@@ -752,7 +897,7 @@ class RemService:
             "real_value": latest["real"],
             "previous_forecast": latest["forecast"],
             "surprise_delta": delta,
-            "unit": unit,
+            "unit": def_unit,
             "status": status,
             "history": hist,
         }
