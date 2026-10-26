@@ -118,12 +118,9 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
 
   return (
     <div className="relative mt-1" onMouseLeave={() => { setHoveredPoint(null); setHoverPos(null) }}>
-      {/* Y-Axis (Measurement Unit & Scale Range) */}
+      {/* Measurement Unit & Scale Range */}
       <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-        <span className="flex items-center gap-1">
-          <span className="text-slate-500 text-[9px] uppercase tracking-wider font-sans">Eje Y:</span>
-          <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
-        </span>
+        <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
         <span className="text-[10px] text-slate-400">
           Rango: {minVal.toLocaleString('es-AR', { maximumFractionDigits: 1 })} — {maxVal.toLocaleString('es-AR', { maximumFractionDigits: 1 })}
         </span>
@@ -183,11 +180,24 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
         </div>
       )}
 
-      {/* X-Axis (Date / Timeline Labels) */}
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-1 pt-1 border-t border-slate-800/50">
-        <span className="text-slate-300 font-medium">{data[0].period}</span>
-        <span className="text-[9px] text-slate-500 uppercase tracking-wider font-sans">Eje X: Fecha</span>
-        <span className="text-slate-300 font-medium">{data[data.length - 1].period}</span>
+      {/* Timeline Labels: show a date every two periods */}
+      <div className="relative w-full h-4 mt-1 pt-1 border-t border-slate-800/50">
+        {points.map((pt, i) => {
+          if (i % 2 !== 0 && !(data.length === 2 && i === 1)) return null
+          const leftPercent = (pt.x / width) * 100
+          return (
+            <span
+              key={i}
+              className="absolute text-[9px] font-mono text-slate-400 whitespace-nowrap"
+              style={{
+                left: `${leftPercent}%`,
+                transform: i === 0 ? 'none' : i === points.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+              }}
+            >
+              {pt.point.period}
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -257,12 +267,9 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
 
   return (
     <div className="relative mt-1" onMouseLeave={() => { setHovered(null); setHoverPos(null) }}>
-      {/* Y-Axis (Measurement Unit & Dual Legend) */}
+      {/* Measurement Unit & Dual Legend */}
       <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-        <span className="flex items-center gap-1">
-          <span className="text-slate-500 text-[9px] uppercase tracking-wider font-sans">Eje Y:</span>
-          <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
-        </span>
+        <span className="text-slate-200 font-semibold">{unit || 'N/A'}</span>
         <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-0.5 bg-emerald-400 rounded-full inline-block"></span> Real
@@ -344,21 +351,27 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
         </div>
       )}
 
-      {/* X-Axis (Date / Period Labels) */}
-      <div className="mt-1 pt-1 border-t border-slate-800/50">
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-          {history.map((h, i) => (
+      {/* Period Labels: show a date every two periods */}
+      <div className="relative w-full h-4 mt-1 pt-1 border-t border-slate-800/50">
+        {realPts.map((pt, i) => {
+          if (i % 2 !== 0 && !(history.length === 2 && i === 1)) return null
+          const leftPercent = (pt.x / width) * 100
+          const isLast = i === realPts.length - 1
+          return (
             <span
               key={i}
-              className={`text-[10px] ${i === history.length - 1 ? 'text-emerald-400 font-semibold' : 'text-slate-400'}`}
+              className={`absolute text-[9px] font-mono whitespace-nowrap ${
+                isLast ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+              }`}
+              style={{
+                left: `${leftPercent}%`,
+                transform: i === 0 ? 'none' : i === realPts.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+              }}
             >
-              {h.period}
+              {pt.point.period}
             </span>
-          ))}
-        </div>
-        <div className="text-center text-[9px] font-mono text-slate-500 mt-0.5 uppercase tracking-wider font-sans">
-          Eje X: Fecha observada
-        </div>
+          )
+        })}
       </div>
     </div>
   )
