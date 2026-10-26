@@ -142,3 +142,28 @@ def test_env_templates_dev_and_prod():
     assert "POSTGRES_PORT=5433" in prod_text
     assert "PORT=8000" in dev_text
     assert "PORT=8080" in prod_text
+
+
+def test_promote_to_prod_workflow_configuration():
+    """Verify that promote-to-prod.yml exists, is valid YAML, and has manual workflow_dispatch triggers."""
+    workflow_path = REPO_ROOT / ".github" / "workflows" / "promote-to-prod.yml"
+    assert workflow_path.exists(), "promote-to-prod.yml must exist"
+
+    with open(workflow_path, "r", encoding="utf-8") as f:
+        wf_cfg = yaml.safe_load(f)
+
+    # Must be triggered manually via workflow_dispatch
+    assert True in wf_cfg or "on" in wf_cfg or "workflow_dispatch" in str(wf_cfg)
+    on_trigger = wf_cfg.get("on") or wf_cfg.get(True)
+    assert "workflow_dispatch" in on_trigger
+
+    inputs = on_trigger["workflow_dispatch"].get("inputs", {})
+    assert "source_branch" in inputs
+    assert "target_branch" in inputs
+    assert "deploy_production" in inputs
+
+    # Verify key jobs exist
+    jobs = wf_cfg.get("jobs", {})
+    assert "validate-dev-branch" in jobs
+    assert "merge-and-promote" in jobs
+    assert "deploy-promoted-production" in jobs

@@ -122,6 +122,21 @@ To enable multi-environment deployments, configure the following in GitHub under
 | `RENDER_API_KEY` | Global | Render Account API Key for REST API deployment. |
 | `DEPLOY_TIMEOUT_SECONDS` | Global | (Optional) Deploy health check timeout (default: `300`). |
 
+#### Manual Promotion from Dev to Production (`promote-to-prod.yml`)
+When dev changes have been tested and verified, promote them to production using the manual GitHub Actions workflow [`.github/workflows/promote-to-prod.yml`](.github/workflows/promote-to-prod.yml):
+1. Navigate to **Actions** -> **Promote Dev to Production** in your GitHub repository.
+2. Click **Run workflow**.
+3. Select your parameters:
+   - **Source branch:** `dev` (or feature/staging branch)
+   - **Target branch:** `master` (or `main`)
+   - **Optional release tag:** (e.g. `v1.2.0`)
+   - **Deploy production:** `true` (automatically trigger Render deploy & health validation)
+4. The workflow:
+   - Executes pre-promotion backend & frontend test suites and build checks.
+   - Merges source branch into target branch with a non-fast-forward merge commit and optional release tag.
+   - Pushes to the production branch.
+   - Deploys the new version to the Production Render service and validates live health probes.
+
 #### Option 2: Render Infrastructure Blueprints
 The repository provides Infrastructure as Code blueprints for Render:
 - **`render.yaml`:** Full dual-environment blueprint defining both `economic-dashboard-dev` + `economic-dashboard-db-dev` and `economic-dashboard-prod` + `economic-dashboard-db-prod`.
@@ -196,7 +211,9 @@ economic-dashboard/
 ├── render.prod.yaml                    # Independent Production-only Render blueprint
 ├── .env.development.example            # Development environment variables template
 ├── .env.production.example             # Production environment variables template
-├── .github/workflows/ci-cd.yml         # GitHub Actions CI/CD (Dev & Prod deploy stages)
+├── .github/workflows/
+│   ├── ci-cd.yml                       # GitHub Actions CI/CD (Dev & Prod deploy stages)
+│   └── promote-to-prod.yml             # Manual promotion from Dev to Production
 ├── _docs/
 │   ├── plan.md                         # Comprehensive architecture blueprint & data specifications
 │   ├── tasks.md                        # Implementation task backlog
