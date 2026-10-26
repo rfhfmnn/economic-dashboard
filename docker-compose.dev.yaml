@@ -49,6 +49,7 @@ services:
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-economic-dashboard-backend-dev}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       DEPLOYED_VERSION: ${DEPLOYED_VERSION:-0.1.0-dev}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://observability-otel-collector:4318}
     ports:
       - "${PORT:-8000}:8000"
     healthcheck:
@@ -59,6 +60,7 @@ services:
       start_period: 15s
     networks:
       - app-network-dev
+      - observability-network-dev
 
 volumes:
   postgres_data_dev:
@@ -69,3 +71,6 @@ networks:
   app-network-dev:
     name: economic_dashboard_network_dev
     driver: bridge
+  observability-network-dev:
+    name: observability-net
+    external: true

@@ -184,3 +184,49 @@ def test_observability_env_and_docs():
     readme_content = readme.read_text(encoding="utf-8")
     for component in ["OpenTelemetry Collector", "Prometheus", "Loki", "Tempo", "Grafana"]:
         assert component in readme_content
+
+
+def test_dev_and_prod_connected_to_observability_stack():
+    """Verify both development and production compose stacks connect to observability-net and export OTLP telemetry."""
+    dev_path = REPO_ROOT / "docker-compose.yaml"
+    explicit_dev_path = REPO_ROOT / "docker-compose.dev.yaml"
+    prod_path = REPO_ROOT / "docker-compose.prod.yaml"
+
+    for path, env_expected, svc_name_expected in [
+        (dev_path, "development", "economic-dashboard-backend-dev"),
+        (explicit_dev_path, "development", "economic-dashboard-backend-dev"),
+        (prod_path, "production", "economic-dashboard-backend-prod"),
+    ]:
+        with open(path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        # 1. External network pointing to observability-net must exist
+        networks = cfg.get("networks", {})
+        has_obs_net = any(
+            net_cfg.get("name") == "observability-net" and net_cfg.get("external") is True
+            for net_name, net_cfg in networks.items()
+            if isinstance(net_cfg, dict)
+        )
+        assert has_obs_net, f"{path.name} must declare an external network with name 'observability-net'"
+
+        # 2. App service must attach to the observability network
+        app_svc_key = next(k for k in cfg["services"] if "app" in k)
+        app_svc = cfg["services"][app_svc_key]
+        app_networks = app_svc.get("networks", [])
+        obs_net_key = next(
+            net_name for net_name, net_cfg in networks.items()
+            if isinstance(net_cfg, dict) and net_cfg.get("name") == "observability-net"
+        )
+        assert obs_net_key in app_networks, f"{path.name} app service must attach to {obs_net_key}"
+
+        # 3. Environment variables must specify OTLP endpoint and telemetry metadata
+        env_vars = app_svc.get("environment", {})
+        if isinstance(env_vars, list):
+            env_dict = dict(item.split("=", 1) for item in env_vars if "=" in item)
+        else:
+            env_dict = env_vars
+
+        assert "OTEL_EXPORTER_OTLP_ENDPOINT" in str(env_dict)
+        assert "OTEL_SERVICE_NAME" in str(env_dict)
+        assert svc_name_expected in str(env_dict)
+        assert env_expected in str(env_dict)

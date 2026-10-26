@@ -120,23 +120,53 @@ OTEL_SERVICE_NAME=economic-dashboard-backend-dev
 ENVIRONMENT=development
 DEPLOYED_VERSION=0.1.0-dev
 
-# Export traces via HTTP protobuf (port 4318) or gRPC (port 4317)
+# Export traces and metrics via HTTP protobuf (port 4318) or gRPC (port 4317)
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 ```
 
-### Option B: Running Backend in Docker (`docker-compose.yaml`)
-When the application runs in Docker, configure it to target host networking or the shared bridge network:
+### Option B: Connecting Containerized Development (`docker-compose.dev.yaml` / `docker-compose.yaml`)
+The development compose stack attaches `app-dev` to the external `observability-net` bridge network and routes telemetry to the collector:
 
 ```yaml
 services:
-  app:
+  app-dev:
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4318"
-```
-Or attach the app container to `observability-net`:
-```yaml
+      OTEL_SERVICE_NAME: economic-dashboard-backend-dev
+      ENVIRONMENT: development
+      DEPLOYED_VERSION: 0.1.0-dev
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://observability-otel-collector:4318
+    networks:
+      - app-network-dev
+      - observability-network-dev
+
 networks:
-  observability-net:
+  app-network-dev:
+    driver: bridge
+  observability-network-dev:
+    name: observability-net
+    external: true
+```
+
+### Option C: Connecting Containerized Production (`docker-compose.prod.yaml`)
+The production compose stack maintains complete database, port, and network isolation from development while seamlessly connecting `app-prod` to `observability-net`:
+
+```yaml
+services:
+  app-prod:
+    environment:
+      OTEL_SERVICE_NAME: economic-dashboard-backend-prod
+      ENVIRONMENT: production
+      DEPLOYED_VERSION: 0.1.0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://observability-otel-collector:4318
+    networks:
+      - app-network-prod
+      - observability-network-prod
+
+networks:
+  app-network-prod:
+    driver: bridge
+  observability-network-prod:
+    name: observability-net
     external: true
 ```
 

@@ -114,11 +114,16 @@ def _setup_span_exporter(provider: TracerProvider) -> None:
         return
 
     # Check for OTLP exporter endpoints (defaults to local collector HTTP endpoint)
-    otlp_endpoint = (
+    raw_endpoint = (
         os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
         or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
         or "http://localhost:4318/v1/traces"
     )
+    if raw_endpoint.endswith("/v1/traces") or ":4317" in raw_endpoint:
+        otlp_endpoint = raw_endpoint
+    else:
+        otlp_endpoint = f"{raw_endpoint.rstrip('/')}/v1/traces"
+
     try:
         # Try HTTP protobuf exporter first, then standard OTLP
         try:
@@ -142,11 +147,16 @@ def _setup_metric_readers() -> list:
         return []
 
     # Default to local OTel collector HTTP endpoint if not explicitly provided
-    otlp_endpoint = (
+    raw_endpoint = (
         os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
         or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
         or "http://localhost:4318/v1/metrics"
     )
+    if raw_endpoint.endswith("/v1/metrics") or ":4317" in raw_endpoint:
+        otlp_endpoint = raw_endpoint
+    else:
+        otlp_endpoint = f"{raw_endpoint.rstrip('/')}/v1/metrics"
+
     try:
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
