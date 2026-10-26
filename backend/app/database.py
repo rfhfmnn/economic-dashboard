@@ -23,10 +23,44 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DB_PATH = BACKEND_DIR / "economic_dashboard.db"
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH.as_posix()}")
 
+# Standardize postgres:// to postgresql:// for SQLAlchemy 2.0+ compatibility
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine_kwargs: Dict[str, Any] = {"connect_args": connect_args}
+if not DATABASE_URL.startswith("sqlite"):
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    })
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_upsert_stmt(model: Any, db: Optional[Session] = None):
+    """Return dialect-specific insert statement supporting on_conflict_do_update for PostgreSQL or SQLite."""
+    dialect_name = "sqlite"
+    if db is not None:
+        try:
+            bind = getattr(db, "bind", None) or db.get_bind()
+            if bind:
+                dialect_name = bind.dialect.name
+        except Exception:
+            dialect_name = "sqlite"
+    elif engine is not None:
+        dialect_name = engine.dialect.name
+
+    if dialect_name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        return pg_insert(model)
+    else:
+        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+        return sqlite_insert(model)
+
 
 
 class Base(DeclarativeBase):

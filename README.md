@@ -57,6 +57,9 @@ Access the dashboard at `http://localhost:8000` (API docs at `http://localhost:8
 
 #### 1. Backend Service & Tests
 ```bash
+# Optional: Point to local PostgreSQL (defaults to SQLite if DATABASE_URL is omitted)
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/economic_dashboard"
+
 # Run automated backend test suite
 python -m pytest backend/tests/ -v
 

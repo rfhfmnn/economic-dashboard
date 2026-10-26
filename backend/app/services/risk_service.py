@@ -5,11 +5,10 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 from sqlalchemy import select
-from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
 from sqlalchemy.orm import Session
 
 from backend.app.clients.bcra_client import BCRAClient
-from backend.app.database import CuitCache
+from backend.app.database import CuitCache, get_upsert_stmt
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +112,7 @@ class RiskService:
         # Store in cache table if db session provided
         if db is not None:
             stmt = (
-                sqlite_upsert(CuitCache)
+                get_upsert_stmt(CuitCache, db)
                 .values(
                     cuit=clean,
                     denomination=parsed_report.get("denominacion"),

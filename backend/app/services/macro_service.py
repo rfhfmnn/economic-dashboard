@@ -4,12 +4,11 @@ from datetime import date, datetime
 import logging
 from typing import Any, Dict, List, Optional
 from sqlalchemy import select
-from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
 from sqlalchemy.orm import Session
 
 from backend.app.clients.bcra_client import BCRAClient
 from backend.app.clients.fx_client import FXClient
-from backend.app.database import MacroSeries, MacroVariable
+from backend.app.database import MacroSeries, MacroVariable, get_upsert_stmt
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ class MacroService:
             unit = KEY_VARIABLES.get(var_id, {}).get("unit") or item.get("unidadExpresion") or item.get("unidad") or ""
 
             stmt = (
-                sqlite_upsert(MacroVariable)
+                get_upsert_stmt(MacroVariable, db)
                 .values(
                     variable_id=var_id,
                     name=name,
@@ -114,7 +113,7 @@ class MacroService:
             float_val = float(val)
 
             stmt = (
-                sqlite_upsert(MacroSeries)
+                get_upsert_stmt(MacroSeries, db)
                 .values(
                     variable_id=variable_id,
                     date=parsed_date,
