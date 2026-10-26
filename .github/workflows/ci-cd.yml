@@ -34,6 +34,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest pytest-cov httpx
 
+      - name: Ensure frontend dist placeholder
+        run: |
+          mkdir -p frontend/dist
+          echo '<!DOCTYPE html><html><head><title>Test</title></head><body><div id="root"></div></body></html>' > frontend/dist/index.html
+
       - name: Run Backend Unit Tests (Pytest)
         env:
           PYTHONPATH: .
