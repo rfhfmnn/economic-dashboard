@@ -301,20 +301,20 @@ export const MacroView: React.FC = () => {
       <div className="space-y-6 animate-pulse">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 rounded-lg bg-slate-900 border border-slate-800"></div>
+            <div key={i} className="h-28 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"></div>
           ))}
         </div>
-        <div className="h-96 rounded-lg bg-slate-900 border border-slate-800"></div>
+        <div className="h-96 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-900/50 bg-rose-950/20 p-6 text-center space-y-3">
-        <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
-        <h3 className="text-base font-semibold text-rose-200">Error de carga macroeconómica</h3>
-        <p className="text-xs text-rose-300 max-w-md mx-auto">{error}</p>
+      <div className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 p-6 text-center space-y-3">
+        <AlertCircle className="w-8 h-8 text-rose-500 dark:text-rose-400 mx-auto" />
+        <h3 className="text-base font-semibold text-rose-800 dark:text-rose-200">Error de carga macroeconómica</h3>
+        <p className="text-xs text-rose-600 dark:text-rose-300 max-w-md mx-auto">{error}</p>
         <button
           type="button"
           onClick={() => loadDashboardData(false)}
@@ -330,7 +330,7 @@ export const MacroView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Sub-Navigation Toggle: BCRA & FX vs. Expectativas REM */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -339,7 +339,7 @@ export const MacroView: React.FC = () => {
             className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
               subTab === 'bcra_fx'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
             <span>Variables BCRA & mercado cambiario</span>
@@ -351,11 +351,11 @@ export const MacroView: React.FC = () => {
             className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
               subTab === 'rem'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
             <span>Expectativas de mercado (REM)</span>
-            <span className="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
+            <span className="text-[10px] font-sans uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
               Nuevo
             </span>
           </button>
@@ -364,7 +364,7 @@ export const MacroView: React.FC = () => {
         {subTab === 'bcra_fx' && (
           <div className="flex items-center gap-3">
             {summary?.timestamp && (
-              <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans tabular-nums hidden sm:inline">
                 Actualizado: {new Date(summary.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
@@ -373,10 +373,10 @@ export const MacroView: React.FC = () => {
               data-testid="macro-refresh-button"
               onClick={handleRefresh}
               disabled={refreshing || loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-medium transition-all shadow-sm hover:border-slate-600 disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium transition-all shadow-sm hover:border-slate-300 dark:hover:border-slate-600 disabled:opacity-50 cursor-pointer"
               title="Sincronizar últimas observaciones oficiales con la API del BCRA"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-500 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} />
               <span>{refreshing ? 'Sincronizando...' : 'Actualizar datos'}</span>
             </button>
           </div>
@@ -415,7 +415,7 @@ export const MacroView: React.FC = () => {
 
           {/* Main Interactive Time-Series Section with Multi-Select */}
           <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900/40 p-3 rounded-lg border border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-slate-900/40 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
               <VariablePicker
                 catalog={catalog}
                 selectedPrimaryIds={primaryIds}
@@ -426,7 +426,7 @@ export const MacroView: React.FC = () => {
                 onRemoveSecondary={handleRemoveSecondary}
               />
 
-              <span className="text-[11px] font-mono text-slate-500">
+              <span className="text-[11px] font-sans tabular-nums text-slate-500 dark:text-slate-400">
                 {chartSeries.length} variable{chartSeries.length > 1 ? 's' : ''} activa{chartSeries.length > 1 ? 's' : ''} • {totalObservations.toLocaleString('es-AR')} puntos
               </span>
             </div>

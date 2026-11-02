@@ -38,10 +38,10 @@ export const CuitSearchInput: React.FC<CuitSearchInputProps> = ({ onSearch, load
   }
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 sm:p-5 space-y-4">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 sm:p-5 space-y-4 shadow-sm">
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 font-mono text-xs">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 font-sans text-xs">
             CUIT
           </div>
           <input
@@ -50,22 +50,22 @@ export const CuitSearchInput: React.FC<CuitSearchInputProps> = ({ onSearch, load
             onChange={handleInputChange}
             placeholder="Ej: 20-30123456-3"
             maxLength={13}
-            className={`w-full pl-14 pr-10 py-2.5 rounded-lg border font-mono text-sm tracking-wide bg-slate-950 text-slate-100 placeholder-slate-600 focus:outline-none transition-colors ${cuit.length > 0
+            className={`w-full pl-14 pr-10 py-2.5 rounded-lg border font-mono text-sm tracking-wide bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none transition-colors ${cuit.length > 0
               ? isValid
                 ? 'border-emerald-500/50 focus:border-emerald-500 ring-1 ring-emerald-500/20'
                 : 'border-rose-500/50 focus:border-rose-500 ring-1 ring-rose-500/20'
-              : 'border-slate-700 focus:border-blue-500'
+              : 'border-slate-300 dark:border-slate-700 focus:border-blue-500'
               }`}
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             {cuit.length > 0 && (
               isValid ? (
                 <span title="Checksum módulo 11 válido">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </span>
               ) : (
                 <span title={validation.error}>
-                  <AlertCircle className="w-4 h-4 text-rose-400" />
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 </span>
               )
             )}
@@ -77,7 +77,7 @@ export const CuitSearchInput: React.FC<CuitSearchInputProps> = ({ onSearch, load
           disabled={!isValid || loading}
           className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-medium text-xs text-white transition-all shadow-sm ${isValid && !loading
             ? 'bg-blue-600 hover:bg-blue-500 cursor-pointer shadow-blue-500/10'
-            : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
             }`}
         >
           <Search className="w-4 h-4" />
@@ -87,22 +87,22 @@ export const CuitSearchInput: React.FC<CuitSearchInputProps> = ({ onSearch, load
 
       {/* Real-time validation warning message */}
       {!isValid && cuit.length > 0 && (
-        <div className="text-xs text-rose-400 flex items-center gap-1.5 font-mono">
+        <div className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1.5 font-sans">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>{validation.error}</span>
         </div>
       )}
 
       {/* Cache toggle */}
-      <div className="flex items-center justify-end pt-1 border-t border-slate-800/60">
-        <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+      <div className="flex items-center justify-end pt-1 border-t border-slate-200 dark:border-slate-800/60">
+        <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={bypassCache}
             onChange={(e) => setBypassCache(e.target.checked)}
-            className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-0 w-3.5 h-3.5"
+            className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-blue-600 focus:ring-0 w-3.5 h-3.5"
           />
-          <span className="font-mono text-[11px]">Forzar consulta en vivo</span>
+          <span className="font-sans text-[11px]">Forzar consulta en vivo</span>
         </label>
       </div>
     </div>

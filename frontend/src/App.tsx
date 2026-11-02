@@ -34,7 +34,7 @@ export function App() {
         <footer className="border-t border-slate-200 dark:border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500 bg-white/80 dark:bg-slate-950/80">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>Banco Central de la República Argentina (BCRA) — Sistema de inteligencia financiera</span>
-            <span className="font-mono text-[11px]">Diseño institucional • Módulo 11 validado</span>
+            <span className="font-sans text-[11px]">Diseño institucional • Módulo 11 validado</span>
           </div>
         </footer>
       </div>

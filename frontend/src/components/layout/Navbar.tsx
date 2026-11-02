@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   ]
 
   return (
-    <nav className="border-b border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40 px-6 backdrop-blur">
+    <nav className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/40 px-6 backdrop-blur">
       <div className="max-w-7xl mx-auto flex space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -43,10 +43,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
               <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} />
               <span>{tab.label}</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                className={`text-[10px] px-1.5 py-0.5 rounded font-sans ${
                   isActive
                     ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-500'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}
               >
                 {tab.badge}

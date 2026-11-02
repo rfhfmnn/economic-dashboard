@@ -91,14 +91,14 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       tabIndex={onClick ? 0 : undefined}
       className={`rounded-lg border p-4 transition-all text-left flex flex-col justify-between ${
         active
-          ? 'bg-blue-950/20 border-blue-500 shadow-sm ring-1 ring-blue-500/30'
-          : 'bg-slate-900/50 border-slate-800 hover:border-slate-700 hover:bg-slate-900/80'
+          ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-500 shadow-sm ring-1 ring-blue-500/30'
+          : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/80'
       } ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-medium text-slate-400 line-clamp-2">{displayTitle}</span>
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2">{displayTitle}</span>
         {category && (
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
+          <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
             {category}
           </span>
         )}
@@ -107,10 +107,10 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       <div className="mt-3">
         <div className="flex items-baseline justify-between gap-1.5">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl font-bold text-slate-100 font-mono tracking-tight tabular-nums">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 font-sans tracking-tight tabular-nums">
               {formattedValue}
             </span>
-            {unit && <span className="text-xs font-mono text-slate-400">{unit}</span>}
+            {unit && <span className="text-xs font-sans text-slate-500 dark:text-slate-400">{unit}</span>}
           </div>
           {recentPoints && recentPoints.length >= 2 && (
             <div className="shrink-0" title="Tendencia últimos 30 días">
@@ -123,27 +123,27 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           )}
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-sans tabular-nums">
           {date && <span>{date}</span>}
 
           <div className="flex items-center gap-2">
             {effectiveMomDelta !== undefined ? (
               <span
                 className={`flex items-center gap-0.5 font-semibold ${
-                  effectiveMomDelta >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  effectiveMomDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                 }`}
               >
                 <span>{effectiveMomDelta >= 0 ? '↑' : '↓'}</span>
                 <span>{Math.abs(effectiveMomDelta).toFixed(1)}% MoM</span>
               </span>
             ) : trend ? (
-              <span className={trend.isPositive ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+              <span className={trend.isPositive ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-rose-600 dark:text-rose-400 font-semibold'}>
                 {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value).toFixed(2)}%
               </span>
             ) : null}
 
             {effectiveYoyDelta !== undefined && (
-              <span className="text-slate-400 text-[10px]" title="Variación interanual (YoY)">
+              <span className="text-slate-500 dark:text-slate-400 text-[10px]" title="Variación interanual (YoY)">
                 ({effectiveYoyDelta >= 0 ? '+' : ''}{effectiveYoyDelta.toFixed(1)}% YoY)
               </span>
             )}
@@ -151,8 +151,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         </div>
 
         {active && (
-          <div className="mt-2 pt-1.5 border-t border-blue-500/20 flex items-center gap-1.5 text-[10px] text-blue-400 font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <div className="mt-2 pt-1.5 border-t border-blue-500/20 flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-sans">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
             <span>En gráfico principal</span>
           </div>
         )}

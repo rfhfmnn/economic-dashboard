@@ -13,32 +13,32 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
   const totalImpago = impagos.reduce((acc, c) => acc + (c.monto || 0), 0)
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-        <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-          <FileWarning className="w-3.5 h-3.5 text-blue-400" />
+        <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <FileWarning className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
           <span>Registro de cheques rechazados</span>
         </h4>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-sans tabular-nums">
           {impagos.length > 0 && (
-            <span className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-400 font-semibold text-[11px]">
+            <span className="px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 font-semibold text-[11px]">
               ⚠️ {impagos.length} sin abonar (${totalImpago.toLocaleString('es-AR')})
             </span>
           )}
-          <span className="text-slate-400">
-            Total: <strong className={cantidad > 0 ? 'text-slate-200' : 'text-emerald-400'}>{cantidad}</strong>
+          <span className="text-slate-500 dark:text-slate-400">
+            Total: <strong className={cantidad > 0 ? 'text-slate-900 dark:text-slate-200' : 'text-emerald-600 dark:text-emerald-400'}>{cantidad}</strong>
           </span>
-          <span className="text-slate-500">•</span>
-          <span className="text-slate-400">
-            Monto: <strong className="text-slate-100">${total_monto.toLocaleString('es-AR')}</strong>
+          <span className="text-slate-400">•</span>
+          <span className="text-slate-500 dark:text-slate-400">
+            Monto: <strong className="text-slate-900 dark:text-slate-100">${total_monto.toLocaleString('es-AR')}</strong>
           </span>
         </div>
       </div>
 
       {cantidad === 0 ? (
-        <div className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-900/40 bg-emerald-950/20 text-emerald-300 text-xs">
-          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 text-xs">
+          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>Sin cheques rechazados registrados ante el BCRA en los períodos informados.</span>
         </div>
       ) : (
@@ -47,7 +47,7 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px]">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 font-sans text-[11px] uppercase tracking-wider">
                     <th className="py-2 px-3">N° cheque</th>
                     <th className="py-2 px-3">Fecha rechazo</th>
                     <th className="py-2 px-3 text-right">Monto (ARS)</th>
@@ -55,32 +55,32 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
                     <th className="py-2 px-3">Causal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-sans tabular-nums">
                   {detalles.map((chq, i) => {
                     const isUnpaid = !chq.pagado && (!chq.fechaPago || chq.fechaPago === null)
                     return (
-                      <tr key={i} className="hover:bg-slate-800/40">
-                        <td className="py-2 px-3 text-slate-300">
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-sans">
                           {chq.numeroCheque || `CHQ-${i + 1}`}
                         </td>
-                        <td className="py-2 px-3 text-slate-400">
+                        <td className="py-2 px-3 text-slate-500 dark:text-slate-400 font-sans tabular-nums">
                           {chq.fechaRechazo}
                         </td>
-                        <td className="py-2 px-3 text-right text-slate-100 font-semibold tabular-nums">
+                        <td className="py-2 px-3 text-right text-slate-900 dark:text-slate-100 font-semibold tabular-nums">
                           ${chq.monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="py-2 px-3 text-center">
                           {isUnpaid ? (
-                            <span className="inline-block text-[10px] px-2 py-0.5 rounded font-mono font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            <span className="inline-block text-[10px] px-2 py-0.5 rounded font-sans font-medium bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30">
                               No abonado
                             </span>
                           ) : (
-                            <span className="inline-block text-[10px] px-2 py-0.5 rounded font-mono font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" title={chq.fechaPago ? `Abonado el ${chq.fechaPago}` : undefined}>
+                            <span className="inline-block text-[10px] px-2 py-0.5 rounded font-sans font-medium bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30" title={chq.fechaPago ? `Abonado el ${chq.fechaPago}` : undefined}>
                               Abonado
                             </span>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-slate-400 font-sans">
+                        <td className="py-2 px-3 text-slate-500 dark:text-slate-400 font-sans">
                           {chq.causal || 'Sin fondos suficientes'}
                         </td>
                       </tr>
@@ -90,7 +90,7 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
               </table>
             </div>
           ) : (
-            <div className="p-2.5 rounded border border-rose-900/40 bg-rose-950/20 text-xs text-rose-300">
+            <div className="p-2.5 rounded border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 text-xs text-rose-700 dark:text-rose-300">
               Registra <strong>{cantidad}</strong> cheques rechazados por un total de{' '}
               <strong>${total_monto.toLocaleString('es-AR')}</strong> en el sistema centralizado.
             </div>

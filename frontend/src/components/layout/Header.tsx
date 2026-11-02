@@ -31,7 +31,7 @@ export const Header: React.FC = () => {
   }, [])
 
   return (
-    <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 transition-colors">
+    <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-slate-100 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 transition-colors">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         {/* Brand identity */}
         <div className="flex items-center space-x-3.5">
@@ -40,7 +40,7 @@ export const Header: React.FC = () => {
               <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
                 Monitor de coyuntura y riesgo
               </h1>
-              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] font-sans uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 v0.1.0
               </span>
             </div>

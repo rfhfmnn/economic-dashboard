@@ -128,11 +128,11 @@ export const RemView: React.FC<RemViewProps> = () => {
   return (
     <div className="space-y-6" data-testid="rem-view-container">
       {/* Control Bar: Report Period, Cohort Switcher & Section Controls */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 backdrop-blur-sm">
         {/* Left: Report Period Dropdown */}
         <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor="rem-period-select" className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-blue-400" />
+          <label htmlFor="rem-period-select" className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
             <span>Informe REM:</span>
           </label>
           <select
@@ -140,7 +140,7 @@ export const RemView: React.FC<RemViewProps> = () => {
             data-testid="rem-period-select"
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-1.5 text-sm font-mono text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-sm font-sans tabular-nums text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           >
             <option value="ultimo">Último informe disponible</option>
             {reports.map((p) => (
@@ -155,8 +155,8 @@ export const RemView: React.FC<RemViewProps> = () => {
         <div className="flex flex-wrap items-center gap-3">
           {/* Cohort Pill Toggle */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Muestra:</span>
-            <div className="bg-slate-950 p-1 rounded-lg border border-slate-800 flex items-center gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Muestra:</span>
+            <div className="bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-1">
               <button
                 type="button"
                 data-testid="cohort-toggle-todos"
@@ -164,7 +164,7 @@ export const RemView: React.FC<RemViewProps> = () => {
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
                   cohort === 'todos'
                     ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800/60'
                 }`}
               >
                 Todos los participantes
@@ -176,7 +176,7 @@ export const RemView: React.FC<RemViewProps> = () => {
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
                   cohort === 'top_10'
                     ? 'bg-amber-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800/60'
                 }`}
               >
                 Top 10 más precisos
@@ -185,7 +185,7 @@ export const RemView: React.FC<RemViewProps> = () => {
           </div>
 
           {/* Category Filter */}
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-xs">
             <button
               type="button"
               data-testid="category-filter-all"
@@ -193,7 +193,7 @@ export const RemView: React.FC<RemViewProps> = () => {
               className={`px-2 py-0.5 rounded text-xs transition-all ${
                 activeCategory === 'all'
                   ? 'bg-blue-600 text-white font-medium shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Todas (8)
@@ -205,7 +205,7 @@ export const RemView: React.FC<RemViewProps> = () => {
               className={`px-2 py-0.5 rounded text-xs transition-all ${
                 activeCategory === 'prices_rates'
                   ? 'bg-blue-600 text-white font-medium shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Precios & tasas
@@ -217,7 +217,7 @@ export const RemView: React.FC<RemViewProps> = () => {
               className={`px-2 py-0.5 rounded text-xs transition-all ${
                 activeCategory === 'activity_fiscal'
                   ? 'bg-blue-600 text-white font-medium shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Actividad & fiscal
@@ -229,7 +229,7 @@ export const RemView: React.FC<RemViewProps> = () => {
             type="button"
             data-testid="rem-reset-horizons-button"
             onClick={handleResetHorizons}
-            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg border border-slate-800 transition-colors"
+            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors"
             title="Restablecer horizontes predeterminados en todas las tarjetas"
           >
             <RotateCcw className="w-4 h-4" />
@@ -241,34 +241,34 @@ export const RemView: React.FC<RemViewProps> = () => {
             data-testid="rem-refresh-button"
             onClick={fetchData}
             disabled={loading}
-            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg border border-slate-800 transition-colors disabled:opacity-50"
+            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors disabled:opacity-50"
             title="Actualizar datos REM"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-500 dark:text-blue-400' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Informative Context Banner */}
       {summary && (
-        <div className="bg-slate-950/60 border border-slate-800/70 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/70 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4 text-xs">
           <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-2 text-slate-300">
-              <Calendar className="w-3.5 h-3.5 text-blue-400" />
-              <span>Publicación: <strong className="font-mono text-slate-100">{summary.report_date}</strong></span>
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+              <Calendar className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+              <span>Publicación: <strong className="font-sans tabular-nums text-slate-900 dark:text-slate-100">{summary.report_date}</strong></span>
             </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <Users className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Participantes en muestra: <strong className="font-mono text-slate-100">{summary.total_participants} entidades</strong></span>
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+              <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Participantes en muestra: <strong className="font-sans tabular-nums text-slate-900 dark:text-slate-100">{summary.total_participants} entidades</strong></span>
             </div>
-            <div className="flex items-center gap-2 text-slate-400">
-              <Layers className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Fuente: <strong className="text-slate-300">BCRA/ArgentinaDatos API</strong></span>
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <Layers className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+              <span>Fuente: <strong className="text-slate-700 dark:text-slate-300">BCRA/ArgentinaDatos API</strong></span>
             </div>
           </div>
 
           {summary.divergence_alerts && summary.divergence_alerts.length > 0 && (
-            <div className="flex items-center gap-1.5 text-amber-400 bg-amber-950/30 border border-amber-800/50 px-2.5 py-1 rounded-md font-mono">
+            <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 px-2.5 py-1 rounded-md font-sans tabular-nums">
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>{summary.divergence_alerts.length} alertas de divergencia Top 10</span>
             </div>
@@ -361,7 +361,7 @@ export const RemView: React.FC<RemViewProps> = () => {
           Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 h-44 animate-pulse"
+              className="bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-5 h-44 animate-pulse"
             />
           ))
         )}

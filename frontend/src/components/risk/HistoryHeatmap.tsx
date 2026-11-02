@@ -7,12 +7,12 @@ export interface HistoryHeatmapProps {
 }
 
 const HEATMAP_CLASSES: Record<number, string> = {
-  1: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:border-emerald-400',
-  2: 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:border-amber-400',
-  3: 'bg-orange-500/20 text-orange-400 border-orange-500/30 hover:border-orange-400',
-  4: 'bg-rose-500/20 text-rose-400 border-rose-500/30 hover:border-rose-400',
-  5: 'bg-red-600/20 text-red-400 border-red-600/30 hover:border-red-400',
-  6: 'bg-purple-600/20 text-purple-300 border-purple-600/30 hover:border-purple-300',
+  1: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500',
+  2: 'bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/30 hover:border-amber-500',
+  3: 'bg-orange-500/15 text-orange-800 dark:text-orange-400 border-orange-500/30 hover:border-orange-500',
+  4: 'bg-rose-500/15 text-rose-800 dark:text-rose-400 border-rose-500/30 hover:border-rose-500',
+  5: 'bg-red-600/15 text-red-800 dark:text-red-400 border-red-600/30 hover:border-red-500',
+  6: 'bg-purple-600/15 text-purple-800 dark:text-purple-300 border-purple-600/30 hover:border-purple-500',
 }
 
 const SIT_LABELS: Record<number, string> = {
@@ -29,19 +29,19 @@ export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
   const sorted = [...history].sort((a, b) => a.periodo.localeCompare(b.periodo))
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-        <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5 text-blue-400" />
+        <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
           <span>Matriz de calificación histórica (24 meses)</span>
         </h4>
-        <span className="text-[11px] font-mono text-slate-500">
+        <span className="text-[11px] font-sans text-slate-500 dark:text-slate-400">
           Evolución mensual de la peor situación registrada en el sistema
         </span>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="p-4 text-center text-xs text-slate-500 font-mono">
+        <div className="p-4 text-center text-xs text-slate-500 font-sans">
           Sin registros históricos informados en la Central de Deudores.
         </div>
       ) : (
@@ -67,10 +67,10 @@ export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
                   className={`flex flex-col items-center justify-center p-2 rounded border transition-all text-center ${theme}`}
                   title={`Período: ${item.periodo} — ${SIT_LABELS[sit]}`}
                 >
-                  <span className="text-sm font-bold font-mono tabular-nums leading-none">
+                  <span className="text-sm font-bold font-sans tabular-nums leading-none">
                     {sit}
                   </span>
-                  <span className="text-[9px] font-mono opacity-80 mt-1">
+                  <span className="text-[9px] font-sans opacity-80 mt-1">
                     {shortLabel}
                   </span>
                 </div>
@@ -79,7 +79,7 @@ export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
           </div>
 
           {/* Legend */}
-          <div className="mt-3 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-slate-400">
+          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800/60 flex flex-wrap items-center justify-center gap-3 text-[10px] font-sans text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded bg-emerald-500/40 border border-emerald-500 inline-block"></span>
               <span>1: Normal</span>

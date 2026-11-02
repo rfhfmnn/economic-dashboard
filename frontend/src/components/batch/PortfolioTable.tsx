@@ -152,26 +152,26 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
   }, [debtors, search, sortField, sortAsc])
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 overflow-hidden">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 overflow-hidden shadow-sm">
       {/* Table header bar */}
-      <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-blue-400" />
-            <h3 className="text-sm font-semibold text-slate-100">
+            <Layers className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {portfolioName} — Detalle comparativo
             </h3>
           </div>
 
           {/* Segmented view mode toggle */}
-          <div className="inline-flex items-center rounded-lg border border-slate-800 bg-slate-950 p-0.5 text-xs">
+          <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setViewMode('flat')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-colors ${
                 viewMode === 'flat'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Building2 className="w-3 h-3" />
@@ -183,7 +183,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium transition-colors ${
                 viewMode === 'grouped'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Users className="w-3 h-3" />
@@ -193,13 +193,13 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
         </div>
 
         <div className="relative w-full md:w-72">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar por CUIT, entidad o razón social..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-700 bg-slate-950 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500"
           />
         </div>
       </div>
@@ -210,10 +210,10 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
           /* Flat Entity Table */
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px] bg-slate-950/40">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-sans text-[11px] bg-slate-50 dark:bg-slate-950/40">
                 <th
                   onClick={() => handleSort('cuit')}
-                  className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>CUIT/CUIL</span>
@@ -222,7 +222,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('denominacion')}
-                  className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Titular/razón social</span>
@@ -231,7 +231,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('entidad')}
-                  className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Entidad financiera</span>
@@ -240,7 +240,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('situacion')}
-                  className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-center gap-1">
                     <span>Situación</span>
@@ -249,7 +249,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('monto')}
-                  className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>Monto en entidad (ARS)</span>
@@ -262,7 +262,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 <th className="py-2.5 px-3 text-right">Dossier</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-sans">
               {filteredAndSortedFlat.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-xs text-slate-500 font-sans">
@@ -271,36 +271,36 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </tr>
               ) : (
                 filteredAndSortedFlat.map((r) => (
-                  <tr key={r.rowId} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2.5 px-3 font-semibold text-slate-300">
+                  <tr key={r.rowId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-2.5 px-3 font-mono font-semibold text-slate-700 dark:text-slate-300">
                       {r.cuit_formateado}
                     </td>
-                    <td className="py-2.5 px-3 font-sans font-medium text-slate-100 max-w-xs truncate" title={r.denominacion}>
+                    <td className="py-2.5 px-3 font-sans font-medium text-slate-900 dark:text-slate-100 max-w-xs truncate" title={r.denominacion}>
                       {r.denominacion}
                     </td>
-                    <td className="py-2.5 px-3 font-sans font-medium text-slate-200 max-w-xs truncate" title={r.entidad}>
+                    <td className="py-2.5 px-3 font-sans font-medium text-slate-700 dark:text-slate-200 max-w-xs truncate" title={r.entidad}>
                       {r.entidad}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <RiskBadge situacion={r.situacion} size="sm" variant="solid" />
                     </td>
-                    <td className="py-2.5 px-3 text-right font-bold text-slate-100 tabular-nums">
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                       ${r.monto?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) || '0'}
                     </td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">
-                      <span className={r.participacionPct >= 50 ? 'text-amber-400 font-semibold' : ''}>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                      <span className={r.participacionPct >= 50 ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>
                         {r.participacionPct.toFixed(1)}%
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-center tabular-nums text-slate-400">
+                    <td className="py-2.5 px-3 text-center tabular-nums text-slate-500 dark:text-slate-400">
                       {r.diasAtraso && r.diasAtraso > 0 ? (
-                        <span className="text-amber-400 font-bold">{r.diasAtraso} d</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">{r.diasAtraso} d</span>
                       ) : (
                         <span>0 d</span>
                       )}
                     </td>
                     <td className="py-2.5 px-3 text-center tabular-nums">
-                      <span className={r.total_cheques_rechazados > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}>
+                      <span className={r.total_cheques_rechazados > 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
                         {r.total_cheques_rechazados || 0}
                       </span>
                     </td>
@@ -308,7 +308,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                       <button
                         type="button"
                         onClick={() => window.open(api.getExportPdfUrl(r.cuit), '_blank')}
-                        className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+                        className="p-1.5 rounded text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         title={`Descargar dossier PDF de ${r.denominacion}`}
                       >
                         <FileDown className="w-3.5 h-3.5" />
@@ -323,11 +323,11 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
           /* Consolidated Debtor Table */
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px] bg-slate-950/40">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-sans text-[11px] bg-slate-50 dark:bg-slate-950/40">
                 <th className="py-2.5 px-3 w-8"></th>
                 <th
                   onClick={() => handleSort('cuit')}
-                  className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>CUIT/CUIL</span>
@@ -336,7 +336,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('denominacion')}
-                  className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Titular/razón social</span>
@@ -345,7 +345,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('situacion')}
-                  className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-center gap-1">
                     <span>Peor situación</span>
@@ -354,7 +354,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 </th>
                 <th
                   onClick={() => handleSort('monto')}
-                  className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-200 select-none"
+                  className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>Deuda total (ARS)</span>
@@ -366,7 +366,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                 <th className="py-2.5 px-3 text-right">Dossier</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-sans">
               {filteredAndSortedGrouped.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-xs text-slate-500 font-sans">
@@ -378,13 +378,13 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   const isExpanded = !!expandedCuits[d.cuit]
                   return (
                     <React.Fragment key={d.cuit}>
-                      <tr className="hover:bg-slate-800/40 transition-colors">
+                      <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="py-2.5 px-2 text-center">
                           {d.entidades && d.entidades.length > 0 && (
                             <button
                               type="button"
                               onClick={() => toggleExpand(d.cuit)}
-                              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                               title={isExpanded ? 'Ocultar entidades' : 'Ver entidades'}
                             >
                               {isExpanded ? (
@@ -395,23 +395,23 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                             </button>
                           )}
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-300">
+                        <td className="py-2.5 px-3 font-mono font-semibold text-slate-700 dark:text-slate-300">
                           {d.cuit_formateado || d.cuit}
                         </td>
-                        <td className="py-2.5 px-3 font-sans font-medium text-slate-100 max-w-xs truncate" title={d.denominacion}>
+                        <td className="py-2.5 px-3 font-sans font-medium text-slate-900 dark:text-slate-100 max-w-xs truncate" title={d.denominacion}>
                           {d.denominacion}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           <RiskBadge situacion={d.peor_situacion || 1} size="sm" variant="solid" />
                         </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-100 tabular-nums">
+                        <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                           ${d.deuda_total?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) || '0'}
                         </td>
-                        <td className="py-2.5 px-3 text-center tabular-nums text-slate-400">
-                          <span className="font-semibold text-slate-200">{d.cantidad_entidades || d.entidades?.length || 0}</span> bancos
+                        <td className="py-2.5 px-3 text-center tabular-nums text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold text-slate-700 dark:text-slate-200">{d.cantidad_entidades || d.entidades?.length || 0}</span> bancos
                         </td>
                         <td className="py-2.5 px-3 text-center tabular-nums">
-                          <span className={d.total_cheques_rechazados > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}>
+                          <span className={d.total_cheques_rechazados > 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
                             {d.total_cheques_rechazados || 0}
                           </span>
                         </td>
@@ -419,7 +419,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                           <button
                             type="button"
                             onClick={() => window.open(api.getExportPdfUrl(d.cuit), '_blank')}
-                            className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+                            className="p-1.5 rounded text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                             title={`Descargar dossier PDF de ${d.denominacion}`}
                           >
                             <FileDown className="w-3.5 h-3.5" />
@@ -429,10 +429,10 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
 
                       {/* Expandable subtable of entities for this debtor */}
                       {isExpanded && d.entidades && d.entidades.length > 0 && (
-                        <tr className="bg-slate-950/70 border-b border-slate-800/80">
+                        <tr className="bg-slate-50/80 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80">
                           <td colSpan={8} className="py-2 px-6">
                             <div className="pl-6 border-l-2 border-blue-500/50 py-1 space-y-1.5 font-sans">
-                              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                 Desglose de entidades financieras ({d.entidades.length})
                               </span>
                               <div className="space-y-1">
@@ -441,20 +441,20 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                                   return (
                                     <div
                                       key={`${ent.entidad}-${idx}`}
-                                      className="flex items-center justify-between text-xs py-1 px-2.5 rounded bg-slate-900/60 border border-slate-800/60 font-mono"
+                                      className="flex items-center justify-between text-xs py-1 px-2.5 rounded bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 font-sans"
                                     >
                                       <div className="flex items-center gap-2">
                                         <RiskBadge situacion={ent.situacion} size="sm" variant="solid" />
-                                        <span className="text-slate-200 font-sans font-medium">{ent.entidad}</span>
+                                        <span className="text-slate-800 dark:text-slate-200 font-sans font-medium">{ent.entidad}</span>
                                         {ent.diasAtraso && ent.diasAtraso > 0 ? (
-                                          <span className="text-[10px] text-amber-400 font-mono">({ent.diasAtraso} d atraso)</span>
+                                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans tabular-nums">({ent.diasAtraso} d atraso)</span>
                                         ) : null}
                                       </div>
                                       <div className="flex items-center gap-3">
-                                        <span className="text-slate-400 text-[11px]">
+                                        <span className="text-slate-500 dark:text-slate-400 text-[11px] tabular-nums">
                                           {part.toFixed(1)}% part.
                                         </span>
-                                        <span className="font-bold text-slate-100 tabular-nums">
+                                        <span className="font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                                           ${ent.monto?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                                         </span>
                                       </div>

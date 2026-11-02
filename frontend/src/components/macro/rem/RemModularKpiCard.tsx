@@ -78,7 +78,7 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
 
   if (!data || data.length < 2) {
     return (
-      <div className="h-11 flex items-center justify-center text-[10px] text-slate-500 font-mono italic">
+      <div className="h-11 flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 font-sans italic">
         Sin puntos suficientes para proyección
       </div>
     )
@@ -162,26 +162,26 @@ const ProjectionSparkline: React.FC<SparklineProps> = ({
       {/* Floating Tooltip with Elevated Stacking */}
       {hoveredPoint && hoverPos && (
         <div
-          className="absolute pointer-events-none -top-8 bg-slate-950 border border-slate-700/90 px-2.5 py-0.5 rounded shadow-2xl text-[10px] font-mono text-slate-200 z-50 whitespace-nowrap"
+          className="absolute pointer-events-none -top-8 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700/90 px-2.5 py-0.5 rounded shadow-xl text-[10px] font-sans tabular-nums text-slate-800 dark:text-slate-200 z-50 whitespace-nowrap"
           style={getTooltipStyle()}
         >
-          <span className="text-slate-400 mr-1">{hoveredPoint.period}:</span>
-          <strong className="text-slate-100">
+          <span className="text-slate-500 dark:text-slate-400 mr-1">{hoveredPoint.period}:</span>
+          <strong className="text-slate-900 dark:text-slate-100">
             {hoveredPoint.value.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
           </strong>
-          <span className="text-slate-400 ml-0.5">{unit.includes('%') ? '%' : ''}</span>
+          <span className="text-slate-500 dark:text-slate-400 ml-0.5">{unit.includes('%') ? '%' : ''}</span>
         </div>
       )}
 
       {/* Timeline Labels: show a date every two periods */}
-      <div className="relative w-full h-4 mt-1 pt-1 border-t border-slate-800/50">
+      <div className="relative w-full h-4 mt-1 pt-1 border-t border-slate-200 dark:border-slate-800/50">
         {points.map((pt, i) => {
           if (i % 2 !== 0 && !(data.length === 2 && i === 1)) return null
           const leftPercent = (pt.x / width) * 100
           return (
             <span
               key={i}
-              className="absolute text-[9px] font-mono text-slate-400 whitespace-nowrap"
+              className="absolute text-[9px] font-sans tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap"
               style={{
                 left: `${leftPercent}%`,
                 transform: i === 0 ? 'none' : i === points.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
@@ -215,7 +215,7 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
 
   if (!history || history.length < 2) {
     return (
-      <div className="h-11 flex items-center justify-center text-[10px] text-slate-500 font-mono italic">
+      <div className="h-11 flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 font-sans italic">
         Sin historial comparativo disponible
       </div>
     )
@@ -261,13 +261,13 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
   return (
     <div className="relative mt-1" onMouseLeave={() => { setHovered(null); setHoverPos(null) }}>
       {/* Dual Legend */}
-      <div className="flex items-center justify-end text-[10px] font-mono text-slate-400 mb-1">
+      <div className="flex items-center justify-end text-[10px] font-sans text-slate-500 dark:text-slate-400 mb-1">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-0.5 bg-emerald-400 rounded-full inline-block"></span> Real
+            <span className="w-2.5 h-0.5 bg-emerald-500 rounded-full inline-block"></span> Real
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-0.5 border-t border-dashed border-amber-400 inline-block"></span> Previsto
+            <span className="w-2.5 h-0.5 border-t border-dashed border-amber-500 inline-block"></span> Previsto
           </span>
         </div>
       </div>
@@ -304,7 +304,7 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
             cx={pt.x}
             cy={pt.y}
             r={2.5}
-            fill="#0f172a"
+            fill="#ffffff"
             stroke="#f59e0b"
             strokeWidth="1.4"
           />
@@ -318,7 +318,7 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
             cy={pt.y}
             r={hovered?.period === pt.point.period ? 4 : 2.5}
             fill={hovered?.period === pt.point.period ? '#ffffff' : '#10b981'}
-            stroke="#0f172a"
+            stroke="#10b981"
             strokeWidth="1.2"
             onMouseEnter={() => {
               setHovered(pt.point)
@@ -331,20 +331,20 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
       {/* Floating Tooltip with Elevated Stacking */}
       {hovered && hoverPos && (
         <div
-          className="absolute pointer-events-none -top-9 bg-slate-950 border border-slate-700/90 px-2.5 py-1 rounded shadow-2xl text-[10px] font-mono text-slate-200 z-50 whitespace-nowrap"
+          className="absolute pointer-events-none -top-9 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700/90 px-2.5 py-1 rounded shadow-xl text-[10px] font-sans tabular-nums text-slate-800 dark:text-slate-200 z-50 whitespace-nowrap"
           style={getTooltipStyle()}
         >
-          <span className="text-slate-400 font-semibold mr-1.5">{hovered.period}:</span>
-          <span className="text-emerald-400 mr-2">Real: <strong>{hovered.real}{unit.includes('%') ? '%' : ''}</strong></span>
-          <span className="text-amber-400 mr-2">Previsto: <strong>{hovered.forecast}{unit.includes('%') ? '%' : ''}</strong></span>
-          <span className={hovered.delta > 0 ? 'text-rose-400' : 'text-emerald-400'}>
+          <span className="text-slate-500 dark:text-slate-400 font-semibold mr-1.5">{hovered.period}:</span>
+          <span className="text-emerald-600 dark:text-emerald-400 mr-2">Real: <strong>{hovered.real}{unit.includes('%') ? '%' : ''}</strong></span>
+          <span className="text-amber-600 dark:text-amber-400 mr-2">Previsto: <strong>{hovered.forecast}{unit.includes('%') ? '%' : ''}</strong></span>
+          <span className={hovered.delta > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
             Δ: {hovered.delta > 0 ? `+${hovered.delta}` : hovered.delta}
           </span>
         </div>
       )}
 
       {/* Period Labels: show a date every two periods */}
-      <div className="relative w-full h-4 mt-1 pt-1 border-t border-slate-800/50">
+      <div className="relative w-full h-4 mt-1 pt-1 border-t border-slate-200 dark:border-slate-800/50">
         {realPts.map((pt, i) => {
           if (i % 2 !== 0 && !(history.length === 2 && i === 1)) return null
           const leftPercent = (pt.x / width) * 100
@@ -352,8 +352,8 @@ const RealVsForecastChart: React.FC<RealVsForecastChartProps> = ({
           return (
             <span
               key={i}
-              className={`absolute text-[9px] font-mono whitespace-nowrap ${
-                isLast ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+              className={`absolute text-[9px] font-sans tabular-nums whitespace-nowrap ${
+                isLast ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-500 dark:text-slate-400'
               }`}
               style={{
                 left: `${leftPercent}%`,
@@ -428,7 +428,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
   return (
     <div
       data-testid={`rem-kpi-card-${variableData.id}`}
-      className="bg-slate-900/80 border border-slate-800/90 hover:border-slate-700/80 rounded-xl p-4 sm:p-5 shadow-lg backdrop-blur-sm transition-all duration-200 flex flex-col justify-between relative hover:z-30 focus-within:z-30"
+      className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700/80 rounded-xl p-4 sm:p-5 shadow-sm transition-all duration-200 flex flex-col justify-between relative hover:z-30 focus-within:z-30"
     >
       <div>
         {/* Top Header: Fixed Variable Name on Left, Horizon Select on Right */}
@@ -437,7 +437,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
           <div className="flex items-start gap-2 min-w-0 flex-1">
             <span className="flex-shrink-0 mt-0.5">{getVariableIcon(variableData.id)}</span>
             <span
-              className="text-xs sm:text-[13px] font-semibold text-slate-200 uppercase tracking-wide break-words leading-tight"
+              className="text-xs sm:text-[13px] font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wide break-words leading-tight"
               title={variableData.name}
             >
               {variableData.name}
@@ -451,7 +451,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
               data-testid={`horizon-select-${variableData.id}`}
               value={activeHorizonKey}
               onChange={(e) => onHorizonChange(e.target.value)}
-              className="bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer hover:border-slate-600 transition-colors"
+              className="bg-slate-50 dark:bg-slate-950/90 border border-slate-300 dark:border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-sans text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
             >
               {variableData.available_horizons.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -467,16 +467,16 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
           <div className="flex items-baseline gap-2">
             <span
               data-testid={`kpi-value-${variableData.id}`}
-              className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-slate-100 tracking-tight"
+              className="text-2xl sm:text-3xl font-bold font-sans tabular-nums text-slate-900 dark:text-slate-100 tracking-tight"
             >
               {formattedValue}
             </span>
-            <span className="text-xs font-mono text-slate-400">{unit}</span>
+            <span className="text-xs font-sans text-slate-500 dark:text-slate-400">{unit}</span>
           </div>
 
           <span
             data-testid={`kpi-period-tag-${variableData.id}`}
-            className="text-[11px] font-mono bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded border border-slate-700/50 flex-shrink-0"
+            className="text-[11px] font-sans tabular-nums bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700/50 flex-shrink-0"
           >
             {horizonData?.period || 'N/A'}
           </span>
@@ -484,33 +484,33 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
 
         {/* Confidence Interquartile Band (P25 - P75) */}
         {formattedP25 && formattedP75 && (
-          <div className="mt-2.5 flex items-center justify-between text-xs text-slate-400 bg-slate-950/40 px-2.5 py-1.5 rounded-lg border border-slate-800/60 font-mono">
-            <span className="text-slate-400 text-[11px]">Rango intercuartil (P25 - P75):</span>
-            <span className="text-slate-200 font-semibold tabular-nums">
+          <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/40 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800/60 font-sans tabular-nums">
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">Rango intercuartil (P25 - P75):</span>
+            <span className="text-slate-800 dark:text-slate-200 font-semibold tabular-nums">
               {formattedP25} — {formattedP75}
             </span>
           </div>
         )}
 
         {/* Micro-Visualization Zone with Mode Switcher */}
-        <div className="mt-3.5 pt-2.5 border-t border-slate-800/60">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-            <span className="font-medium text-slate-400 flex items-center gap-1">
+        <div className="mt-3.5 pt-2.5 border-t border-slate-200 dark:border-slate-800/60">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
+            <span className="font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
               {viewMode === 'future' ? (
                 <>
-                  <TrendingUp className="w-3 h-3 text-cyan-400" />
+                  <TrendingUp className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
                   <span>Curva proyectada</span>
                 </>
               ) : (
                 <>
-                  <Target className="w-3 h-3 text-emerald-400" />
+                  <Target className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   <span>Real vs pronóstico</span>
                 </>
               )}
             </span>
 
             {/* Mode Switcher */}
-            <div className="bg-slate-950 p-0.5 rounded border border-slate-800 flex items-center">
+            <div className="bg-slate-100 dark:bg-slate-950 p-0.5 rounded border border-slate-200 dark:border-slate-800 flex items-center">
               <button
                 type="button"
                 data-testid={`view-toggle-future-${variableData.id}`}
@@ -519,7 +519,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
                 className={`px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ${
                   viewMode === 'future'
                     ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 ↗ Futuro
@@ -532,7 +532,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
                 className={`px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ${
                   viewMode === 'reality'
                     ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 🎯 Real vs Previsto
@@ -551,25 +551,25 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
           ) : expReality ? (
             <div className="space-y-1.5">
               {/* Closed Observation Summary Callout */}
-              <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 text-[11px] font-mono">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
+              <div className="bg-slate-50 dark:bg-slate-950/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800/80 text-[11px] font-sans tabular-nums">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
                   <span>Último cerrado ({expReality.latest_period}):</span>
                   {/* Surprise Delta Badge */}
                   <div
                     className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                       expReality.status === 'favorable'
-                        ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-800/60'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
                         : expReality.status === 'unfavorable'
-                        ? 'bg-rose-950/50 text-rose-400 border border-rose-800/60'
-                        : 'bg-slate-800 text-slate-300 border border-slate-700/60'
+                        ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60'
                     }`}
                   >
                     {expReality.status === 'favorable' ? (
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                     ) : expReality.status === 'unfavorable' ? (
-                      <XCircle className="w-3 h-3 text-rose-400" />
+                      <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
                     ) : (
-                      <HelpCircle className="w-3 h-3 text-slate-400" />
+                      <HelpCircle className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                     )}
                     <span>
                       Sorpresa: {expReality.surprise_delta > 0 ? `+${expReality.surprise_delta}` : expReality.surprise_delta}
@@ -578,12 +578,12 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-slate-300">
+                <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
                   <span>
-                    Dato real: <strong className="text-emerald-400">{expReality.real_value.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
+                    Dato real: <strong className="text-emerald-600 dark:text-emerald-400">{expReality.real_value.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
                   </span>
                   <span>
-                    Previsto REM: <strong className="text-amber-400">{expReality.previous_forecast.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
+                    Previsto REM: <strong className="text-amber-600 dark:text-amber-400">{expReality.previous_forecast.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
                   </span>
                 </div>
               </div>
@@ -598,7 +598,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
               </div>
             </div>
           ) : (
-            <div className="h-11 flex items-center justify-center text-[10px] text-slate-500 font-mono italic">
+            <div className="h-11 flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 font-sans italic">
               Sin datos de expectativa vs realidad
             </div>
           )}
@@ -606,22 +606,22 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
       </div>
 
       {/* Footer: Cohort & Divergence Badge */}
-      <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-xs">
-        <span className="text-slate-400 text-[11px]">
-          Muestra: <strong className="text-slate-300">{cohort === 'top_10' ? 'Top 10' : 'Consenso total'}</strong>
+      <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between text-xs">
+        <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+          Muestra: <strong className="text-slate-700 dark:text-slate-300">{cohort === 'top_10' ? 'Top 10' : 'Consenso total'}</strong>
         </span>
 
         {divFlag ? (
           <div
             data-testid={`top10-divergence-badge-${variableData.id}`}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-950/50 text-amber-400 border border-amber-800/60 font-mono text-[10px] animate-pulse"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 font-sans tabular-nums text-[10px] animate-pulse"
             title="Divergencia significativa (>= 0.3 pp) entre los 10 mejores pronosticadores y el consenso total"
           >
-            <AlertTriangle className="w-3 h-3 text-amber-400" />
+            <AlertTriangle className="w-3 h-3 text-amber-500 dark:text-amber-400" />
             <span>Div. Top 10: {top10Div > 0 ? `+${top10Div.toFixed(2)}` : top10Div.toFixed(2)}</span>
           </div>
         ) : (
-          <span className="text-slate-400 font-mono text-[11px]">
+          <span className="text-slate-500 dark:text-slate-400 font-sans tabular-nums text-[11px]">
             Div. Top 10: {top10Div.toFixed(2)}
           </span>
         )}
