@@ -97,7 +97,7 @@ describe('Batch Portfolio Components', () => {
 
     expect(screen.getByText('EMPRESA ALFA S.A.')).toBeDefined()
     expect(screen.getByText('EMPRESA BETA S.R.L.')).toBeDefined()
-    expect(screen.getByText('Entidad Financiera')).toBeDefined()
+    expect(screen.getByText('Entidad financiera')).toBeDefined()
     expect(screen.getByText('BANCO DE GALICIA Y BS AS')).toBeDefined()
     expect(screen.getByText('BBVA BANCO FRANCES')).toBeDefined()
 
@@ -164,15 +164,15 @@ describe('Batch Portfolio Components', () => {
     const groupTab = screen.getByRole('button', { name: /Consolidado por Deudor/i })
     fireEvent.click(groupTab)
 
-    expect(screen.getByText('Peor Situación')).toBeDefined()
-    expect(screen.getByText('Deuda Total (ARS)')).toBeDefined()
+    expect(screen.getByText('Peor situación')).toBeDefined()
+    expect(screen.getByText('Deuda total (ARS)')).toBeDefined()
     expect(screen.getByText('EMPRESA ALFA S.A.')).toBeDefined()
     expect(screen.getByText('EMPRESA BETA S.R.L.')).toBeDefined()
 
     // Expand debtor details
     const expandBtn = screen.getAllByTitle('Ver entidades')[0]
     fireEvent.click(expandBtn)
-    expect(screen.getByText(/Desglose de Entidades Financieras/i)).toBeDefined()
+    expect(screen.getByText(/Desglose de entidades financieras/i)).toBeDefined()
   })
 })
 

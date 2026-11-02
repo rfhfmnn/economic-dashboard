@@ -156,7 +156,7 @@ describe('CpiExpectationChart Component', () => {
 
     // Assert title
     expect(
-      screen.getByText('Expectativa vs. Realidad: Inflación Mensual (INDEC vs. REM)')
+      screen.getByText('Expectativa vs. realidad: inflación mensual (INDEC vs. REM)')
     ).toBeInTheDocument()
 
     // Wait for accuracy summary to render
@@ -164,7 +164,7 @@ describe('CpiExpectationChart Component', () => {
       expect(screen.getByTestId('cpi-accuracy-summary')).toBeInTheDocument()
     })
 
-    expect(screen.getByText(/Error Absoluto Medio \(MAE\):/)).toBeInTheDocument()
+    expect(screen.getByText(/Error absoluto medio \(MAE\):/)).toBeInTheDocument()
     expect(screen.getByText('0.28 pp')).toBeInTheDocument()
     expect(screen.getByText('-0.05 pp')).toBeInTheDocument()
     expect(screen.getByText('-0.20 pp')).toBeInTheDocument()
@@ -194,7 +194,7 @@ describe('CpiExpectationChart Component', () => {
     // Check title update
     await waitFor(() => {
       expect(
-        screen.getByText('Cono de Proyección de Inflación (Fan Chart REM)')
+        screen.getByText('Cono de proyección de inflación (fan chart REM)')
       ).toBeInTheDocument()
     })
 
@@ -210,7 +210,7 @@ describe('CpiExpectationChart Component', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Expectativa vs. Realidad: Inflación Mensual (INDEC vs. REM)')
+        screen.getByText('Expectativa vs. realidad: inflación mensual (INDEC vs. REM)')
       ).toBeInTheDocument()
     })
   })

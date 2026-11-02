@@ -17,7 +17,7 @@ export const DebtEntityTable: React.FC<DebtEntityTableProps> = ({ entidades, tot
           <span>Distribución de deuda por entidad ({entidades.length})</span>
         </h4>
         <span className="text-xs font-mono text-slate-400">
-          Deuda Total: <strong className="text-slate-100">${totalDebt.toLocaleString('es-AR')}</strong>
+          Deuda total: <strong className="text-slate-100">${totalDebt.toLocaleString('es-AR')}</strong>
         </span>
       </div>
 
@@ -30,11 +30,11 @@ export const DebtEntityTable: React.FC<DebtEntityTableProps> = ({ entidades, tot
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px]">
-                <th className="py-2.5 px-3">Entidad Financiera</th>
+                <th className="py-2.5 px-3">Entidad financiera</th>
                 <th className="py-2.5 px-3 text-center">Situación</th>
-                <th className="py-2.5 px-3 text-right">Monto (Miles ARS)</th>
+                <th className="py-2.5 px-3 text-right">Monto (miles ARS)</th>
                 <th className="py-2.5 px-3 text-right">Participación %</th>
-                <th className="py-2.5 px-3 text-center">Días Atraso</th>
+                <th className="py-2.5 px-3 text-center">Días atraso</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

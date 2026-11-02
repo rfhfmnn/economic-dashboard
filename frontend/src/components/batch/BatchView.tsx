@@ -79,7 +79,7 @@ export const BatchView: React.FC = () => {
       {error && !loading && (
         <div className="rounded-lg border border-rose-900/50 bg-rose-950/20 p-5 text-center space-y-2">
           <AlertCircle className="w-6 h-6 text-rose-400 mx-auto" />
-          <h4 className="text-sm font-semibold text-rose-200">Error en Evaluación de Cartera</h4>
+          <h4 className="text-sm font-semibold text-rose-200">Error en evaluación de cartera</h4>
           <p className="text-xs text-rose-300 font-mono">{error}</p>
         </div>
       )}
@@ -95,7 +95,7 @@ export const BatchView: React.FC = () => {
                   {portfolio.portfolio_name}
                 </h3>
                 <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800">
-                  {portfolio.valid_count} Evaluados
+                  {portfolio.valid_count} evaluados
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1 font-mono">
@@ -106,12 +106,12 @@ export const BatchView: React.FC = () => {
             {/* Metrics cards & Export button */}
             <div className="flex flex-wrap items-center gap-4">
               <div className="text-right">
-                <span className="text-[10px] text-slate-500 font-mono uppercase block">Peor Situación</span>
+                <span className="text-[10px] text-slate-500 font-mono uppercase block">Peor situación</span>
                 <RiskBadge situacion={portfolio.peor_situacion_portfolio} showDescription size="md" variant="solid" />
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] text-slate-500 font-mono uppercase block">Deuda Consolidada</span>
+                <span className="text-[10px] text-slate-500 font-mono uppercase block">Deuda consolidada</span>
                 <span className="text-base font-bold font-mono text-slate-100 tabular-nums">
                   ${portfolio.total_debt?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                 </span>
@@ -146,7 +146,7 @@ export const BatchView: React.FC = () => {
             <div className="p-3.5 rounded-lg border border-amber-900/50 bg-amber-950/20 text-xs space-y-1">
               <div className="flex items-center gap-2 text-amber-300 font-semibold">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span>CUITs Omitidos por Validación ({portfolio.invalid_items.length}):</span>
+                <span>CUITs omitidos por validación ({portfolio.invalid_items.length}):</span>
               </div>
               <div className="flex flex-wrap gap-2 pt-1 font-mono text-[11px]">
                 {portfolio.invalid_items.map((inv, idx) => (

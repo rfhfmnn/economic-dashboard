@@ -51,14 +51,14 @@ describe('DossierModal Component', () => {
     expect(screen.getByText('$850.000 ARS')).toBeDefined()
     expect(screen.getByText('BANCO NACION')).toBeDefined()
     expect(screen.getByText('BANCO PROVINCIA')).toBeDefined()
-    expect(screen.getByText('Imprimir Dossier')).toBeDefined()
+    expect(screen.getByText('Imprimir dossier')).toBeDefined()
   })
 
   it('triggers window.print when Imprimir dossier button is clicked', () => {
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => { })
     render(<DossierModal isOpen={true} onClose={() => { }} report={mockReport} />)
 
-    const printBtn = screen.getByRole('button', { name: /Imprimir Dossier/i })
+    const printBtn = screen.getByRole('button', { name: /Imprimir dossier/i })
     fireEvent.click(printBtn)
     expect(printSpy).toHaveBeenCalled()
     printSpy.mockRestore()

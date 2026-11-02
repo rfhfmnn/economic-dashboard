@@ -94,7 +94,7 @@ describe('RemModularKpiCard Component', () => {
     expect(screen.getByText(/1.8% — 2.0%/)).toBeInTheDocument()
 
     // Cohort and divergence
-    expect(screen.getByText(/Consenso Total/)).toBeInTheDocument()
+    expect(screen.getByText(/Consenso total/)).toBeInTheDocument()
     expect(screen.getByText(/Div. Top 10: 0.04/)).toBeInTheDocument()
   })
 
@@ -126,14 +126,14 @@ describe('RemModularKpiCard Component', () => {
     )
 
     // Initially in future projection mode
-    expect(screen.getByText('Curva Proyectada')).toBeInTheDocument()
+    expect(screen.getByText('Curva proyectada')).toBeInTheDocument()
 
     // Click Real vs Previsto toggle
     const realityBtn = screen.getByTestId('view-toggle-reality-cpi_general')
     fireEvent.click(realityBtn)
 
     // Verify Real vs Previsto mode elements
-    expect(screen.getByText('Real vs Pronóstico')).toBeInTheDocument()
+    expect(screen.getByText('Real vs pronóstico')).toBeInTheDocument()
     expect(screen.getByText(/Último cerrado \(Sep-26\):/)).toBeInTheDocument()
     expect(screen.getByText(/Sorpresa: -0.2 pp/)).toBeInTheDocument()
     expect(screen.getByText('2,1%')).toBeInTheDocument()
@@ -142,7 +142,7 @@ describe('RemModularKpiCard Component', () => {
     // Switch back to Future mode
     const futureBtn = screen.getByTestId('view-toggle-future-cpi_general')
     fireEvent.click(futureBtn)
-    expect(screen.getByText('Curva Proyectada')).toBeInTheDocument()
+    expect(screen.getByText('Curva proyectada')).toBeInTheDocument()
   })
 
   it('renders divergence alert badge when divergence_flag is true', () => {

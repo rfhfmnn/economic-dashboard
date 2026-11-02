@@ -61,7 +61,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     if (mode === 'file' && selectedFile) {
       onEvaluateFile(selectedFile)
     } else if (mode === 'text' && parsedCuits.length > 0) {
-      onEvaluateCuits(parsedCuits, 'Lote Manual')
+      onEvaluateCuits(parsedCuits, 'Lote manual')
     }
   }
 
@@ -159,12 +159,12 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
               <div className="flex items-center gap-3">
                 <span className="text-emerald-400 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{validCount} Válidos</span>
+                  <span>{validCount} válidos</span>
                 </span>
                 {invalidCount > 0 && (
                   <span className="text-rose-400 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{invalidCount} Inválidos</span>
+                    <span>{invalidCount} inválidos</span>
                   </span>
                 )}
               </div>

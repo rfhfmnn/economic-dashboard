@@ -139,7 +139,7 @@ export const RemTable: React.FC<RemTableProps> = ({
           <div className="flex items-center gap-2">
             <Table className="w-4 h-4 text-blue-400" />
             <h3 className="text-base font-semibold text-slate-100 tracking-tight">
-              Tabla Integral de Consenso del Relevamiento (REM)
+              Tabla integral de consenso del relevamiento (REM)
             </h3>
             <span className="text-[10px] font-mono uppercase bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
               {filteredRows.length} indicadores
@@ -213,7 +213,7 @@ export const RemTable: React.FC<RemTableProps> = ({
         <table className="w-full text-left border-collapse" data-testid="rem-breakdown-table">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-900/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              <th className="py-3 px-4">Indicador / Variable</th>
+              <th className="py-3 px-4">Indicador/variable</th>
               <th className="py-3 px-3">Horizonte</th>
               <th className="py-3 px-3 text-right">Mediana</th>
               <th className="py-3 px-3 text-right">Promedio</th>

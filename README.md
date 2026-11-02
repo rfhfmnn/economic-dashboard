@@ -45,6 +45,8 @@ This platform delivers an institutional-grade analytical cockpit structured arou
 
 ## Architecture Overview
 
+![System Architecture](_docs/assets/architecture.svg)
+
 - **Backend:** Python 3.11+, FastAPI, SQLite / PostgreSQL (SQLAlchemy), HTTPX with custom SSL handling & synthetic mock fallback, OpenTelemetry, Pytest.
 - **Frontend:** React 18+, Vite, TypeScript, Tailwind CSS, Lucide React, Recharts.
 - **Observability:** OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana.

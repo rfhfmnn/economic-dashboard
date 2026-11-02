@@ -159,7 +159,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-400" />
             <h3 className="text-sm font-semibold text-slate-100">
-              {portfolioName} — Detalle Comparativo
+              {portfolioName} — Detalle comparativo
             </h3>
           </div>
 
@@ -175,7 +175,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
               }`}
             >
               <Building2 className="w-3 h-3" />
-              <span>Detalle por Entidad ({entityRows.length})</span>
+              <span>Detalle por entidad ({entityRows.length})</span>
             </button>
             <button
               type="button"
@@ -187,7 +187,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
               }`}
             >
               <Users className="w-3 h-3" />
-              <span>Consolidado por Deudor ({debtors.length})</span>
+              <span>Consolidado por deudor ({debtors.length})</span>
             </button>
           </div>
         </div>
@@ -196,7 +196,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Buscar por CUIT, Entidad o Razón Social..."
+            placeholder="Buscar por CUIT, entidad o razón social..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-700 bg-slate-950 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
@@ -216,7 +216,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>CUIT / CUIL</span>
+                    <span>CUIT/CUIL</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -225,7 +225,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Titular / Razón Social</span>
+                    <span>Titular/razón social</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -234,7 +234,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Entidad Financiera</span>
+                    <span>Entidad financiera</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -252,7 +252,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-end gap-1">
-                    <span>Monto en Entidad (ARS)</span>
+                    <span>Monto en entidad (ARS)</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -330,7 +330,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>CUIT / CUIL</span>
+                    <span>CUIT/CUIL</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -339,7 +339,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Titular / Razón Social</span>
+                    <span>Titular/razón social</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -348,7 +348,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 text-center cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-center gap-1">
-                    <span>Peor Situación</span>
+                    <span>Peor situación</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -357,12 +357,12 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                   className="py-2.5 px-3 text-right cursor-pointer hover:text-slate-200 select-none"
                 >
                   <div className="flex items-center justify-end gap-1">
-                    <span>Deuda Total (ARS)</span>
+                    <span>Deuda total (ARS)</span>
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
                 <th className="py-2.5 px-3 text-center">Entidades</th>
-                <th className="py-2.5 px-3 text-center">Cheques Rech.</th>
+                <th className="py-2.5 px-3 text-center">Cheques rech.</th>
                 <th className="py-2.5 px-3 text-right">Dossier</th>
               </tr>
             </thead>
@@ -433,7 +433,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({ debtors, portfol
                           <td colSpan={8} className="py-2 px-6">
                             <div className="pl-6 border-l-2 border-blue-500/50 py-1 space-y-1.5 font-sans">
                               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                                Desglose de Entidades Financieras ({d.entidades.length})
+                                Desglose de entidades financieras ({d.entidades.length})
                               </span>
                               <div className="space-y-1">
                                 {d.entidades.map((ent, idx) => {

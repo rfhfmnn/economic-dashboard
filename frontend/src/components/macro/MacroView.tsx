@@ -8,7 +8,7 @@ import {
   VariableCatalogItem,
   KNOWN_BCRA_VARIABLES,
 } from '../../types'
-import { FxSpreadChart } from './FxSpreadChart'
+import { FxSpreadChart, type FxTimeframe } from './FxSpreadChart'
 import { MacroChart, type Timeframe, type ChartSeries } from './MacroChart'
 import { MetricCard } from './MetricCard'
 import { VariablePicker } from './VariablePicker'
@@ -34,28 +34,43 @@ export const MacroView: React.FC = () => {
   >({})
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1Y')
+  const [fxTimeframe, setFxTimeframe] = useState<FxTimeframe>('1Y')
   const [loading, setLoading] = useState<boolean>(true)
+  const [refreshing, setRefreshing] = useState<boolean>(false)
   const [chartLoading, setChartLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
   // Fetch initial summary, catalog, and FX rates
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (forceRefresh: boolean = false) => {
     try {
-      setLoading(true)
+      if (forceRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
       setError(null)
       const [summaryRes, catalogRes, fxRes] = await Promise.all([
-        api.getMacroSummary(),
+        api.getMacroSummary(forceRefresh),
         api.getMacroCatalog(),
         api.getFxSpreads(),
       ])
       setSummary(summaryRes)
       setCatalog(catalogRes)
       setFxData(fxRes)
+      if (forceRefresh) {
+        // Clear series cache so charts re-fetch fresh data for active series
+        setSeriesCache({})
+      }
     } catch (err: any) {
       setError(err?.message || 'Error al conectar con los servicios macroeconómicos del BCRA.')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
+  }
+
+  const handleRefresh = () => {
+    loadDashboardData(true)
   }
 
   // Fetch missing series data whenever primaryIds or secondaryIds change
@@ -301,7 +316,8 @@ export const MacroView: React.FC = () => {
         <h3 className="text-base font-semibold text-rose-200">Error de carga macroeconómica</h3>
         <p className="text-xs text-rose-300 max-w-md mx-auto">{error}</p>
         <button
-          onClick={loadDashboardData}
+          type="button"
+          onClick={() => loadDashboardData(false)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -326,7 +342,7 @@ export const MacroView: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <span>Variables BCRA & Mercado Cambiario</span>
+            <span>Variables BCRA & mercado cambiario</span>
           </button>
           <button
             type="button"
@@ -338,12 +354,33 @@ export const MacroView: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <span>Expectativas de Mercado (REM)</span>
+            <span>Expectativas de mercado (REM)</span>
             <span className="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
               Nuevo
             </span>
           </button>
         </div>
+
+        {subTab === 'bcra_fx' && (
+          <div className="flex items-center gap-3">
+            {summary?.timestamp && (
+              <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+                Actualizado: {new Date(summary.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            <button
+              type="button"
+              data-testid="macro-refresh-button"
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-medium transition-all shadow-sm hover:border-slate-600 disabled:opacity-50 cursor-pointer"
+              title="Sincronizar últimas observaciones oficiales con la API del BCRA"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
+              <span>{refreshing ? 'Sincronizando...' : 'Actualizar datos'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {subTab === 'rem' ? (
@@ -405,12 +442,8 @@ export const MacroView: React.FC = () => {
           {/* FX Monitor & Spreads Board */}
           <FxSpreadChart
             fxData={fxData}
-            timeframe={timeframe as any}
-            onTimeframeChange={(tf) => {
-              if (['1M', '3M', '6M', '1Y', '5Y', 'Max'].includes(tf)) {
-                setTimeframe(tf as Timeframe)
-              }
-            }}
+            timeframe={fxTimeframe}
+            onTimeframeChange={setFxTimeframe}
           />
         </>
       )}

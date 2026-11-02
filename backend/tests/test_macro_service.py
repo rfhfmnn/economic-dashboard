@@ -110,3 +110,33 @@ def test_get_catalog_search(db_session, macro_service):
     # Search non-existent term
     res_empty = macro_service.get_catalog(db_session, query="NonExistentVariableTerm999")
     assert len(res_empty) == 0
+
+
+def test_macro_cache_ttl_and_staleness_detection(db_session, macro_service):
+    """Verify that stale series entries trigger automatic re-synchronization."""
+    from datetime import datetime, timedelta
+    from backend.app.database import MacroSyncLog
+
+    # Initially empty, variable 15 must be stale
+    assert macro_service.is_variable_stale(db_session, variable_id=15, ttl_hours=4.0) is True
+
+    # Sync variable 15
+    macro_service.sync_variable_series(db_session, variable_id=15)
+    assert macro_service.is_variable_stale(db_session, variable_id=15, ttl_hours=4.0) is False
+
+    # Simulate expired sync log (5 hours ago)
+    old_time = datetime.utcnow() - timedelta(hours=5)
+    log = db_session.query(MacroSyncLog).filter_by(variable_id=15).first()
+    assert log is not None
+    log.last_synced_at = old_time
+    db_session.commit()
+
+    # Should now detect as stale
+    assert macro_service.is_variable_stale(db_session, variable_id=15, ttl_hours=4.0) is True
+
+    # Calling get_variable_history auto-syncs because it is stale
+    history = macro_service.get_variable_history(db_session, variable_id=15)
+    assert len(history) > 0
+    # Now it should be fresh again
+    assert macro_service.is_variable_stale(db_session, variable_id=15, ttl_hours=4.0) is False
+

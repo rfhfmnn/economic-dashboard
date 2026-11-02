@@ -81,7 +81,7 @@ export const RemMetricCard: React.FC<RemMetricCardProps> = ({
       {/* Footer: Cohort Comparison & Divergence Flag */}
       <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs">
         <span className="text-slate-400 text-[11px]">
-          Muestra: <strong className="text-slate-300">{cohort === 'top_10' ? 'Top 10' : 'Consenso Total'}</strong>
+          Muestra: <strong className="text-slate-300">{cohort === 'top_10' ? 'Top 10' : 'Consenso total'}</strong>
         </span>
 
         {divergenceFlag ? (

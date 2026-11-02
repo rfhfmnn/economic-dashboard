@@ -114,6 +114,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest httpx pyyaml
 
+      - name: Ensure Observability Network
+        run: |
+          echo "🌐 Ensuring external observability network exists..."
+          docker network create observability-net || true
+
       - name: Validate Production Docker Compose Configuration
         run: |
           echo "🔍 Validating docker-compose.prod.yaml schema and config..."

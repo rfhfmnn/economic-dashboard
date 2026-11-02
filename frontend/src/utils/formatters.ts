@@ -23,7 +23,25 @@ const PRESERVED_ACRONYMS = new Set([
   'CUIL',
   'AL30',
   'GD30',
+  'DTI',
+  'REM',
+  'INDEC',
+  'CSV',
+  'TXT',
+  'PDF',
+  'PNG',
+  'TAMAR',
+  'MAE',
+  'YoY',
+  'MoM',
 ])
+
+const PRESERVED_PROPER_NOUNS: Record<string, string> = {
+  argentinadatos: 'ArgentinaDatos',
+  dolarapi: 'DolarApi',
+  argentina: 'Argentina',
+  excel: 'Excel',
+}
 
 const PRESERVED_ABBREVIATIONS = new Set(['com.', 'no.', 'nro.', 'art.', 'inc.', 'sr.', 'sra.'])
 
@@ -31,7 +49,8 @@ const PRESERVED_ABBREVIATIONS = new Set(['com.', 'no.', 'nro.', 'art.', 'inc.', 
  * Converts a title to Spanish grammatical case (sentence case):
  * - First word starts with capital letter.
  * - Words are lowercased unless they are acronyms (BCRA, USD, etc.), codes, numbers,
- *   or recognized abbreviations.
+ *   recognized abbreviations, or proper nouns.
+ * - Slashes have no surrounding whitespace ("A/B").
  * - Normalizes "Inflación mensual" to "Inflación intermensual".
  */
 export function formatGrammaticalTitle(rawTitle: string): string {
@@ -42,44 +61,72 @@ export function formatGrammaticalTitle(rawTitle: string): string {
   // Replace "Inflación mensual" / "Inflación Mensual" with "Inflación intermensual"
   text = text.replace(/^inflaci[oó]n\s+mensual/i, 'Inflación intermensual')
 
+  // Remove whitespace around slashes: "word / other" -> "word/other"
+  text = text.replace(/\s*\/\s*/g, '/')
+
   // Split into tokens preserving whitespace and words
   const words = text.split(/\s+/)
 
-  const formattedWords = words.map((word, index) => {
-    // Separate leading/trailing punctuation like (, ), [, ], :, ,, ., ", '
-    const match = word.match(/^([(\["'«¿¡]*)(.*?)([)\]"'»?!:;,.]*)$/)
-    if (!match) return word
-
-    const [, leadingPunct, core, trailingPunct] = match
-    if (!core) return word
-
+  const formatCoreWord = (core: string, isFirstInPhrase: boolean): string => {
     const upperCore = core.toUpperCase()
     const lowerCore = core.toLowerCase()
 
-    // 1. Check if core is an acronym that must remain capitalized
+    // 1. Acronym
     if (PRESERVED_ACRONYMS.has(upperCore)) {
-      return `${leadingPunct}${upperCore}${trailingPunct}`
+      return upperCore
     }
 
-    // 2. Check if it's an abbreviation like Com.
-    if (PRESERVED_ABBREVIATIONS.has(lowerCore + (trailingPunct.includes('.') ? '.' : ''))) {
-      const capitalizedAbbr = lowerCore.charAt(0).toUpperCase() + lowerCore.slice(1)
-      return `${leadingPunct}${capitalizedAbbr}${trailingPunct}`
+    // 2. Proper noun
+    if (PRESERVED_PROPER_NOUNS[lowerCore]) {
+      return PRESERVED_PROPER_NOUNS[lowerCore]
     }
 
-    // 3. Numbers, codes with digits (e.g. A3500, 2009, 2.2.2002=1), or symbols
+    // 3. Abbreviation like Com.
+    if (PRESERVED_ABBREVIATIONS.has(lowerCore)) {
+      return lowerCore.charAt(0).toUpperCase() + lowerCore.slice(1)
+    }
+
+    // 4. Numbers, codes with digits (e.g. A3500, 2009, 2.2.2002=1), or symbols
     if (/\d/.test(core) || /^[%$/#]+$/.test(core)) {
-      return `${leadingPunct}${core}${trailingPunct}`
+      return core
     }
 
-    // 4. First word: Capitalize first letter, lowercase rest
-    if (index === 0) {
-      const capitalized = core.charAt(0).toUpperCase() + core.slice(1).toLowerCase()
-      return `${leadingPunct}${capitalized}${trailingPunct}`
+    // 5. First word of phrase
+    if (isFirstInPhrase) {
+      return core.charAt(0).toUpperCase() + core.slice(1).toLowerCase()
     }
 
-    // 5. Subsequent words: Lowercase
-    return `${leadingPunct}${lowerCore}${trailingPunct}`
+    // 6. Subsequent words
+    return lowerCore
+  }
+
+  const formatTokenPart = (part: string, isFirstInPhrase: boolean): string => {
+    const match = part.match(/^([(\["'«¿¡]*)(.*?)([)\]"'»?!:;,.]*)$/)
+    if (!match) return part
+
+    const [, leadingPunct, core, trailingPunct] = match
+    if (!core) return part
+
+    const formattedCore = formatCoreWord(core, isFirstInPhrase)
+    return `${leadingPunct}${formattedCore}${trailingPunct}`
+  }
+
+  let isFirstWordOverall = true
+  const formattedWords = words.map((word) => {
+    if (!word) return word
+    if (word.includes('/')) {
+      const parts = word.split('/')
+      const formattedParts = parts.map((subPart) => {
+        const isFirst = isFirstWordOverall
+        isFirstWordOverall = false
+        return formatTokenPart(subPart, isFirst)
+      })
+      return formattedParts.join('/')
+    }
+
+    const isFirst = isFirstWordOverall
+    isFirstWordOverall = false
+    return formatTokenPart(word, isFirst)
   })
 
   return formattedWords.join(' ')

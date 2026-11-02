@@ -143,6 +143,18 @@ class RemReport(Base):
     )
 
 
+class MacroSyncLog(Base):
+    """Tracks last synchronization timestamp per variable or catalog to enforce cache TTL."""
+
+    __tablename__ = "macro_sync_log"
+
+    variable_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_synced_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+
+
 def init_db(bind_engine=None) -> None:
     """Create all tables in the database."""
     target_engine = bind_engine or engine

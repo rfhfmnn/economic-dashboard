@@ -16,6 +16,8 @@ The application is tailored for **economic and credit risk analysts**, structure
 
 ## 2. High-Level System Architecture
 
+![System Architecture](assets/architecture.svg)
+
 ```mermaid
 flowchart TD
     subgraph Data Sources

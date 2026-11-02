@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 660" width="800">
+  <defs>
+    <!-- Default gray arrow -->
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+    <!-- Blue arrow -->
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#3b82f6"/>
+    </marker>
+    <!-- Orange arrow -->
+    <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#f59e0b"/>
+    </marker>
+    <!-- Green arrow -->
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#22c55e"/>
+    </marker>
+    <!-- Purple arrow -->
+    <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#a855f7"/>
+    </marker>
+    <!-- Red arrow -->
+    <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+  </style>
+
+  <!-- ========================================== -->
+  <!-- 1. LAYER: BACKGROUND GROUPING BOXES        -->
+  <!-- ========================================== -->
+
+  <!-- Group 1: External Data Sources -->
+  <rect x="25" y="64" width="750" height="76" rx="8" stroke="#94a3b8" stroke-dasharray="6,4" fill="#f8fafc"/>
+  <text x="37" y="78" font-size="11" font-weight="600" fill="#64748b">EXTERNAL DATA SOURCES &amp; PUBLIC APIS</text>
+
+  <!-- Group 2: Backend Application & Data Engine -->
+  <rect x="25" y="166" width="750" height="286" rx="8" stroke="#94a3b8" stroke-dasharray="6,4" fill="#f8fafc"/>
+  <text x="37" y="180" font-size="11" font-weight="600" fill="#64748b">BACKEND APPLICATION &amp; DATA ENGINE — FASTAPI (PYTHON 3.11+)</text>
+
+  <!-- Group 3: Frontend Analytical Dashboard -->
+  <rect x="25" y="478" width="750" height="156" rx="8" stroke="#94a3b8" stroke-dasharray="6,4" fill="#f8fafc"/>
+  <text x="37" y="492" font-size="11" font-weight="600" fill="#64748b">FRONTEND ANALYTICAL DASHBOARD — REACT 18 + VITE + TAILWIND CSS</text>
+
+  <!-- ========================================== -->
+  <!-- 2. LAYER: CONNECTORS & ARROWS              -->
+  <!-- ========================================== -->
+
+  <!-- Tier 1 External APIs -> Tier 2.1 Ingestion Client (x=130, 310, 490, 670) -->
+  <!-- source bottom: 130, target top: 188. start: 130+5=135, end: 188-11=177 -->
+  <path d="M 130,135 L 130,177" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M 310,135 L 310,177" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M 490,135 L 490,177" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M 670,135 L 670,177" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+
+  <!-- Tier 2.1 Ingestion Client -> Tier 2.2 Persistence/Cache (x=220, 580) -->
+  <!-- source bottom: 226, target top: 252. start: 226+5=231, end: 252-11=241 -->
+  <path d="M 220,231 L 220,241" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow-orange)"/>
+  <path d="M 580,231 L 580,241" stroke="#ec4899" stroke-width="1.5" fill="none" marker-end="url(#arrow-red)"/>
+
+  <!-- Tier 2.2 Persistence/Cache -> Tier 2.3 Domain Services (x=130, 310, 490, 670) -->
+  <!-- source bottom: 294, target top: 320. start: 294+5=299, end: 320-11=309 -->
+  <path d="M 130,299 L 130,309" stroke="#22c55e" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+  <path d="M 310,299 L 310,309" stroke="#22c55e" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+  <path d="M 490,299 L 490,309" stroke="#22c55e" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+  <path d="M 670,299 L 670,309" stroke="#22c55e" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+
+  <!-- Tier 2.3 Domain Services -> Tier 2.4 REST API Gateway (x=130, 310, 490, 670) -->
+  <!-- source bottom: 370, target top: 396. start: 370+5=375, end: 396-11=385 -->
+  <path d="M 130,375 L 130,385" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow-orange)"/>
+  <path d="M 310,375 L 310,385" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow-orange)"/>
+  <path d="M 490,375 L 490,385" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arrow-purple)"/>
+  <path d="M 670,375 L 670,385" stroke="#22c55e" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+
+  <!-- Tier 2.4 REST API Gateway <-> Tier 3.1 Frontend API Client -->
+  <!-- source bottom: 438, target top: 500. start: 438+5=443, end: 500-11=489 -->
+  <path d="M 330,443 L 330,489" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+  <!-- return arrow: start: 500-5=495, end: 438+11=449 -->
+  <path d="M 470,495 L 470,449" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="473" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">HTTP / JSON REST API</text>
+
+  <!-- Tier 3.1 Frontend API Client -> Tier 3.2 UI Views (x=130, 310, 490, 670) -->
+  <!-- source bottom: 538, target top: 564. start: 538+5=543, end: 564-11=553 -->
+  <path d="M 130,543 L 130,553" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M 310,543 L 310,553" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)"/>
+  <path d="M 490,543 L 490,553" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arrow-purple)"/>
+  <path d="M 670,543 L 670,553" stroke="#22c55e" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+
+  <!-- ========================================== -->
+  <!-- 3. LAYER: BOXES & TEXT                     -->
+  <!-- ========================================== -->
+
+  <!-- Main Diagram Header -->
+  <text x="400" y="32" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e293b">Economic &amp; Credit Risk Dashboard (BCRA)</text>
+  <text x="400" y="48" text-anchor="middle" font-size="11" fill="#64748b">End-to-End System Architecture &amp; Data Pipeline</text>
+
+  <!-- Tier 1: 4 External Source Boxes -->
+  <!-- Box 1: BCRA Estadísticas -->
+  <rect x="47" y="86" width="166" height="44" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="130" y="103" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">BCRA Estadísticas</text>
+  <text x="130" y="118" text-anchor="middle" font-size="9" fill="#64748b">Reserves, Base, Rates</text>
+
+  <!-- Box 2: ArgentinaDatos REM -->
+  <rect x="227" y="86" width="166" height="44" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="310" y="103" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">ArgentinaDatos (REM)</text>
+  <text x="310" y="118" text-anchor="middle" font-size="9" fill="#64748b">Market Forecasts &amp; CPI</text>
+
+  <!-- Box 3: BCRA Deudores -->
+  <rect x="407" y="86" width="166" height="44" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="490" y="103" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">BCRA Deudores API</text>
+  <text x="490" y="118" text-anchor="middle" font-size="9" fill="#64748b">Debts, Sit 1-6, Checks</text>
+
+  <!-- Box 4: DolarApi FX -->
+  <rect x="587" y="86" width="166" height="44" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="670" y="103" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">DolarApi (FX Rates)</text>
+  <text x="670" y="118" text-anchor="middle" font-size="9" fill="#64748b">MEP, CCL, Blue &amp; Brecha</text>
+
+  <!-- Tier 2.1: Ingestion & Resilience Layer -->
+  <!-- Left Box: Resilient HTTPX Client -->
+  <rect x="47" y="188" width="346" height="38" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="220" y="203" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">Resilient HTTPX Client (Custom SSL &amp; Retries)</text>
+  <text x="220" y="217" text-anchor="middle" font-size="9" fill="#64748b">Bypasses BCRA certificate chain quirks &amp; handles timeouts</text>
+
+  <!-- Right Box: Synthetic Mock Fallback Engine -->
+  <rect x="407" y="188" width="346" height="38" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="1.2"/>
+  <text x="580" y="203" text-anchor="middle" font-size="11" font-weight="bold" fill="#9d174d">Synthetic Mock Fallback Engine (mock_data.py)</text>
+  <text x="580" y="217" text-anchor="middle" font-size="9" fill="#64748b">Seamless zero-crash fallback during upstream outages or offline</text>
+
+  <!-- Tier 2.2: Persistence & Cache Layer (SQLite) -->
+  <rect x="47" y="252" width="706" height="42" rx="6" fill="#d1fae5" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="400" y="268" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">SQLite Local Persistence &amp; Caching (SQLAlchemy / SQLModel)</text>
+  <text x="400" y="283" text-anchor="middle" font-size="9.5" fill="#64748b">Indexed Tables: macro_series · deudores_cache · cuit_portfolio · rem_reports</text>
+
+  <!-- Tier 2.3: Domain Services & Analytics Engine -->
+  <!-- Service 1: Macro & FX -->
+  <rect x="47" y="320" width="166" height="50" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="130" y="339" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">Macro &amp; FX Service</text>
+  <text x="130" y="355" text-anchor="middle" font-size="9" fill="#64748b">Aggregates &amp; Brecha %</text>
+
+  <!-- Service 2: REM Forecast -->
+  <rect x="227" y="320" width="166" height="50" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="310" y="339" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">REM Forecast Service</text>
+  <text x="310" y="355" text-anchor="middle" font-size="9" fill="#64748b">CPI Fan Chart &amp; Top 10</text>
+
+  <!-- Service 3: Credit Risk Engine -->
+  <rect x="407" y="320" width="166" height="50" rx="6" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.2"/>
+  <text x="490" y="339" text-anchor="middle" font-size="11" font-weight="bold" fill="#6b21a8">Credit Risk Engine</text>
+  <text x="490" y="355" text-anchor="middle" font-size="9" fill="#64748b">24M Matrix &amp; Badges</text>
+
+  <!-- Service 4: Export & Dossier -->
+  <rect x="587" y="320" width="166" height="50" rx="6" fill="#d1fae5" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="670" y="339" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">Export Service</text>
+  <text x="670" y="355" text-anchor="middle" font-size="9" fill="#64748b">Excel, CSV &amp; 1-Page PDF</text>
+
+  <!-- Tier 2.4: FastAPI REST API Gateway -->
+  <rect x="47" y="396" width="706" height="42" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="400" y="412" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">FastAPI REST API Gateway &amp; Telemetry Layer</text>
+  <text x="400" y="427" text-anchor="middle" font-size="9.5" fill="#64748b">Routers: /api/macro · /api/macro/rem · /api/risk · /api/batch · /api/export · /api/system</text>
+
+  <!-- Tier 3.1: Frontend API Client & State Layer -->
+  <rect x="47" y="500" width="706" height="38" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="400" y="515" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">Typed API Client &amp; Client-Side Validation Layer (services/api.ts)</text>
+  <text x="400" y="529" text-anchor="middle" font-size="9" fill="#64748b">AFIP Módulo 11 checksum · Global error boundaries · TanStack Query caching</text>
+
+  <!-- Tier 3.2: 4 UI Views & Dossier -->
+  <!-- View 1: Macro & FX Monitor -->
+  <rect x="47" y="564" width="166" height="56" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="130" y="582" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">Macro &amp; FX Monitor</text>
+  <text x="130" y="596" text-anchor="middle" font-size="9" fill="#64748b">Recharts Dual-Axis Series</text>
+  <text x="130" y="609" text-anchor="middle" font-size="8.5" fill="#64748b">FX Spread &amp; Variable Picker</text>
+
+  <!-- View 2: REM Expectations -->
+  <rect x="227" y="564" width="166" height="56" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <text x="310" y="582" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">REM Market Monitor</text>
+  <text x="310" y="596" text-anchor="middle" font-size="9" fill="#64748b">CPI Inflation Fan Chart</text>
+  <text x="310" y="609" text-anchor="middle" font-size="8.5" fill="#64748b">Top 10 vs All Forecasters</text>
+
+  <!-- View 3: Credit Risk Screener -->
+  <rect x="407" y="564" width="166" height="56" rx="6" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.2"/>
+  <text x="490" y="582" text-anchor="middle" font-size="11" font-weight="bold" fill="#6b21a8">Credit Risk Screener</text>
+  <text x="490" y="596" text-anchor="middle" font-size="9" fill="#64748b">24M Heatmap Matrix</text>
+  <text x="490" y="609" text-anchor="middle" font-size="8.5" fill="#64748b">Cheques &amp; Early Warnings</text>
+
+  <!-- View 4: Batch Board & Dossier -->
+  <rect x="587" y="564" width="166" height="56" rx="6" fill="#d1fae5" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="670" y="582" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">Portfolio &amp; Dossier</text>
+  <text x="670" y="596" text-anchor="middle" font-size="9" fill="#64748b">CSV/TXT Batch Upload</text>
+  <text x="670" y="609" text-anchor="middle" font-size="8.5" fill="#64748b">1-Page Executive PDF</text>
+</svg>

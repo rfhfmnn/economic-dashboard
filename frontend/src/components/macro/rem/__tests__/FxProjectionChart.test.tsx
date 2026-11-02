@@ -68,7 +68,7 @@ describe('FxProjectionChart Component', () => {
 
     expect(screen.getByTestId('fx-projection-chart')).toBeInTheDocument()
     expect(
-      screen.getByText('Trayectoria del Tipo de Cambio Nominal Oficial ($/USD)')
+      screen.getByText('Trayectoria del tipo de cambio nominal oficial ($/USD)')
     ).toBeInTheDocument()
 
     // Wait for end period and crawling peg calculations

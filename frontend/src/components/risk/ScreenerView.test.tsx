@@ -94,6 +94,8 @@ describe('Credit Screener Components', () => {
       expect(screen.getByText('ACME ARGENTINA S.A.')).toBeDefined()
       expect(screen.getByText('Exportar PDF')).toBeDefined()
       expect(screen.getByText('BANCO DE GALICIA Y BUENOS AIRES')).toBeDefined()
+      expect(screen.getByText(/Matriz de alertas tempranas/i)).toBeDefined()
+      expect(screen.getByText(/Matriz de calificación histórica/i)).toBeDefined()
     })
   })
 
@@ -106,6 +108,6 @@ describe('Credit Screener Components', () => {
     const incomeInput = screen.getByPlaceholderText(/Ingreso estimado/i)
     fireEvent.change(incomeInput, { target: { value: '50000' } })
 
-    expect(screen.getByText(/Carga \/ Cobertura/i)).toBeDefined()
+    expect(screen.getByText(/Carga\/cobertura/i)).toBeDefined()
   })
 })

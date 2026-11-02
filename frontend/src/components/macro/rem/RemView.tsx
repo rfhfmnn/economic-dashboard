@@ -84,10 +84,10 @@ export const RemView: React.FC<RemViewProps> = () => {
       if (sumData) setSummary(sumData)
       if (modData) setModularKpis(modData)
       if (!sumData && !modData) {
-        throw new Error('Error al obtener informe REM de ArgentinaDatos / BCRA')
+        throw new Error('Error al obtener informe REM de ArgentinaDatos/BCRA')
       }
     } catch (err: any) {
-      setError(err?.message || 'Error al obtener informe REM de ArgentinaDatos / BCRA')
+      setError(err?.message || 'Error al obtener informe REM de ArgentinaDatos/BCRA')
     } finally {
       setLoading(false)
     }
@@ -179,7 +179,7 @@ export const RemView: React.FC<RemViewProps> = () => {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                 }`}
               >
-                Top 10 Más Precisos
+                Top 10 más precisos
               </button>
             </div>
           </div>
@@ -208,7 +208,7 @@ export const RemView: React.FC<RemViewProps> = () => {
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Precios & Tasas
+              Precios & tasas
             </button>
             <button
               type="button"
@@ -220,7 +220,7 @@ export const RemView: React.FC<RemViewProps> = () => {
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Actividad & Fiscal
+              Actividad & fiscal
             </button>
           </div>
 
@@ -263,7 +263,7 @@ export const RemView: React.FC<RemViewProps> = () => {
             </div>
             <div className="flex items-center gap-2 text-slate-400">
               <Layers className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Fuente: <strong className="text-slate-300">BCRA / ArgentinaDatos API</strong></span>
+              <span>Fuente: <strong className="text-slate-300">BCRA/ArgentinaDatos API</strong></span>
             </div>
           </div>
 
@@ -309,7 +309,7 @@ export const RemView: React.FC<RemViewProps> = () => {
           // Legacy fallback cards
           <>
             <RemMetricCard
-              title="IPC Próximo Mes"
+              title="IPC próximo mes"
               period={summary.kpis.cpi_next_month.period}
               value={summary.kpis.cpi_next_month.value}
               unit={summary.kpis.cpi_next_month.unit}
@@ -321,7 +321,7 @@ export const RemView: React.FC<RemViewProps> = () => {
               icon={<TrendingUp className="w-4 h-4 text-emerald-400" />}
             />
             <RemMetricCard
-              title="IPC Próximos 12M"
+              title="IPC próximos 12M"
               period={summary.kpis.cpi_12m.period}
               value={summary.kpis.cpi_12m.value}
               unit={summary.kpis.cpi_12m.unit}
@@ -333,7 +333,7 @@ export const RemView: React.FC<RemViewProps> = () => {
               icon={<Percent className="w-4 h-4 text-blue-400" />}
             />
             <RemMetricCard
-              title="Tipo de Cambio Fin de Año"
+              title="Tipo de cambio fin de año"
               period={summary.kpis.fx_year_end.period}
               value={summary.kpis.fx_year_end.value}
               unit={summary.kpis.fx_year_end.unit}
@@ -345,7 +345,7 @@ export const RemView: React.FC<RemViewProps> = () => {
               icon={<DollarSign className="w-4 h-4 text-amber-400" />}
             />
             <RemMetricCard
-              title="Tasa Política Monetaria"
+              title="Tasa política monetaria"
               period={summary.kpis.policy_rate.period}
               value={summary.kpis.policy_rate.value}
               unit={summary.kpis.policy_rate.unit}

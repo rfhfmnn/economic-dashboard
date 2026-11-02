@@ -68,8 +68,9 @@ export const api = {
   },
 
   // Macro & FX Endpoints
-  getMacroSummary: async (): Promise<IndicatorsSummaryResponse> => {
-    const res: any = await request<any>('/macro/summary')
+  getMacroSummary: async (refresh: boolean = false): Promise<IndicatorsSummaryResponse> => {
+    const qs = refresh ? '?refresh=true' : ''
+    const res: any = await request<any>(`/macro/summary${qs}`)
     const rawIndicators = res?.indicators || {}
     const indicatorsList: MacroIndicator[] = Array.isArray(rawIndicators)
       ? rawIndicators.map((ind: any) => ({
@@ -96,10 +97,11 @@ export const api = {
     }
   },
 
-  getMacroSeries: async (idVariable: number, desde?: string, hasta?: string): Promise<MacroSeriesResponse> => {
+  getMacroSeries: async (idVariable: number, desde?: string, hasta?: string, refresh: boolean = false): Promise<MacroSeriesResponse> => {
     const params = new URLSearchParams()
     if (desde) params.append('desde', desde)
     if (hasta) params.append('hasta', hasta)
+    if (refresh) params.append('refresh', 'true')
     const qs = params.toString() ? `?${params.toString()}` : ''
     const res: any = await request<any>(`/macro/series/${idVariable}${qs}`)
 

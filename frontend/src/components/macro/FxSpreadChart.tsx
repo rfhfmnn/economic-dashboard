@@ -20,6 +20,7 @@ import {
 } from 'recharts'
 import type { FxHistoryPoint, FxHistoryResponse, FxSpreadsResponse } from '../../types'
 import { api } from '../../services/api'
+import { useTheme } from '../../context/ThemeContext'
 
 export type FxTimeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
 
@@ -37,8 +38,21 @@ export const COTIZACIONES: CotizationConfig[] = [
   { key: 'oficial', name: 'Oficial mayorista', shortName: 'Oficial', desc: 'A3500 BCRA', color: '#38bdf8' },
   { key: 'mep', name: 'Dólar MEP', shortName: 'MEP', desc: 'Bolsa (AL30)', color: '#818cf8' },
   { key: 'ccl', name: 'Dólar CCL', shortName: 'CCL', desc: 'Contado con liq.', color: '#a855f7' },
-  { key: 'blue', name: 'Dólar Blue', shortName: 'Blue', desc: 'Informal/Libre', color: '#f59e0b' },
+  { key: 'blue', name: 'Dólar Blue', shortName: 'Blue', desc: 'Informal/libre', color: '#f59e0b' },
 ]
+
+export const getCotizationColor = (key: CotizationKey, isDark: boolean): string => {
+  switch (key) {
+    case 'oficial':
+      return isDark ? '#38bdf8' : '#0284c7'
+    case 'mep':
+      return isDark ? '#818cf8' : '#4f46e5'
+    case 'ccl':
+      return isDark ? '#a855f7' : '#9333ea'
+    case 'blue':
+      return isDark ? '#f59e0b' : '#d97706'
+  }
+}
 
 const TIMEFRAMES: FxTimeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
 
@@ -57,6 +71,16 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
   timeframe: propTimeframe,
   onTimeframeChange,
 }) => {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+
+  const cotizacionesWithTheme = useMemo(() => {
+    return COTIZACIONES.map((c) => ({
+      ...c,
+      color: getCotizationColor(c.key, isDark),
+    }))
+  }, [isDark])
+
   // Historical data state
   const [historyData, setHistoryData] = useState<FxHistoryResponse | null>(initialHistory)
   const [loadingHistory, setLoadingHistory] = useState<boolean>(!initialHistory)
@@ -294,25 +318,32 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
 
     ctx.scale(scale, scale)
 
-    // Dark canvas background
-    ctx.fillStyle = '#090d16'
+    // Dynamic canvas background according to theme
+    const canvasBg = isDark ? '#090d16' : '#ffffff'
+    const titleColor = isDark ? '#f8fafc' : '#0f172a'
+    const subtitleColor = isDark ? '#94a3b8' : '#475569'
+    const dividerColor = isDark ? '#1e293b' : '#e2e8f0'
+    const footerColor = '#64748b'
+
+    ctx.fillStyle = canvasBg
     ctx.fillRect(0, 0, totalWidth, totalHeight)
 
     // Header title
     ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillStyle = '#f8fafc'
+    ctx.fillStyle = titleColor
     ctx.fillText('Monitor cambiario — Evolución de cotizaciones y brecha financiera', paddingX, 30)
 
     // Subtitle
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillStyle = '#94a3b8'
-    const activeNames = COTIZACIONES.filter((c) => activeCotizaciones[c.key])
+    ctx.fillStyle = subtitleColor
+    const activeNames = cotizacionesWithTheme
+      .filter((c) => activeCotizaciones[c.key])
       .map((c) => c.name)
       .join(' • ')
     ctx.fillText(`${activeNames} | Rango: ${timeframe}`, paddingX, 48)
 
     // Divider line
-    ctx.strokeStyle = '#1e293b'
+    ctx.strokeStyle = dividerColor
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(paddingX, 58)
@@ -337,10 +368,10 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
 
       // Footer
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillStyle = '#64748b'
+      ctx.fillStyle = footerColor
       const dateStr = new Date().toLocaleDateString('es-AR')
       ctx.fillText(
-        `Fuente: BCRA / DolarApi / ArgentinaDatos • Generado: ${dateStr}`,
+        `Fuente: BCRA/DolarApi/ArgentinaDatos • Generado: ${dateStr}`,
         paddingX,
         totalHeight - 12
       )
@@ -356,7 +387,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
     img.src = blobURL
   }
 
-  // Custom Recharts Tooltip
+  // Custom Recharts Tooltip adapting to light/dark themes
   const FxCustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null
 
@@ -388,14 +419,24 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
     }
 
     return (
-      <div className="bg-slate-900/95 border border-slate-700/80 rounded-lg p-3 shadow-2xl backdrop-blur-md min-w-[240px] text-xs">
-        <div className="text-slate-400 font-sans font-medium text-[11px] pb-1.5 mb-2 border-b border-slate-800 flex items-center justify-between">
+      <div
+        className={`${
+          isDark
+            ? 'bg-slate-900/95 border-slate-700/80 text-slate-100 shadow-2xl'
+            : 'bg-white/95 border-slate-200 text-slate-900 shadow-xl'
+        } border rounded-lg p-3 backdrop-blur-md min-w-[240px] text-xs font-sans`}
+      >
+        <div
+          className={`font-sans font-medium text-[11px] pb-1.5 mb-2 border-b flex items-center justify-between ${
+            isDark ? 'text-slate-400 border-slate-800' : 'text-slate-500 border-slate-200'
+          }`}
+        >
           <span>{formatDate(label)}</span>
-          <span className="text-[10px] text-slate-500 font-mono">ARS/USD</span>
+          <span className="text-[10px] text-slate-500 font-sans tabular-nums">ARS/USD</span>
         </div>
         <div className="space-y-2">
           {payload.map((item: any) => {
-            const cfg = COTIZACIONES.find((c) => c.key === item.dataKey)
+            const cfg = cotizacionesWithTheme.find((c) => c.key === item.dataKey)
             const val = item.value
             const brecha =
               oficialVal && item.dataKey !== 'oficial'
@@ -409,10 +450,12 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-slate-200 font-medium">{cfg?.name || item.name}</span>
+                  <span className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                    {cfg?.name || item.name}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 font-mono tabular-nums">
-                  <span className="text-slate-100 font-bold">
+                <div className="flex items-center gap-2 font-sans tabular-nums">
+                  <span className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                     $
                     {val?.toLocaleString('es-AR', {
                       minimumFractionDigits: 2,
@@ -421,12 +464,19 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                   </span>
                   {brecha !== null && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${brecha > 40
-                          ? 'text-rose-400 bg-rose-500/15 border border-rose-500/30'
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-sans tabular-nums font-semibold border ${
+                        brecha > 40
+                          ? isDark
+                            ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+                            : 'text-rose-700 bg-rose-50 border-rose-200'
                           : brecha > 20
-                            ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30'
-                            : 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
-                        }`}
+                            ? isDark
+                              ? 'text-amber-400 bg-amber-500/15 border-amber-500/30'
+                              : 'text-amber-700 bg-amber-50 border-amber-200'
+                            : isDark
+                              ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
+                              : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      }`}
                     >
                       +{brecha.toFixed(1)}%
                     </span>
@@ -442,14 +492,14 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
 
   if (loading || !fxData) {
     return (
-      <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-5 animate-pulse">
-        <div className="h-5 w-48 bg-slate-800 rounded mb-4"></div>
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 animate-pulse">
+        <div className="h-5 w-48 bg-slate-200 dark:bg-slate-800 rounded mb-4"></div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 bg-slate-800/60 rounded"></div>
+            <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded"></div>
           ))}
         </div>
-        <div className="mt-4 h-64 bg-slate-800/40 rounded"></div>
+        <div className="mt-4 h-64 bg-slate-100 dark:bg-slate-800/40 rounded"></div>
       </div>
     )
   }
@@ -475,35 +525,43 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
   }
 
   const getSpreadBadgeClass = (brecha: number) => {
-    if (brecha > 40) return 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-    if (brecha > 20) return 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-    return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+    if (brecha > 40)
+      return isDark
+        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+        : 'bg-rose-50 text-rose-700 border-rose-200'
+    if (brecha > 20)
+      return isDark
+        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+        : 'bg-amber-50 text-amber-700 border-amber-200'
+    return isDark
+      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
   }
 
   const activeCount = Object.values(activeCotizaciones).filter(Boolean).length
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 sm:p-5 space-y-4">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 sm:p-5 space-y-4 shadow-sm">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             <span>Monitor cambiario & brecha financiera</span>
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Cotizaciones de tipos de cambio financieros, dispersión histórica y comparación interactiva
           </p>
         </div>
 
-        <span className="text-[11px] font-mono text-slate-500">
+        <span className="text-[11px] font-sans tabular-nums text-slate-500 dark:text-slate-400">
           Act: {formattedTime}
         </span>
       </div>
 
       {/* FX Current Rates Grid (Clicking toggles that cotization in the plot) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {COTIZACIONES.map((card) => {
+        {cotizacionesWithTheme.map((card) => {
           const rate = rates[card.key]
           const spread = spreads[card.key]
           const venta = rate?.venta || (card.key === 'oficial' ? oficial_base : 0)
@@ -515,10 +573,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               key={card.key}
               onClick={() => toggleCotization(card.key)}
               title={`Clic para ${isActive ? 'ocultar en' : 'mostrar en'} el gráfico histórico`}
-              className={`rounded-lg border p-3.5 flex flex-col justify-between cursor-pointer transition-all duration-200 ${isActive
-                  ? 'border-slate-700 bg-slate-950/80 shadow-md ring-1 ring-slate-700/60'
-                  : 'border-slate-800/60 bg-slate-950/30 opacity-60 hover:opacity-90'
-                }`}
+              className={`rounded-lg border p-3.5 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+                isActive
+                  ? 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/80 shadow-sm ring-1 ring-slate-300 dark:ring-slate-700/60'
+                  : 'border-slate-200 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 opacity-60 hover:opacity-90'
+              }`}
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -527,11 +586,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: card.color }}
                     />
-                    <span className="text-xs font-semibold text-slate-200">{card.name}</span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{card.name}</span>
                   </div>
                   {spread && (
                     <span
-                      className={`text-[11px] font-mono px-1.5 py-0.5 rounded border ${getSpreadBadgeClass(
+                      className={`text-[11px] font-sans tabular-nums px-1.5 py-0.5 rounded border ${getSpreadBadgeClass(
                         spread.brecha_porcentaje
                       )}`}
                     >
@@ -540,10 +599,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                   )}
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-[10px] text-slate-500">{card.desc}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">{card.desc}</p>
                   <span
-                    className={`text-[9px] uppercase tracking-wider font-mono font-medium ${isActive ? 'text-emerald-400' : 'text-slate-500'
-                      }`}
+                    className={`text-[9px] uppercase tracking-wider font-sans font-medium ${
+                      isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
+                    }`}
                   >
                     {isActive ? 'En gráfico' : 'Oculto'}
                   </span>
@@ -551,17 +611,17 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               </div>
 
               <div className="mt-3">
-                <div className="flex items-baseline justify-between font-mono">
+                <div className="flex items-baseline justify-between font-sans tabular-nums">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Venta</span>
-                    <span className="text-lg font-bold text-slate-100 tabular-nums">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Venta</span>
+                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                       ${venta.toFixed(2)}
                     </span>
                   </div>
                   {compra > 0 && (
                     <div className="text-right">
-                      <span className="text-[10px] text-slate-500 block">Compra</span>
-                      <span className="text-xs text-slate-400 tabular-nums">${compra.toFixed(2)}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Compra</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">${compra.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -572,12 +632,12 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
       </div>
 
       {/* Brecha Cambiaria Summary Bar */}
-      <div className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-300">Brecha cambiaria máxima:</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">Brecha cambiaria máxima:</span>
           {spreads?.blue && (
             <span
-              className={`font-mono font-bold px-2 py-0.5 rounded border ${getSpreadBadgeClass(
+              className={`font-sans tabular-nums font-bold px-2 py-0.5 rounded border ${getSpreadBadgeClass(
                 Math.max(
                   spreads?.mep?.brecha_porcentaje || 0,
                   spreads?.ccl?.brecha_porcentaje || 0,
@@ -595,22 +655,22 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
+        <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400 font-sans tabular-nums text-[11px]">
           <span>
             MEP Spread:{' '}
-            <strong className="text-slate-200">
+            <strong className="text-slate-900 dark:text-slate-200">
               +{spreads?.mep?.brecha_porcentaje?.toFixed(1) || '0.0'}%
             </strong>
           </span>
           <span>
             CCL Spread:{' '}
-            <strong className="text-slate-200">
+            <strong className="text-slate-900 dark:text-slate-200">
               +{spreads?.ccl?.brecha_porcentaje?.toFixed(1) || '0.0'}%
             </strong>
           </span>
           <span>
             Blue Spread:{' '}
-            <strong className="text-slate-200">
+            <strong className="text-slate-900 dark:text-slate-200">
               +{spreads?.blue?.brecha_porcentaje?.toFixed(1) || '0.0'}%
             </strong>
           </span>
@@ -618,41 +678,43 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
       </div>
 
       {/* Interactive Time-Series Section */}
-      <div className="rounded-lg border border-slate-800/90 bg-slate-950/70 p-4 space-y-3.5">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/70 p-4 space-y-3.5">
         {/* Controls Toolbar: Cotizations Selector + Date Configs + Export Buttons */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-slate-800/80">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800/80">
           {/* Cotization Pill Multi-Select and Comparison */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5 mr-1">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mr-1">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               <span>Cotizaciones:</span>
             </span>
 
-            {COTIZACIONES.map((c) => {
+            {cotizacionesWithTheme.map((c) => {
               const active = activeCotizaciones[c.key]
               return (
                 <div
                   key={c.key}
                   onClick={() => toggleCotization(c.key)}
-                  className={`group relative flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 cursor-pointer border select-none ${active
-                      ? 'border-slate-700 bg-slate-900/90 text-slate-100 shadow-sm'
-                      : 'border-slate-800/70 bg-slate-950/40 text-slate-400 hover:text-slate-300 hover:border-slate-700'
-                    }`}
+                  className={`group relative flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 cursor-pointer border select-none ${
+                    active
+                      ? 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800/70 bg-slate-100/60 dark:bg-slate-950/40 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
                 >
                   <span
-                    className={`w-2 h-2 rounded-full transition-opacity ${active ? 'opacity-100' : 'opacity-40'
-                      }`}
+                    className={`w-2 h-2 rounded-full transition-opacity ${
+                      active ? 'opacity-100' : 'opacity-40'
+                    }`}
                     style={{ backgroundColor: c.color }}
                   />
                   <span>{c.shortName}</span>
-                  {active && <Check className="w-3 h-3 text-emerald-400 ml-0.5" />}
+                  {active && <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400 ml-0.5" />}
 
                   {/* Quick 'Solo' hover button to isolate cotization */}
                   <button
                     type="button"
                     onClick={(e) => soloCotization(c.key, e)}
                     title={`Aislar solo ${c.name}`}
-                    className="ml-1 text-[10px] text-slate-400 hover:text-emerald-400 font-mono px-1 rounded hover:bg-slate-800/80 transition-colors"
+                    className="ml-1 text-[10px] text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 font-sans px-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800/80 transition-colors"
                   >
                     solo
                   </button>
@@ -660,11 +722,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               )
             })}
 
-            {activeCount < COTIZACIONES.length && (
+            {activeCount < cotizacionesWithTheme.length && (
               <button
                 type="button"
                 onClick={selectAllCotizaciones}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 border border-sky-500/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 transition-colors"
                 title="Mostrar todas las cotizaciones"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -676,7 +738,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
           {/* Timeframe Presets & Export Actions */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Timeframe Pill Buttons */}
-            <div className="flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-800">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900/90 rounded-lg p-0.5 border border-slate-200 dark:border-slate-800">
               {TIMEFRAMES.map((tf) => (
                 <button
                   key={tf}
@@ -685,10 +747,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                     handleTimeframeChange(tf)
                     if (showCustomPicker) setShowCustomPicker(false)
                   }}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${timeframe === tf
-                      ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`px-2.5 py-1 text-xs font-sans tabular-nums rounded-md transition-all ${
+                    timeframe === tf
+                      ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
                 >
                   {tf}
                 </button>
@@ -700,10 +763,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                   handleTimeframeChange('Custom')
                   setShowCustomPicker(!showCustomPicker)
                 }}
-                className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${timeframe === 'Custom'
-                    ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                className={`flex items-center gap-1 px-2.5 py-1 text-xs font-sans rounded-md transition-all ${
+                  timeframe === 'Custom'
+                    ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 font-semibold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
                 title="Rango personalizado de fechas"
               >
                 <Calendar className="w-3.5 h-3.5" />
@@ -717,10 +781,10 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                 type="button"
                 onClick={handleDownloadPng}
                 disabled={chartData.length === 0}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans tabular-nums rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 shadow-xs"
                 title="Descargar gráfico en alta resolución (PNG)"
               >
-                <Camera className="w-3.5 h-3.5 text-slate-400" />
+                <Camera className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                 <span className="hidden sm:inline">PNG</span>
               </button>
 
@@ -728,10 +792,10 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                 type="button"
                 onClick={handleDownloadCsv}
                 disabled={chartData.length === 0}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40"
-                title="Exportar datos a CSV / Excel"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans tabular-nums rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 shadow-xs"
+                title="Exportar datos a CSV/Excel"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                 <span className="hidden sm:inline">CSV</span>
               </button>
             </div>
@@ -740,10 +804,10 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
 
         {/* Custom Date Pickers Drawer (when 'Personalizado' is active) */}
         {showCustomPicker && (
-          <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
-            <span className="text-slate-300 font-medium">Rango de fechas:</span>
+          <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
+            <span className="text-slate-700 dark:text-slate-300 font-medium">Rango de fechas:</span>
             <div className="flex items-center gap-2">
-              <label htmlFor="fx-custom-start" className="text-slate-400">
+              <label htmlFor="fx-custom-start" className="text-slate-500 dark:text-slate-400">
                 Desde:
               </label>
               <input
@@ -754,11 +818,11 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                   setCustomStartDate(e.target.value)
                   handleTimeframeChange('Custom')
                 }}
-                className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div className="flex items-center gap-2">
-              <label htmlFor="fx-custom-end" className="text-slate-400">
+              <label htmlFor="fx-custom-end" className="text-slate-500 dark:text-slate-400">
                 Hasta:
               </label>
               <input
@@ -769,10 +833,10 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                   setCustomEndDate(e.target.value)
                   handleTimeframeChange('Custom')
                 }}
-                className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               />
             </div>
-            <span className="text-slate-500 text-[11px] font-mono">
+            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans tabular-nums">
               {chartData.length} observaciones filtradas
             </span>
           </div>
@@ -781,19 +845,19 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
         {/* Chart Viewport */}
         <div ref={chartContainerRef} className="relative w-full h-[340px] pt-2">
           {loadingHistory ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-xs rounded-lg z-10 space-y-2">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 dark:bg-slate-950/60 backdrop-blur-xs rounded-lg z-10 space-y-2">
               <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs font-mono text-slate-400">
+              <span className="text-xs font-sans text-slate-500 dark:text-slate-400">
                 Cargando serie histórica de cotizaciones...
               </span>
             </div>
           ) : chartData.length === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 text-xs">
               <p>Sin observaciones de cotizaciones disponibles para el rango seleccionado.</p>
               <button
                 type="button"
                 onClick={() => handleTimeframeChange('1Y')}
-                className="mt-2 text-emerald-400 hover:underline"
+                className="mt-2 text-emerald-600 dark:text-emerald-400 hover:underline"
               >
                 Restablecer a 1 Año
               </button>
@@ -805,46 +869,58 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               data={chartData}
               margin={{ top: 10, right: 20, left: 15, bottom: 20 }}
             >
-              <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid
+                stroke={isDark ? '#1e293b' : '#e2e8f0'}
+                strokeDasharray="3 3"
+                vertical={false}
+              />
               <XAxis
                 dataKey="fecha"
-                stroke="#64748b"
+                stroke={isDark ? '#64748b' : '#475569'}
+                tick={{ fill: isDark ? '#94a3b8' : '#475569', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: '#334155' }}
+                axisLine={{ stroke: isDark ? '#334155' : '#cbd5e1' }}
                 tickFormatter={formatXAxis}
                 dy={6}
+                className="font-sans tabular-nums"
               />
               <YAxis
-                stroke="#64748b"
+                stroke={isDark ? '#64748b' : '#475569'}
+                tick={{ fill: isDark ? '#94a3b8' : '#475569', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: '#334155' }}
+                axisLine={{ stroke: isDark ? '#334155' : '#cbd5e1' }}
                 domain={['auto', 'auto']}
                 tickFormatter={(val: number) => `$${Math.round(val).toLocaleString('es-AR')}`}
                 width={70}
+                className="font-sans tabular-nums"
               />
               <Tooltip content={<FxCustomTooltip />} />
               <Legend
                 verticalAlign="bottom"
                 height={28}
+                wrapperStyle={{ fontFamily: 'Inter, sans-serif' }}
                 content={() => (
-                  <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium pt-2 select-none">
-                    {COTIZACIONES.map((c) => {
+                  <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium pt-2 select-none font-sans">
+                    {cotizacionesWithTheme.map((c) => {
                       const active = activeCotizaciones[c.key]
                       return (
                         <button
                           key={c.key}
                           type="button"
                           onClick={() => toggleCotization(c.key)}
-                          className={`flex items-center gap-1.5 transition-opacity ${active ? 'opacity-100' : 'opacity-40 hover:opacity-75'
-                            }`}
+                          className={`flex items-center gap-1.5 transition-opacity ${
+                            active ? 'opacity-100' : 'opacity-40 hover:opacity-75'
+                          }`}
                         >
                           <span
                             className="w-2.5 h-2.5 rounded-full"
                             style={{ backgroundColor: c.color }}
                           />
-                          <span className="text-slate-300 font-sans">{c.name}</span>
+                          <span className={isDark ? 'text-slate-300 font-sans' : 'text-slate-700 font-sans'}>
+                            {c.name}
+                          </span>
                         </button>
                       )
                     })}
@@ -853,7 +929,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
               />
 
               {/* Render dynamic line per active cotization */}
-              {COTIZACIONES.map((c) => {
+              {cotizacionesWithTheme.map((c) => {
                 if (!activeCotizaciones[c.key]) return null
                 return (
                   <Line
@@ -864,7 +940,7 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
                     stroke={c.color}
                     strokeWidth={2}
                     dot={false}
-                    activeDot={{ r: 5, stroke: '#090d16', strokeWidth: 2 }}
+                    activeDot={{ r: 5, stroke: isDark ? '#090d16' : '#ffffff', strokeWidth: 2 }}
                     isAnimationActive={false}
                   />
                 )
@@ -874,10 +950,10 @@ export const FxSpreadChart: React.FC<FxSpreadChartProps> = ({
         </div>
 
         {/* Footer Metrics Indicator */}
-        <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 font-mono pt-1 border-t border-slate-800/60">
+        <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-sans tabular-nums pt-1 border-t border-slate-200 dark:border-slate-800/60">
           <div>
             <span>
-              {activeCount} de {COTIZACIONES.length} cotizaciones activas •{' '}
+              {activeCount} de {cotizacionesWithTheme.length} cotizaciones activas •{' '}
               {chartData.length.toLocaleString('es-AR')} días evaluados
             </span>
           </div>

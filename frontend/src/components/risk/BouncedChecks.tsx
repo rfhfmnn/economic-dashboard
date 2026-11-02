@@ -48,7 +48,7 @@ export const BouncedChecks: React.FC<BouncedChecksProps> = ({ cheques }) => {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px]">
-                    <th className="py-2 px-3">N° Cheque</th>
+                    <th className="py-2 px-3">N° cheque</th>
                     <th className="py-2 px-3">Fecha rechazo</th>
                     <th className="py-2 px-3 text-right">Monto (ARS)</th>
                     <th className="py-2 px-3 text-center">Estado</th>

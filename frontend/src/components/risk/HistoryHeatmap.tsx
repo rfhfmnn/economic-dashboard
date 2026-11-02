@@ -94,7 +94,7 @@ export const HistoryHeatmap: React.FC<HistoryHeatmapProps> = ({ history }) => {
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded bg-rose-500/40 border border-rose-500 inline-block"></span>
-              <span>4: Alto Riesgo</span>
+              <span>4: Alto riesgo</span>
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded bg-red-600/40 border border-red-600 inline-block"></span>

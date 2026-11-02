@@ -57,7 +57,7 @@ export const DossierModal: React.FC<DossierModalProps> = ({ isOpen, onClose, rep
               title="Imprimir documento (Ctrl+P)"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Imprimir Dossier</span>
+              <span>Imprimir dossier</span>
             </button>
 
             <button
@@ -94,40 +94,40 @@ export const DossierModal: React.FC<DossierModalProps> = ({ isOpen, onClose, rep
                   BANCO CENTRAL DE LA REPÚBLICA ARGENTINA
                 </h2>
                 <p className="text-xs text-slate-400 print:text-slate-600">
-                  Central de Deudores del Sistema Financiero — Dossier Ejecutivo de Riesgo
+                  Central de deudores del sistema financiero — Dossier ejecutivo de riesgo
                 </p>
               </div>
             </div>
 
             <div className="text-right text-xs font-mono text-slate-400 print:text-slate-600">
               <div>Emisión: {new Date().toLocaleDateString('es-AR')}</div>
-              <div className="text-[10px]">Confidencial / Uso Institucional</div>
+              <div className="text-[10px]">Confidencial/uso institucional</div>
             </div>
           </div>
 
           {/* Debtor Overview Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-lg bg-slate-950/60 print:bg-slate-50 border border-slate-800 print:border-slate-300">
             <div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase block">Titular / Razón Social</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase block">Titular/razón social</span>
               <span className="text-sm font-bold text-slate-100 print:text-slate-900 truncate block" title={report.denominacion}>
                 {report.denominacion}
               </span>
             </div>
 
             <div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase block">CUIT / CUIL</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase block">CUIT/CUIL</span>
               <span className="text-sm font-mono font-semibold text-slate-200 print:text-slate-800">
                 {report.cuit_formateado || report.cuit}
               </span>
             </div>
 
             <div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase block">Peor Situación</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase block">Peor situación</span>
               <RiskBadge situacion={report.peor_situacion} showDescription size="sm" variant="solid" />
             </div>
 
             <div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase block">Deuda Consolidada</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase block">Deuda consolidada</span>
               <span className="text-sm font-mono font-bold text-slate-100 print:text-slate-900 tabular-nums">
                 ${report.deuda_total?.toLocaleString('es-AR') || '0'} ARS
               </span>
@@ -139,7 +139,7 @@ export const DossierModal: React.FC<DossierModalProps> = ({ isOpen, onClose, rep
             <div className="p-3 rounded-lg border border-slate-800 print:border-slate-300 bg-slate-950/40 print:bg-slate-50 flex items-center justify-between text-xs">
               <div>
                 <span className="text-[10px] font-mono text-slate-400 print:text-slate-600 uppercase block">
-                  Capacidad de Pago Evaluada
+                  Capacidad de pago evaluada
                 </span>
                 <span className="font-semibold text-slate-200 print:text-slate-800">
                   Ingreso declarado: ${dtiData.income.toLocaleString('es-AR')} ({dtiData.frequency === 'monthly' ? 'mensual' : 'anual'})
@@ -147,7 +147,7 @@ export const DossierModal: React.FC<DossierModalProps> = ({ isOpen, onClose, rep
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-mono text-slate-400 print:text-slate-600 uppercase block">
-                  Ratio Deuda / Ingreso Anual
+                  Ratio deuda/ingreso anual
                 </span>
                 <span className="font-mono font-bold text-sm text-slate-100 print:text-slate-900">
                   {dtiData.multiple.toFixed(1)}x ({dtiData.label})

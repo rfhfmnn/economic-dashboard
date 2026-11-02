@@ -213,7 +213,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             }`}
         >
           <Search className="w-3.5 h-3.5 text-slate-400" />
-          <span>{isOpen ? 'Cerrar Selector' : 'Seleccionar Variables'}</span>
+          <span>{isOpen ? 'Cerrar selector' : 'Seleccionar variables'}</span>
           <span className="ml-1 text-[10px] font-mono bg-slate-900 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700">
             {activePrimaryIds.length + activeSecondaryIds.length}
           </span>

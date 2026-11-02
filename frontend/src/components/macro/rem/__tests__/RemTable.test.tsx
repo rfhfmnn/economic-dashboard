@@ -91,7 +91,7 @@ describe('RemTable Component', () => {
 
     expect(screen.getByTestId('rem-table-container')).toBeInTheDocument()
     expect(
-      screen.getByText('Tabla Integral de Consenso del Relevamiento (REM)')
+      screen.getByText('Tabla integral de consenso del relevamiento (REM)')
     ).toBeInTheDocument()
 
     // Wait for rows to render

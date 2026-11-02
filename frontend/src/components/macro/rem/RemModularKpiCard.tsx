@@ -499,12 +499,12 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
               {viewMode === 'future' ? (
                 <>
                   <TrendingUp className="w-3 h-3 text-cyan-400" />
-                  <span>Curva Proyectada</span>
+                  <span>Curva proyectada</span>
                 </>
               ) : (
                 <>
                   <Target className="w-3 h-3 text-emerald-400" />
-                  <span>Real vs Pronóstico</span>
+                  <span>Real vs pronóstico</span>
                 </>
               )}
             </span>
@@ -580,7 +580,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
 
                 <div className="flex items-center justify-between text-slate-300">
                   <span>
-                    Dato Real: <strong className="text-emerald-400">{expReality.real_value.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
+                    Dato real: <strong className="text-emerald-400">{expReality.real_value.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
                   </span>
                   <span>
                     Previsto REM: <strong className="text-amber-400">{expReality.previous_forecast.toLocaleString('es-AR')}{expReality.unit.includes('%') ? '%' : ''}</strong>
@@ -608,7 +608,7 @@ export const RemModularKpiCard: React.FC<RemModularKpiCardProps> = ({
       {/* Footer: Cohort & Divergence Badge */}
       <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-xs">
         <span className="text-slate-400 text-[11px]">
-          Muestra: <strong className="text-slate-300">{cohort === 'top_10' ? 'Top 10' : 'Consenso Total'}</strong>
+          Muestra: <strong className="text-slate-300">{cohort === 'top_10' ? 'Top 10' : 'Consenso total'}</strong>
         </span>
 
         {divFlag ? (

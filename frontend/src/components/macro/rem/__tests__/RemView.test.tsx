@@ -70,7 +70,7 @@ describe('RemMetricCard Component', () => {
   it('renders title, period, value, and interquartile confidence band', () => {
     render(
       <RemMetricCard
-        title="IPC Próximo Mes"
+        title="IPC próximo mes"
         period="Oct-26"
         value={1.9}
         unit="% mensual"
@@ -82,7 +82,7 @@ describe('RemMetricCard Component', () => {
       />
     )
 
-    expect(screen.getByText('IPC Próximo Mes')).toBeInTheDocument()
+    expect(screen.getByText('IPC próximo mes')).toBeInTheDocument()
     expect(screen.getByText('Oct-26')).toBeInTheDocument()
     expect(screen.getByText('1,9%')).toBeInTheDocument()
     expect(screen.getByText(/1.8% — 2.0%/)).toBeInTheDocument()
@@ -93,7 +93,7 @@ describe('RemMetricCard Component', () => {
   it('renders divergence alert badge when divergenceFlag is true', () => {
     render(
       <RemMetricCard
-        title="IPC Próximos 12M"
+        title="IPC próximos 12M"
         period="próx. 12 meses"
         value={21.1}
         unit="% i.a."
@@ -155,10 +155,10 @@ describe('RemView Component', () => {
     expect(screen.getByText('Relevamiento 2026-09')).toBeInTheDocument()
 
     // Assert cards
-    expect(await screen.findByText('IPC Próximo Mes')).toBeInTheDocument()
-    expect(screen.getByText('IPC Próximos 12M')).toBeInTheDocument()
-    expect(screen.getByText('Tipo de Cambio Fin de Año')).toBeInTheDocument()
-    expect(screen.getByText('Tasa Política Monetaria')).toBeInTheDocument()
+    expect(await screen.findByText('IPC próximo mes')).toBeInTheDocument()
+    expect(screen.getByText('IPC próximos 12M')).toBeInTheDocument()
+    expect(screen.getByText('Tipo de cambio fin de año')).toBeInTheDocument()
+    expect(screen.getByText('Tasa política monetaria')).toBeInTheDocument()
 
     // Assert info banner
     expect(screen.getByText('2026-09-04')).toBeInTheDocument()
@@ -242,7 +242,7 @@ describe('MacroView Sub-Tab Navigation', () => {
 
     // Verify RemView is rendered
     expect(await screen.findByTestId('rem-view-container')).toBeInTheDocument()
-    expect(screen.getByText('IPC Próximo Mes')).toBeInTheDocument()
+    expect(screen.getByText('IPC próximo mes')).toBeInTheDocument()
 
     // Switch back to BCRA & FX
     const bcraSubtab = screen.getByTestId('macro-subtab-bcra')

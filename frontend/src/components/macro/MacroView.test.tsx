@@ -267,7 +267,7 @@ describe('MacroView Components', () => {
     )
 
     const pngBtn = screen.getByRole('button', { name: /PNG/i })
-    const csvBtn = screen.getByRole('button', { name: /CSV \/ Excel/i })
+    const csvBtn = screen.getByRole('button', { name: /CSV\/Excel/i })
 
     expect(pngBtn).toBeDefined()
     expect(csvBtn).toBeDefined()
@@ -378,4 +378,17 @@ describe('MacroView Components', () => {
     expect(pngBtn).toBeDefined()
     expect(csvBtn).toBeDefined()
   })
+
+  it('renders refresh button and triggers refresh on click', async () => {
+    render(<MacroView />)
+    await waitFor(() => {
+      expect(screen.getByTestId('macro-refresh-button')).toBeDefined()
+    })
+    const refreshBtn = screen.getByTestId('macro-refresh-button')
+    fireEvent.click(refreshBtn)
+    await waitFor(() => {
+      expect(screen.getByText('Actualizar datos')).toBeDefined()
+    })
+  })
 })
+

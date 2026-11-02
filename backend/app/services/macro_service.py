@@ -1,16 +1,17 @@
-"""Macroeconomic Data Ingestion, Synchronization, and Caching Service."""
-
-from datetime import date, datetime
+import os
+from datetime import date, datetime, timedelta, timezone
 import logging
 from typing import Any, Dict, List, Optional
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.app.clients.bcra_client import BCRAClient
 from backend.app.clients.fx_client import FXClient
-from backend.app.database import MacroSeries, MacroVariable, get_upsert_stmt
+from backend.app.database import MacroSeries, MacroSyncLog, MacroVariable, get_upsert_stmt
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_CACHE_TTL_HOURS = float(os.getenv("MACRO_CACHE_TTL_HOURS", "4.0"))
 
 KEY_VARIABLES = {
     1: {"name": "Reservas internacionales", "category": "Monetario", "unit": "Millones USD"},
@@ -26,6 +27,7 @@ KEY_VARIABLES = {
 }
 
 
+
 class MacroService:
     """Service layer coordinating BCRA series caching, time-series querying, and FX spreads."""
 
@@ -36,6 +38,56 @@ class MacroService:
     ) -> None:
         self.bcra_client = bcra_client or BCRAClient()
         self.fx_client = fx_client or FXClient()
+
+    def record_sync(self, db: Session, variable_id: int) -> None:
+        """Record synchronization timestamp for a variable or catalog (variable_id=0)."""
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        stmt = (
+            get_upsert_stmt(MacroSyncLog, db)
+            .values(
+                variable_id=variable_id,
+                last_synced_at=now,
+            )
+            .on_conflict_do_update(
+                index_elements=["variable_id"],
+                set_={"last_synced_at": now},
+            )
+        )
+        db.execute(stmt)
+        db.commit()
+
+    def is_variable_stale(
+        self,
+        db: Session,
+        variable_id: int,
+        ttl_hours: Optional[float] = None,
+    ) -> bool:
+        """Determine if cached data for variable_id is absent or exceeds TTL."""
+        ttl = ttl_hours if ttl_hours is not None else DEFAULT_CACHE_TTL_HOURS
+        threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=ttl)
+
+        # 1. Check sync log
+        sync_log = db.scalar(
+            select(MacroSyncLog).where(MacroSyncLog.variable_id == variable_id)
+        )
+        if sync_log and sync_log.last_synced_at:
+            synced_time = sync_log.last_synced_at
+            if synced_time.tzinfo is not None:
+                synced_time = synced_time.replace(tzinfo=None)
+            return synced_time < threshold
+
+        # 2. Fallback to latest MacroSeries created_at if no sync log exists yet
+        if variable_id > 0:
+            latest_created = db.scalar(
+                select(func.max(MacroSeries.created_at)).where(MacroSeries.variable_id == variable_id)
+            )
+            if not latest_created:
+                return True
+            if latest_created.tzinfo is not None:
+                latest_created = latest_created.replace(tzinfo=None)
+            return latest_created < threshold
+
+        return True
 
     def sync_catalog(self, db: Session) -> List[MacroVariable]:
         """Fetch primary BCRA variables catalog and upsert into macro_variables table."""
@@ -77,6 +129,7 @@ class MacroService:
             db.execute(stmt)
 
         db.commit()
+        self.record_sync(db, variable_id=0)
 
         # Query all catalog variables
         catalog = list(db.scalars(select(MacroVariable).order_by(MacroVariable.variable_id)).all())
@@ -128,6 +181,7 @@ class MacroService:
             upsert_count += 1
 
         db.commit()
+        self.record_sync(db, variable_id=variable_id)
         return upsert_count
 
     def get_variable_history(
@@ -138,8 +192,8 @@ class MacroService:
         hasta: Optional[str] = None,
         refresh: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Retrieve historical series from DB cache, auto-syncing if empty or refresh requested."""
-        if refresh:
+        """Retrieve historical series from DB cache, auto-syncing if empty, stale, or refresh requested."""
+        if refresh or self.is_variable_stale(db, variable_id=variable_id):
             self.sync_variable_series(db, variable_id=variable_id, desde=desde, hasta=hasta)
 
         stmt = select(MacroSeries).where(MacroSeries.variable_id == variable_id)
@@ -172,16 +226,16 @@ class MacroService:
         ]
 
     def get_indicators_summary(self, db: Session, refresh: bool = False) -> Dict[str, Any]:
-        """Aggregate latest snapshot of key macro indicators and parallel FX spreads."""
-        # Ensure catalog is populated
+        """Aggregate latest snapshot of key macro indicators and parallel FX spreads, auto-refreshing stale series."""
+        # Ensure catalog is populated and fresh (catalog TTL: 24h)
         catalog_count = db.query(MacroVariable).count()
-        if catalog_count == 0 or refresh:
+        if catalog_count == 0 or refresh or self.is_variable_stale(db, variable_id=0, ttl_hours=24.0):
             self.sync_catalog(db)
 
         indicators_data: Dict[str, Any] = {}
 
         for var_id, meta in KEY_VARIABLES.items():
-            if refresh:
+            if refresh or self.is_variable_stale(db, variable_id=var_id):
                 self.sync_variable_series(db, variable_id=var_id)
 
             latest = db.scalar(

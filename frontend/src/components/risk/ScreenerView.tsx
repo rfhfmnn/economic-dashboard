@@ -7,6 +7,8 @@ import { BouncedChecks } from './BouncedChecks'
 import { CuitSearchInput } from './CuitSearchInput'
 import { DebtEntityTable } from './DebtEntityTable'
 import { DossierModal, type DtiAnalysisData } from './DossierModal'
+import { HistoryHeatmap } from './HistoryHeatmap'
+import { RiskBadgeGrid } from './RiskBadgeGrid'
 import { BatchView } from '../batch/BatchView'
 
 export interface ScreenerViewProps {
@@ -112,7 +114,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
             }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>Portafolio Batch</span>
+          <span>Portafolio batch</span>
         </button>
       </div>
 
@@ -176,12 +178,12 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                 {/* Right KPIs & PDF button */}
                 <div className="flex flex-wrap items-center gap-3 md:border-l md:border-slate-800 md:pl-5">
                   <div className="text-right sm:text-left md:text-right">
-                    <span className="text-[10px] text-slate-500 font-mono uppercase block">Peor Situación</span>
+                    <span className="text-[10px] text-slate-500 font-mono uppercase block">Peor situación</span>
                     <RiskBadge situacion={report.peor_situacion} showDescription size="md" variant="solid" />
                   </div>
 
                   <div className="text-right sm:text-left md:text-right">
-                    <span className="text-[10px] text-slate-500 font-mono uppercase block">Deuda Total</span>
+                    <span className="text-[10px] text-slate-500 font-mono uppercase block">Deuda total</span>
                     <span className="text-base font-bold font-mono text-slate-100 tabular-nums">
                       ${report.deuda_total?.toLocaleString('es-AR') || '0'}
                     </span>
@@ -194,7 +196,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                     title="Abrir vista de impresión de Dossier Ejecutivo"
                   >
                     <FileText className="w-4 h-4" />
-                    <span>Ver Dossier</span>
+                    <span>Ver dossier</span>
                   </button>
 
                   <button
@@ -209,6 +211,12 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                 </div>
               </div>
 
+              {/* Early Warning Risk Badges */}
+              <RiskBadgeGrid badges={report.alertas_tempranas || []} />
+
+              {/* 24-Month Credit Rating Trajectory Matrix */}
+              <HistoryHeatmap history={report.historia_24m || []} />
+
               {/* Debt-to-Income (DTI) & Capacidad de Pago Calculator */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -218,7 +226,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                     </div>
                     <div>
                       <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
-                        Capacidad de Pago & Ratio Deuda / Ingreso (DTI)
+                        Capacidad de pago & ratio deuda/ingreso (DTI)
                       </h4>
                       <p className="text-[11px] text-slate-400">
                         Compare la deuda total informada en BCRA (${report.deuda_total?.toLocaleString('es-AR')}) contra los ingresos declarados del titular.
@@ -261,7 +269,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
                     {dtiAnalysis && (
                       <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 uppercase font-mono block">Carga / Cobertura</span>
+                          <span className="text-[10px] text-slate-500 uppercase font-mono block">Carga/cobertura</span>
                           <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded border ${dtiAnalysis.color}`}>
                             {dtiAnalysis.multiple.toFixed(1)}x {dtiAnalysis.label}
                           </span>
@@ -300,7 +308,7 @@ export const ScreenerView: React.FC<ScreenerViewProps> = ({ initialCuit = '', in
           {!report && !loading && !error && (
             <div className="rounded-lg border border-slate-800/80 bg-slate-900/40 p-8 text-center space-y-3">
               <Building className="w-10 h-10 text-slate-600 mx-auto" />
-              <h4 className="text-sm font-semibold text-slate-300">Central de Deudores del Sistema Financiero (BCRA)</h4>
+              <h4 className="text-sm font-semibold text-slate-300">Central de deudores del sistema financiero (BCRA)</h4>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 Ingrese un CUIT o CUIL en el buscador superior para consultar en vivo la clasificación de deuda bancaria y cheques rechazados del período vigente.
               </p>
