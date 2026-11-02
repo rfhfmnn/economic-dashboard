@@ -568,8 +568,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  stroke={isDark ? '#818cf8' : '#6366f1'}
-                  tick={{ fill: isDark ? '#818cf8' : '#6366f1', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
+                  stroke={isDark ? '#818cf8' : '#4f46e5'}
+                  tick={{ fill: isDark ? '#818cf8' : '#4f46e5', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}

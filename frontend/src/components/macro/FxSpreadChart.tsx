@@ -44,7 +44,7 @@ export const COTIZACIONES: CotizationConfig[] = [
 export const getCotizationColor = (key: CotizationKey, isDark: boolean): string => {
   switch (key) {
     case 'oficial':
-      return isDark ? '#38bdf8' : '#0284c7'
+      return isDark ? '#38bdf8' : '#0369a1'
     case 'mep':
       return isDark ? '#818cf8' : '#4f46e5'
     case 'ccl':
