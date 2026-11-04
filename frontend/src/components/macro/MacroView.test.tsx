@@ -135,6 +135,17 @@ describe('MacroView Components', () => {
               }),
           })
         }
+        if (url.includes('/macro/cpi')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                { fecha: '2024-03-31', valor: 11.0, indice: 100.0 },
+                { fecha: '2024-04-30', valor: 8.8, indice: 108.8 },
+                { fecha: '2024-05-31', valor: 4.2, indice: 113.37 },
+              ]),
+          })
+        }
         return Promise.reject(new Error('Unknown url'))
       })
     )

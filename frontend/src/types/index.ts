@@ -35,6 +35,13 @@ export interface MacroSeriesPoint {
   valor: number
 }
 
+export interface CpiPoint {
+  fecha: string
+  valor: number
+  indice: number
+}
+
+
 export interface MacroSeriesResponse {
   id_variable: number
   variable_name: string

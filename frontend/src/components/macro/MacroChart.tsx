@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { Calendar, Camera, FileSpreadsheet } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -10,10 +10,15 @@ import {
   Legend,
   CartesianGrid,
 } from 'recharts'
-import type { MacroSeriesPoint } from '../../types'
+import type { CpiPoint, MacroSeriesPoint } from '../../types'
 import { KNOWN_BCRA_VARIABLES } from '../../types'
 import { formatGrammaticalTitle } from '../../utils/formatters'
 import { useTheme } from '../../context/ThemeContext'
+import {
+  buildDeflatorModel,
+  isSeriesEligibleForDeflation,
+} from '../../utils/deflator'
+import { api } from '../../services/api'
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
 
@@ -39,6 +44,9 @@ export interface MacroChartProps {
   customStartDate?: string
   customEndDate?: string
   onCustomDateChange?: (start: string, end: string) => void
+  cpiData?: CpiPoint[]
+  isRealMode?: boolean
+  onRealModeChange?: (real: boolean) => void
 }
 
 const TIMEFRAMES: Timeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
@@ -55,6 +63,9 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   customStartDate: propStartDate,
   customEndDate: propEndDate,
   onCustomDateChange,
+  cpiData: propCpiData,
+  isRealMode: propIsRealMode,
+  onRealModeChange,
 }) => {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -62,6 +73,36 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   const [internalStartDate, setInternalStartDate] = useState<string>('')
   const [internalEndDate, setInternalEndDate] = useState<string>('')
   const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false)
+
+  // Inflation deflation mode state (Nominal vs Real IPC)
+  const [internalRealMode, setInternalRealMode] = useState<boolean>(false)
+  const isRealMode = propIsRealMode !== undefined ? propIsRealMode : internalRealMode
+  const setIsRealMode = (val: boolean) => {
+    setInternalRealMode(val)
+    if (onRealModeChange) onRealModeChange(val)
+  }
+
+  // INDEC CPI series data
+  const [internalCpiData, setInternalCpiData] = useState<CpiPoint[]>([])
+  const activeCpiData = propCpiData || internalCpiData
+
+  useEffect(() => {
+    if (!propCpiData || propCpiData.length === 0) {
+      let isMounted = true
+      api.getMacroCpi()
+        .then((data) => {
+          if (isMounted && data && data.length > 0) {
+            setInternalCpiData(data)
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load INDEC CPI series:', err)
+        })
+      return () => {
+        isMounted = false
+      }
+    }
+  }, [propCpiData])
 
   const startDate = propStartDate !== undefined ? propStartDate : internalStartDate
   const endDate = propEndDate !== undefined ? propEndDate : internalEndDate
@@ -78,21 +119,172 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
   const chartContainerRef = useRef<HTMLDivElement>(null)
 
+  // Normalize series: either use passed multi-series or fall back to primaryData/secondaryData
+  const rawSeries = useMemo<ChartSeries[]>(() => {
+    if (series && series.length > 0) {
+      return series.map((s) => {
+        let title = s.title
+        let unit = s.unit
+        const numId = typeof s.id === 'number' ? s.id : Number(String(s.id).replace(/\D/g, ''))
+        if (numId && KNOWN_BCRA_VARIABLES[numId]) {
+          if (!title || title.startsWith('Serie #')) {
+            title = KNOWN_BCRA_VARIABLES[numId].name
+          }
+          if (!unit) {
+            unit = KNOWN_BCRA_VARIABLES[numId].unit
+          }
+        }
+        return { ...s, title, unit }
+      })
+    }
+    const result: ChartSeries[] = []
+    if (primaryData && primaryData.length > 0) {
+      result.push({
+        id: 'primary',
+        title: primaryTitle || 'Variable principal',
+        data: primaryData,
+        axis: 'left',
+        color: '#3b82f6',
+      })
+    }
+    if (secondaryData && secondaryData.length > 0) {
+      result.push({
+        id: 'secondary',
+        title: secondaryTitle || 'Variable dual',
+        data: secondaryData,
+        axis: 'right',
+        color: '#8b5cf6',
+        strokeDasharray: '4 4',
+      })
+    }
+    return result
+  }, [series, primaryTitle, primaryData, secondaryTitle, secondaryData])
+
+  // Check if at least one selected series is eligible for inflation adjustment
+  const hasEligibleSeries = useMemo(() => {
+    return rawSeries.some(isSeriesEligibleForDeflation)
+  }, [rawSeries])
+
+  // Build cumulative price index and deflator factors
+  const deflator = useMemo(() => {
+    return buildDeflatorModel(activeCpiData)
+  }, [activeCpiData])
+
+  const activeReal = isRealMode && hasEligibleSeries && deflator.hasCpiData
+
+  // Effective series reflecting (pesos constantes) unit annotation when deflated
+  const effectiveSeries = useMemo<ChartSeries[]>(() => {
+    return rawSeries.map((s) => {
+      const isEligible = isSeriesEligibleForDeflation(s)
+      if (activeReal && isEligible) {
+        const baseUnit = s.unit ? `${s.unit} (pesos constantes)` : 'pesos constantes'
+        return { ...s, unit: baseUnit }
+      }
+      return s
+    })
+  }, [rawSeries, activeReal])
+
+  // Merge series by date with inflation deflation applied to eligible series
+  const { chartData, hasPendingObservations } = useMemo(() => {
+    if (rawSeries.length === 0) return { chartData: [], hasPendingObservations: false }
+
+    const map = new Map<string, { fecha: string; [key: string]: any }>()
+    let pendingObs = false
+
+    rawSeries.forEach((s) => {
+      const key = `var_${s.id}`
+      const isEligible = isSeriesEligibleForDeflation(s)
+      const shouldDeflate = activeReal && isEligible
+
+      s.data.forEach((p) => {
+        const existing = map.get(p.fecha)
+        const monthKey = p.fecha.slice(0, 7)
+
+        let plotValue = p.valor
+        if (shouldDeflate) {
+          if (deflator.latestCpiMonth && monthKey > deflator.latestCpiMonth) {
+            pendingObs = true
+            plotValue = p.valor
+          } else {
+            const factor = deflator.factorByMonth.get(monthKey) ?? 1.0
+            plotValue = Math.round(p.valor * factor * 100) / 100
+          }
+        }
+
+        if (existing) {
+          existing[key] = plotValue
+          if (shouldDeflate) {
+            existing[`${key}_nominal`] = p.valor
+            existing[`${key}_deflated`] = true
+          }
+        } else {
+          const item: any = { fecha: p.fecha, [key]: plotValue }
+          if (shouldDeflate) {
+            item[`${key}_nominal`] = p.valor
+            item[`${key}_deflated`] = true
+          }
+          map.set(p.fecha, item)
+        }
+      })
+    })
+
+    const merged = Array.from(map.values())
+    merged.sort((a, b) => a.fecha.localeCompare(b.fecha))
+
+    // Filter by timeframe or custom range
+    if (merged.length === 0) return { chartData: merged, hasPendingObservations: false }
+
+    let filtered = merged
+    if (timeframe === 'Custom') {
+      filtered = merged.filter((item) => {
+        if (startDate && item.fecha < startDate) return false
+        if (endDate && item.fecha > endDate) return false
+        return true
+      })
+      if (filtered.length === 0) filtered = merged
+    } else if (timeframe !== 'Max') {
+      const latest = new Date(merged[merged.length - 1].fecha)
+      const cutoff = new Date(latest)
+
+      if (timeframe === '1M') cutoff.setMonth(latest.getMonth() - 1)
+      else if (timeframe === '3M') cutoff.setMonth(latest.getMonth() - 3)
+      else if (timeframe === '6M') cutoff.setMonth(latest.getMonth() - 6)
+      else if (timeframe === '1Y') cutoff.setFullYear(latest.getFullYear() - 1)
+      else if (timeframe === '5Y') cutoff.setFullYear(latest.getFullYear() - 5)
+
+      const cutoffStr = cutoff.toISOString().split('T')[0]
+      const tfFiltered = merged.filter((item) => item.fecha >= cutoffStr)
+      filtered = tfFiltered.length > 0 ? tfFiltered : merged
+    }
+
+    return { chartData: filtered, hasPendingObservations: pendingObs }
+  }, [rawSeries, activeReal, deflator, timeframe, startDate, endDate])
+
+  const leftSeries = effectiveSeries.filter((s) => s.axis === 'left')
+  const rightSeries = effectiveSeries.filter((s) => s.axis === 'right')
+  const hasRightAxis = rightSeries.length > 0
+
   const handleDownloadCsv = () => {
     if (chartData.length === 0 || effectiveSeries.length === 0) return
 
     const headerCols = [
       'Fecha',
-      ...effectiveSeries.map((s) => {
-        const unit = s.unit ? ` (${s.unit})` : ''
+      ...rawSeries.map((s) => {
+        const isDeflated = activeReal && isSeriesEligibleForDeflation(s)
+        const realTag = isDeflated ? ` [Real - Base ${deflator.baseMonthFormatted}]` : ''
+        const baseUnit = s.unit
+          ? ` (${s.unit}${isDeflated ? ' pesos constantes' : ''})`
+          : isDeflated
+          ? ' (pesos constantes)'
+          : ''
         const axis = s.axis === 'left' ? 'Principal' : 'Dual'
-        return `"${s.title.replace(/"/g, '""')}${unit} [${axis}]"`
+        return `"${s.title.replace(/"/g, '""')}${baseUnit} [${axis}]${realTag}"`
       }),
     ]
 
     const rows = chartData.map((item) => {
       const cols = [item.fecha]
-      effectiveSeries.forEach((s) => {
+      rawSeries.forEach((s) => {
         const val = item[`var_${s.id}`]
         cols.push(val !== undefined && val !== null ? String(val) : '')
       })
@@ -105,7 +297,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const a = document.createElement('a')
     a.href = url
     const dateStr = new Date().toISOString().split('T')[0]
-    a.download = `series_macro_bcra_${timeframe.toLowerCase()}_${dateStr}.csv`
+    const modeTag = activeReal ? '_real' : '_nominal'
+    a.download = `series_macro_bcra${modeTag}_${timeframe.toLowerCase()}_${dateStr}.csv`
     document.body.appendChild(a)
     a.click()
     window.URL.revokeObjectURL(url)
@@ -160,14 +353,17 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const displayTitle = titleText.length > 70 ? titleText.slice(0, 67) + '...' : titleText
     ctx.fillText(displayTitle, paddingX, 32)
 
-    // Period / Timeframe subtitle
+    // Period / Timeframe subtitle with Real mode annotation
     ctx.fillStyle = subtitleColor
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const periodText =
       chartData.length > 0
         ? `Período: ${chartData[0].fecha} a ${chartData[chartData.length - 1].fecha} (${timeframe})`
         : `Período: ${timeframe}`
-    ctx.fillText(periodText, paddingX, 52)
+    const realSubtitle = activeReal
+      ? ` · Real (precios constantes de ${deflator.baseMonthFormatted} - IPC INDEC)`
+      : ''
+    ctx.fillText(`${periodText}${realSubtitle}`, paddingX, 52)
 
     // Draw Legend series on top right of the canvas
     let legendX = totalWidth - paddingX
@@ -217,7 +413,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       const a = document.createElement('a')
       a.href = pngUrl
       const dateStr = new Date().toISOString().split('T')[0]
-      a.download = `grafico_bcra_${timeframe.toLowerCase()}_${dateStr}.png`
+      const modeTag = activeReal ? '_real' : ''
+      a.download = `grafico_bcra${modeTag}_${timeframe.toLowerCase()}_${dateStr}.png`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -229,118 +426,31 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     img.src = url
   }
 
-  // Normalize series: either use passed multi-series or fall back to primaryData/secondaryData
-  const effectiveSeries = useMemo<ChartSeries[]>(() => {
-    if (series && series.length > 0) {
-      return series.map((s) => {
-        let title = s.title
-        let unit = s.unit
-        const numId = typeof s.id === 'number' ? s.id : Number(String(s.id).replace(/\D/g, ''))
-        if (numId && KNOWN_BCRA_VARIABLES[numId]) {
-          if (!title || title.startsWith('Serie #')) {
-            title = KNOWN_BCRA_VARIABLES[numId].name
-          }
-          if (!unit) {
-            unit = KNOWN_BCRA_VARIABLES[numId].unit
-          }
-        }
-        return { ...s, title, unit }
-      })
-    }
-    const result: ChartSeries[] = []
-    if (primaryData && primaryData.length > 0) {
-      result.push({
-        id: 'primary',
-        title: primaryTitle || 'Variable principal',
-        data: primaryData,
-        axis: 'left',
-        color: '#3b82f6',
-      })
-    }
-    if (secondaryData && secondaryData.length > 0) {
-      result.push({
-        id: 'secondary',
-        title: secondaryTitle || 'Variable dual',
-        data: secondaryData,
-        axis: 'right',
-        color: '#8b5cf6',
-        strokeDasharray: '4 4',
-      })
-    }
-    return result
-  }, [series, primaryTitle, primaryData, secondaryTitle, secondaryData])
-
-  // Merge series by date
-  const chartData = useMemo(() => {
-    if (effectiveSeries.length === 0) return []
-
-    const map = new Map<string, { fecha: string; [key: string]: any }>()
-
-    effectiveSeries.forEach((s) => {
-      const key = `var_${s.id}`
-      s.data.forEach((p) => {
-        const existing = map.get(p.fecha)
-        if (existing) {
-          existing[key] = p.valor
-        } else {
-          map.set(p.fecha, { fecha: p.fecha, [key]: p.valor })
-        }
-      })
-    })
-
-    const merged = Array.from(map.values())
-    merged.sort((a, b) => a.fecha.localeCompare(b.fecha))
-
-    // Filter by timeframe or custom range
-    if (merged.length === 0) return merged
-
-    if (timeframe === 'Custom') {
-      const filtered = merged.filter((item) => {
-        if (startDate && item.fecha < startDate) return false
-        if (endDate && item.fecha > endDate) return false
-        return true
-      })
-      return filtered.length > 0 ? filtered : merged
-    }
-
-    if (timeframe === 'Max') return merged
-
-    const latest = new Date(merged[merged.length - 1].fecha)
-    let cutoff = new Date(latest)
-
-    if (timeframe === '1M') cutoff.setMonth(latest.getMonth() - 1)
-    else if (timeframe === '3M') cutoff.setMonth(latest.getMonth() - 3)
-    else if (timeframe === '6M') cutoff.setMonth(latest.getMonth() - 6)
-    else if (timeframe === '1Y') cutoff.setFullYear(latest.getFullYear() - 1)
-    else if (timeframe === '5Y') cutoff.setFullYear(latest.getFullYear() - 5)
-
-    const cutoffStr = cutoff.toISOString().split('T')[0]
-    const filtered = merged.filter((item) => item.fecha >= cutoffStr)
-    return filtered.length > 0 ? filtered : merged
-  }, [effectiveSeries, timeframe, startDate, endDate])
-
-  const leftSeries = effectiveSeries.filter((s) => s.axis === 'left')
-  const rightSeries = effectiveSeries.filter((s) => s.axis === 'right')
-  const hasRightAxis = rightSeries.length > 0
-
-  // Custom elevated tooltip for MacroChart
+  // Custom elevated tooltip for MacroChart displaying both Real and Nominal values
   const MacroCustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null
 
     return (
-      <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 rounded-lg p-3 shadow-xl backdrop-blur-md text-xs font-sans tabular-nums min-w-[220px]">
+      <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 rounded-lg p-3 shadow-xl backdrop-blur-md text-xs font-sans tabular-nums min-w-[240px]">
         <p className="text-slate-500 dark:text-slate-400 font-medium mb-1.5 border-b border-slate-100 dark:border-slate-800 pb-1">
           Fecha: {label}
         </p>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {payload.map((item: any) => {
             const s = effectiveSeries.find(
+              (it) => it.title === item.name || `var_${it.id}` === item.dataKey || String(it.id) === String(item.dataKey)
+            )
+            const rawS = rawSeries.find(
               (it) => it.title === item.name || `var_${it.id}` === item.dataKey || String(it.id) === String(item.dataKey)
             )
             const displayName = s
               ? `${s.title} (${s.axis === 'left' ? 'Principal' : 'Dual'})`
               : item.name
             const unitSuffix = s?.unit ? ` ${s.unit}` : ''
+
+            const isDeflated = item.payload && item.payload[`${item.dataKey}_deflated`]
+            const nominalVal = item.payload ? item.payload[`${item.dataKey}_nominal`] : undefined
+
             const val =
               typeof item.value === 'number'
                 ? `${item.value.toLocaleString('es-AR')}${unitSuffix}`
@@ -352,7 +462,22 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                   <span>{displayName}</span>
                 </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">{val}</span>
+                <div className="flex flex-col items-end">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums font-mono">
+                    {val}
+                    {isDeflated && (
+                      <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-normal">
+                        (Real)
+                      </span>
+                    )}
+                  </span>
+                  {isDeflated && nominalVal !== undefined && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums font-mono">
+                      Nominal: {typeof nominalVal === 'number' ? nominalVal.toLocaleString('es-AR') : nominalVal}
+                      {rawS?.unit ? ` ${rawS.unit}` : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -413,9 +538,78 @@ export const MacroChart: React.FC<MacroChartProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Evolución histórica y comparación temporal multi-variable de series BCRA
           </p>
+          {activeReal && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span
+                data-testid="real-mode-badge"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-xs"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Precios constantes de {deflator.baseMonthFormatted} (INDEC IPC)</span>
+              </span>
+              {hasPendingObservations && (
+                <span
+                  data-testid="pending-cpi-notice"
+                  className="text-[10px] font-sans text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50"
+                  title="Observaciones posteriores al último mes de IPC publicado por INDEC se mantienen en valor nominal"
+                >
+                  (Obs. recientes pendientes de publicación IPC INDEC)
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        {/* Timeframe pill switcher with Personalizado & Export actions */}
+        {/* Toolbar: Deflation Toggle + Timeframe pill switcher + Export actions */}
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Nominal / Real (IPC) Segmented Toggle */}
+          <div
+            className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5"
+            role="group"
+            aria-label="Ajuste por inflación"
+          >
+            <button
+              type="button"
+              data-testid="toggle-nominal"
+              onClick={() => setIsRealMode(false)}
+              className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
+                !isRealMode
+                  ? 'bg-blue-600 text-white font-medium shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+              }`}
+            >
+              Nominal
+            </button>
+            <div
+              className="inline-block"
+              title={
+                !hasEligibleSeries
+                  ? 'Ajuste no aplicable: las series seleccionadas ya están expresadas en moneda extranjera o porcentaje.'
+                  : `Deflactar a precios constantes de ${deflator.baseMonthFormatted || 'último mes'} usando IPC INDEC`
+              }
+            >
+              <button
+                type="button"
+                data-testid="toggle-real"
+                disabled={!hasEligibleSeries}
+                onClick={() => {
+                  if (hasEligibleSeries) {
+                    setIsRealMode(true)
+                  }
+                }}
+                className={`px-2.5 py-1 text-xs font-sans rounded transition-colors ${
+                  !hasEligibleSeries
+                    ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-slate-600'
+                    : isRealMode
+                    ? 'bg-blue-600 text-white font-medium shadow-sm cursor-pointer'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900 cursor-pointer'
+                }`}
+              >
+                Real (IPC)
+              </button>
+            </div>
+          </div>
+
+          {/* Timeframe pill switcher with Personalizado & Export actions */}
           <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5 flex-wrap">
             {TIMEFRAMES.map((tf) => (
               <button

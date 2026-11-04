@@ -4,6 +4,7 @@
 
 import type {
   BatchPortfolioResponse,
+  CpiPoint,
   DebtorReport,
   FxHistoryResponse,
   FxSpreadsResponse,
@@ -127,6 +128,17 @@ export const api = {
       descripcion: item.descripcion ?? item.name ?? '',
       categoria: item.categoria ?? item.category ?? '',
       unit: item.unit ?? item.unidad ?? '',
+    }))
+  },
+
+  getMacroCpi: async (refresh: boolean = false): Promise<CpiPoint[]> => {
+    const qs = refresh ? '?refresh=true' : ''
+    const res: any = await request<any>(`/macro/cpi${qs}`)
+    const list = Array.isArray(res) ? res : []
+    return list.map((item: any) => ({
+      fecha: item.fecha || '',
+      valor: Number(item.valor) || 0,
+      indice: Number(item.indice) || 0,
     }))
   },
 
