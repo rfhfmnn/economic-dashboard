@@ -132,3 +132,24 @@ def test_network_fallback_on_invalid_endpoint():
     assert isinstance(report, list)
     assert len(report) > 0
     client.close()
+
+
+def test_get_indec_inflation_caching_and_fallback(test_db):
+    """Test INDEC CPI inflation retrieval, SQLite caching, and mock fallback."""
+    client = REMClient(force_mock=True, cache_ttl_seconds=60)
+    data = client.get_indec_inflation(db=test_db)
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert "fecha" in data[0]
+    assert "valor" in data[0]
+
+    # Verify SQLite cache populated
+    cached_row = test_db.query(RemReport).filter(RemReport.period == "cpi_history").first()
+    assert cached_row is not None
+    assert len(cached_row.raw_payload) == len(data)
+
+    # Calling again hits cache
+    cached_data = client.get_indec_inflation(db=test_db)
+    assert len(cached_data) == len(data)
+    client.close()
+

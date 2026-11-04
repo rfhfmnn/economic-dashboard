@@ -692,3 +692,46 @@ def get_mock_rem_report(period: str = "2026-09") -> List[Dict[str, Any]]:
                 ))
 
     return results
+
+
+MOCK_INDEC_INFLATION: List[Dict[str, Any]] = [
+    {"fecha": "2024-01-31", "valor": 20.6},
+    {"fecha": "2024-02-29", "valor": 13.2},
+    {"fecha": "2024-03-31", "valor": 11.0},
+    {"fecha": "2024-04-30", "valor": 8.8},
+    {"fecha": "2024-05-31", "valor": 4.2},
+    {"fecha": "2024-06-30", "valor": 4.6},
+    {"fecha": "2024-07-31", "valor": 4.0},
+    {"fecha": "2024-08-31", "valor": 4.2},
+    {"fecha": "2024-09-30", "valor": 3.5},
+    {"fecha": "2024-10-31", "valor": 2.7},
+    {"fecha": "2024-11-30", "valor": 2.4},
+    {"fecha": "2024-12-31", "valor": 2.7},
+    {"fecha": "2025-01-31", "valor": 2.2},
+    {"fecha": "2025-02-28", "valor": 2.4},
+    {"fecha": "2025-03-31", "valor": 3.1},
+    {"fecha": "2025-04-30", "valor": 2.8},
+    {"fecha": "2025-05-31", "valor": 2.0},
+    {"fecha": "2025-06-30", "valor": 1.9},
+    {"fecha": "2025-07-31", "valor": 2.2},
+    {"fecha": "2025-08-31", "valor": 1.8},
+    {"fecha": "2025-09-30", "valor": 2.1},
+    {"fecha": "2025-10-31", "valor": 2.3},
+    {"fecha": "2025-11-30", "valor": 2.0},
+    {"fecha": "2025-12-31", "valor": 2.5},
+    {"fecha": "2026-01-31", "valor": 2.3},
+    {"fecha": "2026-02-28", "valor": 2.2},
+    {"fecha": "2026-03-31", "valor": 2.4},
+    {"fecha": "2026-04-30", "valor": 2.1},
+    {"fecha": "2026-05-31", "valor": 2.0},
+    {"fecha": "2026-06-30", "valor": 1.8},
+    {"fecha": "2026-07-31", "valor": 2.1},
+    {"fecha": "2026-08-31", "valor": 1.7},
+    {"fecha": "2026-09-30", "valor": 1.9},
+]
+
+
+def get_mock_cpi() -> List[Dict[str, Any]]:
+    """Return synthetic monthly INDEC CPI inflation rate points."""
+    return [dict(item) for item in MOCK_INDEC_INFLATION]
+

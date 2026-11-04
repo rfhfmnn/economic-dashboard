@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from sqlalchemy.orm import Session
 
-from backend.app.clients.mock_data import get_mock_rem_report, get_mock_rem_reports
+from backend.app.clients.mock_data import get_mock_cpi, get_mock_rem_report, get_mock_rem_reports
 from backend.app.database import RemReport
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,8 @@ class REMClient:
                 "Accept": "application/json",
             },
         )
+        self._cpi_cache: Optional[List[Dict[str, Any]]] = None
+        self._cpi_cached_at: Optional[datetime] = None
 
     @staticmethod
     def normalize_period(period_str: str) -> str:
@@ -182,39 +184,105 @@ class REMClient:
 
         return records
 
-    def get_indec_inflation(self) -> List[Dict[str, Any]]:
-        """Fetch historical monthly INDEC inflation series from ArgentinaDatos."""
-        if self.force_mock:
-            return self._get_mock_inflation()
+    def get_indec_inflation(
+        self,
+        db: Optional[Session] = None,
+        refresh: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Fetch historical monthly INDEC inflation series from ArgentinaDatos with caching and mock fallback."""
+        import time
+        from backend.app.metrics import track_cache_access, track_external_call, track_fallback_invocation
 
-        try:
+        now = datetime.now(timezone.utc)
+
+        # 1. Check in-memory cache
+        if not refresh and self._cpi_cache is not None and self._cpi_cached_at is not None:
+            age = (now - self._cpi_cached_at).total_seconds()
+            if age < self.cache_ttl_seconds:
+                logger.debug("Serving INDEC CPI from in-memory cache (age: %ds).", age)
+                track_cache_access(hit=True, cache_type="cpi_memory")
+                return [dict(item) for item in self._cpi_cache]
+
+        # 2. Check SQLite cache
+        if not refresh and db is not None:
+            try:
+                cached = (
+                    db.query(RemReport)
+                    .filter(RemReport.period == "cpi_history")
+                    .first()
+                )
+                if cached and cached.cached_at:
+                    cached_time = cached.cached_at
+                    if cached_time.tzinfo is None:
+                        cached_time = cached_time.replace(tzinfo=timezone.utc)
+                    age = (now - cached_time).total_seconds()
+                    if age < self.cache_ttl_seconds and isinstance(cached.raw_payload, list) and len(cached.raw_payload) > 0:
+                        logger.debug("Serving INDEC CPI from SQLite cache (age: %ds).", age)
+                        track_cache_access(hit=True, cache_type="cpi_sqlite")
+                        self._cpi_cache = cached.raw_payload
+                        self._cpi_cached_at = cached_time
+                        return [dict(item) for item in cached.raw_payload]
+                track_cache_access(hit=False, cache_type="cpi_sqlite")
+            except Exception as exc:
+                logger.warning("Error reading CPI cache from SQLite: %s", exc)
+
+        # 3. Fetch from remote or generate mock
+        records: List[Dict[str, Any]] = []
+        if self.force_mock:
+            track_fallback_invocation(provider="indec_cpi", reason="force_mock")
+            records = get_mock_cpi()
+        else:
             url = "https://api.argentinadatos.com/v1/finanzas/indices/inflacion"
-            response = self.client.get(url)
-            response.raise_for_status()
-            data = response.json()
-            if isinstance(data, list) and len(data) > 0:
-                return data
-            return self._get_mock_inflation()
-        except Exception as exc:
-            logger.warning("Error fetching INDEC inflation series: %s. Using mock fallback.", exc)
-            return self._get_mock_inflation()
+            start_time = time.perf_counter()
+            try:
+                response = self.client.get(url)
+                duration = time.perf_counter() - start_time
+                response.raise_for_status()
+                track_external_call("indec_cpi", url, duration, success=True)
+                data = response.json()
+                if isinstance(data, list) and len(data) > 0:
+                    records = data
+                else:
+                    track_fallback_invocation(provider="indec_cpi", reason="empty_payload")
+                    records = get_mock_cpi()
+            except Exception as exc:
+                duration = time.perf_counter() - start_time
+                track_external_call("indec_cpi", url, duration, success=False, error_type=type(exc).__name__)
+                track_fallback_invocation(provider="indec_cpi", reason="network_or_api_error")
+                logger.warning("Error fetching INDEC inflation series: %s. Using mock fallback.", exc)
+                records = get_mock_cpi()
+
+        # Update in-memory cache
+        self._cpi_cache = records
+        self._cpi_cached_at = now
+
+        # 4. Store into SQLite cache if db session is provided
+        if db is not None and records:
+            try:
+                existing = (
+                    db.query(RemReport)
+                    .filter(RemReport.period == "cpi_history")
+                    .first()
+                )
+                if existing:
+                    existing.raw_payload = records
+                    existing.cached_at = now
+                else:
+                    new_cache = RemReport(
+                        period="cpi_history",
+                        raw_payload=records,
+                        cached_at=now,
+                    )
+                    db.add(new_cache)
+                db.commit()
+            except Exception as exc:
+                logger.warning("Failed saving CPI history to SQLite cache: %s", exc)
+                db.rollback()
+
+        return [dict(item) for item in records]
 
     def _get_mock_inflation(self) -> List[Dict[str, Any]]:
-        return [
-            {"fecha": "2025-09-30", "valor": 3.5},
-            {"fecha": "2025-10-31", "valor": 2.7},
-            {"fecha": "2025-11-30", "valor": 2.5},
-            {"fecha": "2025-12-31", "valor": 2.8},
-            {"fecha": "2026-01-31", "valor": 2.3},
-            {"fecha": "2026-02-28", "valor": 2.2},
-            {"fecha": "2026-03-31", "valor": 2.4},
-            {"fecha": "2026-04-30", "valor": 2.1},
-            {"fecha": "2026-05-31", "valor": 2.0},
-            {"fecha": "2026-06-30", "valor": 1.8},
-            {"fecha": "2026-07-31", "valor": 2.1},
-            {"fecha": "2026-08-31", "valor": 1.7},
-            {"fecha": "2026-09-30", "valor": 1.9},
-        ]
+        return get_mock_cpi()
 
     def close(self) -> None:
         """Close the HTTP connection pool."""

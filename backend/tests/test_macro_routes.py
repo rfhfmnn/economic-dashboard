@@ -82,3 +82,44 @@ def test_get_fx_history_endpoint(client: TestClient):
     for key in ("oficial", "mep", "ccl", "blue"):
         assert key in rates
         assert len(rates[key]) > 0
+
+
+def test_get_macro_cpi_endpoint(client: TestClient):
+    """Verify GET /api/macro/cpi returns 200, schema with fecha/valor/indice, and cumulative calculation."""
+    response = client.get("/api/macro/cpi")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+    first = data[0]
+    assert "fecha" in first
+    assert "valor" in first
+    assert "indice" in first
+    assert first["indice"] == 100.0
+
+    if len(data) > 1:
+        second = data[1]
+        expected_second_indice = round(100.0 * (1.0 + second["valor"] / 100.0), 4)
+        assert abs(second["indice"] - expected_second_indice) < 0.001
+
+
+def test_get_macro_cpi_fallback(client: TestClient, monkeypatch):
+    """Verify GET /api/macro/cpi gracefully falls back to mock data when external API fails."""
+    import httpx
+    from backend.app.routes import macro_routes
+
+    def mock_get_fail(*args, **kwargs):
+        raise httpx.ConnectError("Network connection failed to INDEC provider")
+
+    monkeypatch.setattr(macro_routes.macro_service.rem_client.client, "get", mock_get_fail)
+    # Clear in-memory cache to force fetch attempt
+    macro_routes.macro_service.rem_client._cpi_cache = None
+
+    response = client.get("/api/macro/cpi?refresh=true")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert data[0]["indice"] == 100.0
+

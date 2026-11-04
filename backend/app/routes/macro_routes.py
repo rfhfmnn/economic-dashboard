@@ -61,3 +61,13 @@ def get_variable_catalog(
     """List available BCRA series metadata with optional search filter."""
     query_term = q or search
     return macro_service.get_catalog(db, query=query_term)
+
+
+@router.get("/cpi")
+def get_macro_cpi(
+    refresh: bool = Query(False, description="Force sync latest INDEC CPI inflation from external API"),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    """Get historical monthly INDEC CPI inflation rates and cumulative price index."""
+    return macro_service.get_cpi_history(db=db, refresh=refresh)
+

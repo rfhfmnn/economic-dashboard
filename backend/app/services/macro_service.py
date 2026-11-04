@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.clients.bcra_client import BCRAClient
 from backend.app.clients.fx_client import FXClient
+from backend.app.clients.rem_client import REMClient
 from backend.app.database import MacroSeries, MacroSyncLog, MacroVariable, get_upsert_stmt
 
 logger = logging.getLogger(__name__)
@@ -35,9 +36,11 @@ class MacroService:
         self,
         bcra_client: Optional[BCRAClient] = None,
         fx_client: Optional[FXClient] = None,
+        rem_client: Optional[REMClient] = None,
     ) -> None:
         self.bcra_client = bcra_client or BCRAClient()
         self.fx_client = fx_client or FXClient()
+        self.rem_client = rem_client or REMClient()
 
     def record_sync(self, db: Session, variable_id: int) -> None:
         """Record synchronization timestamp for a variable or catalog (variable_id=0)."""
@@ -297,3 +300,40 @@ class MacroService:
             }
             for v in variables
         ]
+
+    def get_cpi_history(
+        self,
+        db: Session,
+        refresh: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve historical monthly INDEC CPI inflation rates and computed cumulative price index."""
+        raw_items = self.rem_client.get_indec_inflation(db=db, refresh=refresh)
+        if not raw_items:
+            return []
+
+        # Ensure sorted ascending by date
+        sorted_items = sorted(raw_items, key=lambda x: str(x.get("fecha", "")))
+
+        results: List[Dict[str, Any]] = []
+        current_index = 100.0
+
+        for i, item in enumerate(sorted_items):
+            fecha = str(item.get("fecha", ""))
+            try:
+                rate = float(item.get("valor", 0.0))
+            except (ValueError, TypeError):
+                rate = 0.0
+
+            if i == 0:
+                indice = 100.0
+            else:
+                current_index = current_index * (1.0 + rate / 100.0)
+                indice = round(current_index, 4)
+
+            results.append({
+                "fecha": fecha,
+                "valor": rate,
+                "indice": indice,
+            })
+
+        return results
