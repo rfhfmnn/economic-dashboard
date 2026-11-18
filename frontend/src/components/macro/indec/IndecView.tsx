@@ -395,8 +395,8 @@ export const IndecView: React.FC = () => {
                   data-testid={`timeframe-${tf.toLowerCase()}`}
                   onClick={() => setTimeframe(tf)}
                   className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${timeframe === tf
-                      ? 'bg-blue-600 text-white font-medium shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+                    ? 'bg-blue-600 text-white font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
                     }`}
                 >
                   {tf}

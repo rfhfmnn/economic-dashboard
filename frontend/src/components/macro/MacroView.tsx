@@ -339,11 +339,10 @@ export const MacroView: React.FC = () => {
             type="button"
             data-testid="macro-subtab-bcra"
             onClick={() => setSubTab('bcra_fx')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              subTab === 'bcra_fx'
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${subTab === 'bcra_fx'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <span>Variables BCRA & mercado cambiario</span>
           </button>
@@ -351,11 +350,10 @@ export const MacroView: React.FC = () => {
             type="button"
             data-testid="macro-subtab-rem"
             onClick={() => setSubTab('rem')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              subTab === 'rem'
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${subTab === 'rem'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <span>Expectativas de mercado (REM)</span>
             <span className="text-[10px] font-sans uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
@@ -366,13 +364,12 @@ export const MacroView: React.FC = () => {
             type="button"
             data-testid="macro-subtab-indec"
             onClick={() => setSubTab('indec')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              subTab === 'indec'
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${subTab === 'indec'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-            }`}
+              }`}
           >
-            <span>Variables INDEC (Economía Real)</span>
+            <span>Variables INDEC (economía real)</span>
           </button>
         </div>
 
