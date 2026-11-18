@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
+  ReferenceLine,
 } from 'recharts'
 import type { CpiPoint, MacroSeriesPoint } from '../../types'
 import { KNOWN_BCRA_VARIABLES } from '../../types'
@@ -23,6 +24,13 @@ import {
   inferSeriesTaxonomy,
   type Periodicity,
 } from '../../utils/resampler'
+import {
+  rebaseSeriesToBase100,
+  isMonthlyVariationSeries,
+  formatDateToDdMmYyyy,
+  formatIndexVariation,
+  type IndexedPoint,
+} from '../../utils/indexer'
 import { api } from '../../services/api'
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
@@ -55,6 +63,10 @@ export interface MacroChartProps {
   onRealModeChange?: (real: boolean) => void
   periodicity?: Periodicity
   onPeriodicityChange?: (periodicity: Periodicity) => void
+  isBase100?: boolean
+  onBase100Change?: (base100: boolean) => void
+  customBaseDate?: string
+  onCustomBaseDateChange?: (baseDate: string) => void
 }
 
 const TIMEFRAMES: Timeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
@@ -76,6 +88,10 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   onRealModeChange,
   periodicity: propPeriodicity,
   onPeriodicityChange,
+  isBase100: propIsBase100,
+  onBase100Change,
+  customBaseDate: propCustomBaseDate,
+  onCustomBaseDateChange,
 }) => {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -98,6 +114,22 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   const setIsRealMode = (val: boolean) => {
     setInternalRealMode(val)
     if (onRealModeChange) onRealModeChange(val)
+  }
+
+  // Base 100 scale state (Nivel vs Base 100)
+  const [internalBase100, setInternalBase100] = useState<boolean>(false)
+  const isBase100 = propIsBase100 !== undefined ? propIsBase100 : internalBase100
+  const setIsBase100 = (val: boolean) => {
+    setInternalBase100(val)
+    if (onBase100Change) onBase100Change(val)
+  }
+
+  // Custom base date state (t0)
+  const [internalCustomBaseDate, setInternalCustomBaseDate] = useState<string>('')
+  const customBaseDate = propCustomBaseDate !== undefined ? propCustomBaseDate : internalCustomBaseDate
+  const handleCustomBaseDateChange = (val: string) => {
+    setInternalCustomBaseDate(val)
+    if (onCustomBaseDateChange) onCustomBaseDateChange(val)
   }
 
   // INDEC CPI series data
@@ -219,9 +251,9 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     })
   }, [resampledSeries, activeReal])
 
-  // Merge series by date with inflation deflation applied to eligible series
-  const { chartData, hasPendingObservations } = useMemo(() => {
-    if (resampledSeries.length === 0) return { chartData: [], hasPendingObservations: false }
+  // Merge series by date with inflation deflation applied to eligible series and base-100 normalization
+  const { chartData, hasPendingObservations, effectiveBaseDate } = useMemo(() => {
+    if (resampledSeries.length === 0) return { chartData: [], hasPendingObservations: false, effectiveBaseDate: '' }
 
     const map = new Map<string, { fecha: string; [key: string]: any }>()
     let pendingObs = false
@@ -276,7 +308,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     merged.sort((a, b) => a.fecha.localeCompare(b.fecha))
 
     // Filter by timeframe or custom range
-    if (merged.length === 0) return { chartData: merged, hasPendingObservations: false }
+    if (merged.length === 0) return { chartData: merged, hasPendingObservations: false, effectiveBaseDate: '' }
 
     let filtered = merged
     if (timeframe === 'Custom') {
@@ -301,37 +333,108 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       filtered = tfFiltered.length > 0 ? tfFiltered : merged
     }
 
-    return { chartData: filtered, hasPendingObservations: pendingObs }
-  }, [resampledSeries, activeReal, deflator, timeframe, startDate, endDate])
+    // Determine target base date (t0)
+    const defaultBaseDate = filtered.length > 0 ? filtered[0].fecha : ''
+    const targetBaseDate = customBaseDate || defaultBaseDate
+
+    // When Base 100 is active, re-express every series
+    if (isBase100) {
+      resampledSeries.forEach((s) => {
+        const key = `var_${s.id}`
+        // Extract all available observations for this series (using nominal or deflated values)
+        const sPoints: MacroSeriesPoint[] = []
+        merged.forEach((m) => {
+          if (m[key] !== undefined && m[key] !== null && typeof m[key] === 'number') {
+            sPoints.push({ fecha: m.fecha, valor: m[key] })
+          }
+        })
+
+        const isMonthlyVar = isMonthlyVariationSeries(s)
+        const rebased = rebaseSeriesToBase100(sPoints, {
+          customBaseDate: targetBaseDate,
+          isMonthlyVariation: isMonthlyVar,
+          precision: 2,
+        })
+
+        const rebasedMap = new Map<string, IndexedPoint>()
+        rebased.forEach((rp) => rebasedMap.set(rp.fecha, rp))
+
+        filtered.forEach((item) => {
+          if (item[key] !== undefined) {
+            const nativeVal = item[key]
+            const rp = rebasedMap.get(item.fecha)
+            item[`${key}_native`] = nativeVal
+            item[`${key}_indexed`] = true
+            item[key] = rp ? rp.valor : null
+            item[`${key}_pct`] = rp ? rp.variationPct : null
+          }
+        })
+      })
+    }
+
+    return { chartData: filtered, hasPendingObservations: pendingObs, effectiveBaseDate: targetBaseDate }
+  }, [resampledSeries, activeReal, deflator, timeframe, startDate, endDate, isBase100, customBaseDate])
+
+  const effectiveBaseDateStr = effectiveBaseDate || (chartData.length > 0 ? chartData[0].fecha : '')
+  const formattedBaseDate = formatDateToDdMmYyyy(effectiveBaseDateStr)
 
   const leftSeries = effectiveSeries.filter((s) => s.axis === 'left')
   const rightSeries = effectiveSeries.filter((s) => s.axis === 'right')
-  const hasRightAxis = rightSeries.length > 0
+  const hasRightAxis = !isBase100 && rightSeries.length > 0
 
   const handleDownloadCsv = () => {
     if (chartData.length === 0 || effectiveSeries.length === 0) return
 
-    const headerCols = [
-      'Fecha',
-      ...resampledSeries.map((s) => {
-        const isDeflated = activeReal && isSeriesEligibleForDeflation(s)
-        const realTag = isDeflated ? ` [Real - Base ${deflator.baseMonthFormatted}]` : ''
-        const baseUnit = s.unit
-          ? ` (${s.unit}${isDeflated ? ' pesos constantes' : ''})`
-          : isDeflated
-          ? ' (pesos constantes)'
-          : ''
-        const axis = s.axis === 'left' ? 'Principal' : 'Dual'
-        return `"${s.title.replace(/"/g, '""')}${baseUnit} [${axis}]${realTag}"`
-      }),
-    ]
+    let headerCols: string[] = []
+    if (isBase100) {
+      headerCols = [
+        'Fecha',
+        ...resampledSeries.flatMap((s) => {
+          const isDeflated = activeReal && isSeriesEligibleForDeflation(s)
+          const realTag = isDeflated ? ` [Real - Base ${deflator.baseMonthFormatted}]` : ''
+          const baseUnit = s.unit
+            ? ` (${s.unit}${isDeflated ? ' pesos constantes' : ''})`
+            : isDeflated
+            ? ' (pesos constantes)'
+            : ''
+          return [
+            `"${s.title.replace(/"/g, '""')} - índice (base 100 = ${formattedBaseDate})${realTag}"`,
+            `"${s.title.replace(/"/g, '""')} - valor nativo${baseUnit}${realTag}"`,
+          ]
+        }),
+      ]
+    } else {
+      headerCols = [
+        'Fecha',
+        ...resampledSeries.map((s) => {
+          const isDeflated = activeReal && isSeriesEligibleForDeflation(s)
+          const realTag = isDeflated ? ` [Real - Base ${deflator.baseMonthFormatted}]` : ''
+          const baseUnit = s.unit
+            ? ` (${s.unit}${isDeflated ? ' pesos constantes' : ''})`
+            : isDeflated
+            ? ' (pesos constantes)'
+            : ''
+          const axis = s.axis === 'left' ? 'Principal' : 'Dual'
+          return `"${s.title.replace(/"/g, '""')}${baseUnit} [${axis}]${realTag}"`
+        }),
+      ]
+    }
 
     const rows = chartData.map((item) => {
       const cols = [item.fecha]
-      resampledSeries.forEach((s) => {
-        const val = item[`var_${s.id}`]
-        cols.push(val !== undefined && val !== null ? String(val) : '')
-      })
+      if (isBase100) {
+        resampledSeries.forEach((s) => {
+          const indexVal = item[`var_${s.id}`]
+          const nativeVal = item[`var_${s.id}_native`]
+          cols.push(indexVal !== undefined && indexVal !== null ? String(indexVal) : '')
+          cols.push(nativeVal !== undefined && nativeVal !== null ? String(nativeVal) : '')
+        })
+      } else {
+        resampledSeries.forEach((s) => {
+          const val = item[`var_${s.id}`]
+          cols.push(val !== undefined && val !== null ? String(val) : '')
+        })
+      }
       return cols.join(';')
     })
 
@@ -343,7 +446,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const dateStr = new Date().toISOString().split('T')[0]
     const modeTag = activeReal ? '_real' : '_nominal'
     const periodicityTag = periodicity !== 'original' ? `_${periodicity}` : ''
-    a.download = `series_macro_bcra${modeTag}${periodicityTag}_${timeframe.toLowerCase()}_${dateStr}.csv`
+    const scaleTag = isBase100 ? '_base100' : ''
+    a.download = `series_macro_bcra${modeTag}${periodicityTag}${scaleTag}_${timeframe.toLowerCase()}_${dateStr}.csv`
     document.body.appendChild(a)
     a.click()
     window.URL.revokeObjectURL(url)
@@ -398,13 +502,14 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const displayTitle = titleText.length > 70 ? titleText.slice(0, 67) + '...' : titleText
     ctx.fillText(displayTitle, paddingX, 32)
 
-    // Period / Timeframe subtitle with Real mode and periodicity annotation
+    // Period / Timeframe subtitle with Base 100, Real mode, and periodicity annotation
     ctx.fillStyle = subtitleColor
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const periodText =
       chartData.length > 0
         ? `Período: ${chartData[0].fecha} a ${chartData[chartData.length - 1].fecha} (${timeframe})`
         : `Período: ${timeframe}`
+    const base100Subtitle = isBase100 ? ` · Base 100 (t0 = ${formattedBaseDate})` : ''
     const realSubtitle = activeReal
       ? ` · Real (precios constantes de ${deflator.baseMonthFormatted} - IPC INDEC)`
       : ''
@@ -412,7 +517,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       periodicity !== 'original'
         ? ` · Periodicidad: ${periodicity}`
         : ''
-    ctx.fillText(`${periodText}${realSubtitle}${periodicitySubtitle}`, paddingX, 52)
+    ctx.fillText(`${periodText}${base100Subtitle}${realSubtitle}${periodicitySubtitle}`, paddingX, 52)
 
     // Draw Legend series on top right of the canvas
     let legendX = totalWidth - paddingX
@@ -464,7 +569,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       const dateStr = new Date().toISOString().split('T')[0]
       const modeTag = activeReal ? '_real' : ''
       const periodicityTag = periodicity !== 'original' ? `_${periodicity}` : ''
-      a.download = `grafico_bcra${modeTag}${periodicityTag}_${timeframe.toLowerCase()}_${dateStr}.png`
+      const scaleTag = isBase100 ? '_base100' : ''
+      a.download = `grafico_bcra${modeTag}${periodicityTag}${scaleTag}_${timeframe.toLowerCase()}_${dateStr}.png`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -476,7 +582,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     img.src = url
   }
 
-  // Custom elevated tooltip for MacroChart displaying both Real and Nominal values and partial periods
+  // Custom elevated tooltip for MacroChart displaying Base 100, Real, and Nominal values and partial periods
   const MacroCustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null
 
@@ -505,18 +611,25 @@ export const MacroChart: React.FC<MacroChartProps> = ({
             const rawS = rawSeries.find(
               (it) => it.title === item.name || `var_${it.id}` === item.dataKey || String(it.id) === String(item.dataKey)
             )
+            const axisName = isBase100 ? 'Base 100' : (s?.axis === 'left' ? 'Principal' : 'Dual')
             const displayName = s
-              ? `${s.title} (${s.axis === 'left' ? 'Principal' : 'Dual'})`
+              ? `${s.title} (${axisName})`
               : item.name
-            const unitSuffix = s?.unit ? ` ${s.unit}` : ''
+            const unitSuffix = !isBase100 && s?.unit ? ` ${s.unit}` : ''
 
             const isDeflated = item.payload && item.payload[`${item.dataKey}_deflated`]
             const nominalVal = item.payload ? item.payload[`${item.dataKey}_nominal`] : undefined
             const isItemPartial = item.payload && item.payload[`${item.dataKey}_partial`]
+            const isIndexed = isBase100 && item.payload && item.payload[`${item.dataKey}_indexed`]
+            const variationPct = item.payload ? item.payload[`${item.dataKey}_pct`] : undefined
+            const nativeVal = item.payload ? item.payload[`${item.dataKey}_native`] : undefined
 
             const val =
               typeof item.value === 'number'
-                ? `${item.value.toLocaleString('es-AR')}${unitSuffix}`
+                ? `${item.value.toLocaleString('es-AR', {
+                    minimumFractionDigits: isBase100 ? 2 : 0,
+                    maximumFractionDigits: 2,
+                  })}${unitSuffix}`
                 : item.value
 
             return (
@@ -526,9 +639,23 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   <span>{displayName}</span>
                 </span>
                 <div className="flex flex-col items-end">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums font-mono">
-                    {val}
-                    {isDeflated && (
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-slate-100 tabular-nums font-mono">
+                    <span>{val}</span>
+                    {isIndexed && variationPct !== undefined && variationPct !== null && (
+                      <span
+                        data-testid="tooltip-index-variation"
+                        className={`text-[10px] font-sans font-medium px-1 py-0.2 rounded ${
+                          variationPct > 0
+                            ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50'
+                            : variationPct < 0
+                            ? 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50'
+                            : 'text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800'
+                        }`}
+                      >
+                        {formatIndexVariation(variationPct)}
+                      </span>
+                    )}
+                    {isDeflated && !isBase100 && (
                       <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-normal">
                         (Real)
                       </span>
@@ -538,7 +665,21 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                         (Parcial)
                       </span>
                     )}
-                  </span>
+                  </div>
+                  {isIndexed && nativeVal !== undefined && (
+                    <span
+                      data-testid="tooltip-native-val"
+                      className="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums font-mono"
+                    >
+                      Valor nativo: {typeof nativeVal === 'number' ? nativeVal.toLocaleString('es-AR') : nativeVal}
+                      {s?.unit ? ` ${s.unit}` : ''}
+                      {isDeflated && (
+                        <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-normal">
+                          (Real)
+                        </span>
+                      )}
+                    </span>
+                  )}
                   {isDeflated && nominalVal !== undefined && (
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums font-mono">
                       Nominal: {typeof nominalVal === 'number' ? nominalVal.toLocaleString('es-AR') : nominalVal}
@@ -560,7 +701,25 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap text-sm font-semibold text-slate-900 dark:text-slate-100">
-            {leftSeries.length > 0 ? (
+            {isBase100 ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-sans uppercase tracking-wider text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800/60">
+                  Base 100
+                </span>
+                {effectiveSeries.map((s, idx) => (
+                  <span key={s.id} className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-medium">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                    <span>{formatGrammaticalTitle(s.title)}</span>
+                    {s.unit && (
+                      <span className="text-[10px] font-sans tabular-nums text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700/60">
+                        {s.unit}
+                      </span>
+                    )}
+                    {idx < effectiveSeries.length - 1 && <span className="text-slate-400">/</span>}
+                  </span>
+                ))}
+              </div>
+            ) : leftSeries.length > 0 ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-sans uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/60">
                   Principal
@@ -582,7 +741,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
               <span>{formatGrammaticalTitle(primaryTitle || 'Monitor macroeconómico')}</span>
             )}
 
-            {rightSeries.length > 0 && (
+            {!isBase100 && rightSeries.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-slate-400 font-normal text-xs">vs</span>
                 <span className="text-[10px] font-sans uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/60">
@@ -606,6 +765,41 @@ export const MacroChart: React.FC<MacroChartProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Evolución histórica y comparación temporal multi-variable de series BCRA
           </p>
+
+          {/* Base 100 informative badge & dynamic base date selector */}
+          {isBase100 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span
+                data-testid="base-100-badge"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 shadow-xs"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span>Base 100 (t0 = {formattedBaseDate})</span>
+              </span>
+
+              <div className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/80 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                <span className="text-[11px]">Fecha base:</span>
+                <input
+                  type="date"
+                  data-testid="custom-base-date-input"
+                  aria-label="Fecha base personalizada"
+                  value={customBaseDate}
+                  onChange={(e) => handleCustomBaseDateChange(e.target.value)}
+                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-1.5 py-0.5 rounded text-[11px] focus:outline-none focus:border-purple-500 font-sans tabular-nums transition-colors"
+                />
+                {customBaseDate && (
+                  <button
+                    type="button"
+                    data-testid="reset-base-date-btn"
+                    onClick={() => handleCustomBaseDateChange('')}
+                    className="text-[10px] text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline font-sans cursor-pointer ml-1"
+                  >
+                    Restablecer
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Informative Aggregation Rule Badge & Partial Period Indicator */}
           {periodicity !== 'original' && (
@@ -748,6 +942,38 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 Real (IPC)
               </button>
             </div>
+          </div>
+
+          {/* Scale Segmented Control: Nivel vs Base 100 */}
+          <div
+            className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5"
+            role="group"
+            aria-label="Escala de visualización"
+          >
+            <button
+              type="button"
+              data-testid="scale-level"
+              onClick={() => setIsBase100(false)}
+              className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
+                !isBase100
+                  ? 'bg-blue-600 text-white font-medium shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+              }`}
+            >
+              Nivel
+            </button>
+            <button
+              type="button"
+              data-testid="scale-base100"
+              onClick={() => setIsBase100(true)}
+              className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
+                isBase100
+                  ? 'bg-blue-600 text-white font-medium shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+              }`}
+            >
+              Base 100
+            </button>
           </div>
 
           {/* Timeframe pill switcher with Personalizado & Export actions */}
@@ -893,7 +1119,26 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                 axisLine={false}
                 domain={['auto', 'auto']}
                 className="font-sans tabular-nums"
+                label={
+                  isBase100
+                    ? {
+                        value: `Número índice (base 100 = ${formattedBaseDate})`,
+                        angle: -90,
+                        position: 'insideLeft',
+                        offset: 10,
+                        style: {
+                          textAnchor: 'middle',
+                          fill: isDark ? '#94a3b8' : '#475569',
+                          fontSize: 10,
+                          fontFamily: 'Inter, sans-serif',
+                        },
+                      }
+                    : undefined
+                }
                 tickFormatter={(val) => {
+                  if (isBase100) {
+                    return val.toLocaleString('es-AR', { maximumFractionDigits: 1 })
+                  }
                   if (Math.abs(val) >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`
                   if (Math.abs(val) >= 1_000) return `${(val / 1_000).toFixed(0)}k`
                   return val
@@ -917,6 +1162,14 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   }}
                 />
               )}
+              {isBase100 && (
+                <ReferenceLine
+                  y={100}
+                  yAxisId="left"
+                  stroke="#94a3b8"
+                  strokeDasharray="3 3"
+                />
+              )}
               <Tooltip content={<MacroCustomTooltip />} />
               <Legend
                 verticalAlign="top"
@@ -927,7 +1180,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                     (item) => item.title === value || `var_${item.id}` === value || String(item.id) === String(value)
                   )
                   const title = s ? s.title : (value === 'primary' ? (primaryTitle || 'Principal') : (secondaryTitle || 'Dual'))
-                  const axisLabel = s?.axis === 'right' ? 'Dual' : 'Principal'
+                  const axisLabel = isBase100 ? 'Base 100' : (s?.axis === 'right' ? 'Dual' : 'Principal')
                   return (
                     <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-sans font-medium mr-2">
                       <span>{title}</span>
@@ -946,13 +1199,13 @@ export const MacroChart: React.FC<MacroChartProps> = ({
               {effectiveSeries.map((s) => (
                 <Line
                   key={s.id}
-                  yAxisId={s.axis}
+                  yAxisId={isBase100 ? 'left' : s.axis}
                   type="monotone"
                   dataKey={`var_${s.id}`}
                   name={s.title}
                   stroke={s.color}
                   strokeWidth={2}
-                  strokeDasharray={s.strokeDasharray || (s.axis === 'right' ? '4 4' : undefined)}
+                  strokeDasharray={isBase100 ? undefined : (s.strokeDasharray || (s.axis === 'right' ? '4 4' : undefined))}
                   dot={(props: any) => {
                     if (props.payload && (props.payload.isPartial || props.payload[`${props.dataKey}_partial`])) {
                       return (

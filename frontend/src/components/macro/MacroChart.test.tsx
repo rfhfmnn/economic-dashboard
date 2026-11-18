@@ -507,4 +507,194 @@ describe('MacroChart Component - Intelligent Temporal Periodicity Resampling', (
       expect(realBadge.textContent).toContain('Precios constantes')
     })
   })
+
+  describe('Dynamic Base-100 Normalization & Scale Control', () => {
+    const multiSeries: ChartSeries[] = [
+      {
+        id: 15,
+        title: 'Base monetaria total',
+        unit: 'ARS M',
+        data: [
+          { fecha: '2026-01-01', valor: 1000 },
+          { fecha: '2026-02-01', valor: 1200 },
+          { fecha: '2026-03-01', valor: 1500 },
+        ],
+        axis: 'left',
+        color: '#3b82f6',
+      },
+      {
+        id: 4,
+        title: 'Tipo de cambio oficial (A3500)',
+        unit: 'ARS/USD',
+        data: [
+          { fecha: '2026-01-01', valor: 800 },
+          { fecha: '2026-02-01', valor: 880 },
+          { fecha: '2026-03-01', valor: 960 },
+        ],
+        axis: 'right',
+        color: '#8b5cf6',
+      },
+    ]
+
+    it('renders Nivel and Base 100 segmented scale buttons with Nivel active by default', () => {
+      render(
+        <MacroChart
+          series={multiSeries}
+          timeframe="1Y"
+          onTimeframeChange={vi.fn()}
+        />
+      )
+
+      const levelBtn = screen.getByTestId('scale-level')
+      const base100Btn = screen.getByTestId('scale-base100')
+
+      expect(levelBtn).toBeDefined()
+      expect(base100Btn).toBeDefined()
+      expect(levelBtn.textContent).toBe('Nivel')
+      expect(base100Btn.textContent).toBe('Base 100')
+      expect(screen.queryByTestId('base-100-badge')).toBeNull()
+    })
+
+    it('switches to Base 100 mode when clicked, displays Base 100 badge and custom base date input', async () => {
+      render(
+        <MacroChart
+          series={multiSeries}
+          timeframe="1Y"
+          onTimeframeChange={vi.fn()}
+        />
+      )
+
+      const base100Btn = screen.getByTestId('scale-base100')
+      fireEvent.click(base100Btn)
+
+      await waitFor(() => {
+        const badge = screen.getByTestId('base-100-badge')
+        expect(badge).toBeDefined()
+        expect(badge.textContent).toContain('Base 100 (t0 = 01/01/2026)')
+
+        const baseDateInput = screen.getByTestId('custom-base-date-input')
+        expect(baseDateInput).toBeDefined()
+      })
+    })
+
+    it('allows changing custom base date and resetting it', async () => {
+      render(
+        <MacroChart
+          series={multiSeries}
+          timeframe="1Y"
+          onTimeframeChange={vi.fn()}
+        />
+      )
+
+      fireEvent.click(screen.getByTestId('scale-base100'))
+
+      const baseDateInput = screen.getByTestId('custom-base-date-input')
+      fireEvent.change(baseDateInput, { target: { value: '2026-02-01' } })
+
+      await waitFor(() => {
+        const badge = screen.getByTestId('base-100-badge')
+        expect(badge.textContent).toContain('Base 100 (t0 = 01/02/2026)')
+        expect(screen.getByTestId('reset-base-date-btn')).toBeDefined()
+      })
+
+      // Click reset
+      fireEvent.click(screen.getByTestId('reset-base-date-btn'))
+
+      await waitFor(() => {
+        const badge = screen.getByTestId('base-100-badge')
+        expect(badge.textContent).toContain('Base 100 (t0 = 01/01/2026)')
+        expect(screen.queryByTestId('reset-base-date-btn')).toBeNull()
+      })
+    })
+
+    it('triggers onBase100Change callback prop when clicked', () => {
+      const onBase100ChangeMock = vi.fn()
+      render(
+        <MacroChart
+          series={multiSeries}
+          timeframe="1Y"
+          onTimeframeChange={vi.fn()}
+          onBase100Change={onBase100ChangeMock}
+        />
+      )
+
+      fireEvent.click(screen.getByTestId('scale-base100'))
+      expect(onBase100ChangeMock).toHaveBeenCalledWith(true)
+
+      fireEvent.click(screen.getByTestId('scale-level'))
+      expect(onBase100ChangeMock).toHaveBeenCalledWith(false)
+    })
+
+    it('generates dual columns in CSV export when Base 100 is active', async () => {
+      let generatedBlob: Blob | null = null
+      let downloadedFilename = ''
+
+      const createUrlSpy = vi.spyOn(window.URL, 'createObjectURL').mockImplementation((blob: any) => {
+        generatedBlob = blob
+        return 'blob:fake-url'
+      })
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedFilename = this.download
+      })
+
+      render(
+        <MacroChart
+          series={multiSeries}
+          timeframe="1Y"
+          onTimeframeChange={vi.fn()}
+          isBase100={true}
+        />
+      )
+
+      const csvBtn = screen.getByRole('button', { name: /CSV\/Excel/i })
+      fireEvent.click(csvBtn)
+
+      expect(createUrlSpy).toHaveBeenCalled()
+      expect(clickSpy).toHaveBeenCalled()
+      expect(downloadedFilename).toContain('_base100')
+      expect(downloadedFilename).toContain('.csv')
+
+      expect(generatedBlob).not.toBeNull()
+      const text = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsText(generatedBlob as unknown as Blob)
+      })
+      expect(text).toContain('Base monetaria total - índice (base 100')
+      expect(text).toContain('Base monetaria total - valor nativo')
+
+      createUrlSpy.mockRestore()
+      clickSpy.mockRestore()
+    })
+
+    it('seamlessly composes resampling, real inflation deflation, and base 100 normalization together', async () => {
+      render(
+        <MacroChart
+          series={multiSeries}
+          timeframe="1Y"
+          onTimeframeChange={vi.fn()}
+          cpiData={mockCpiData}
+        />
+      )
+
+      // Step 1: Switch to Mensual periodicity
+      fireEvent.click(screen.getByTestId('periodicity-mensual'))
+
+      // Step 2: Switch to Real mode
+      fireEvent.click(screen.getByTestId('toggle-real'))
+
+      // Step 3: Switch to Base 100 scale
+      fireEvent.click(screen.getByTestId('scale-base100'))
+
+      await waitFor(() => {
+        // All three badges/indicators should be active and harmonious
+        expect(screen.getByTestId('aggregation-rule-badge')).toBeDefined()
+        expect(screen.getByTestId('real-mode-badge')).toBeDefined()
+        expect(screen.getByTestId('base-100-badge')).toBeDefined()
+
+        const baseBadge = screen.getByTestId('base-100-badge')
+        expect(baseBadge.textContent).toContain('Base 100')
+      })
+    })
+  })
 })
