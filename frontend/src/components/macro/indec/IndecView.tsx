@@ -15,9 +15,6 @@ import { VariablePicker } from '../VariablePicker'
 const PRIMARY_COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#38bdf8', '#14b8a6']
 const SECONDARY_COLORS = ['#8b5cf6', '#f59e0b', '#ec4899', '#a855f7', '#fb923c']
 
-export type IndecTimeframe = '1Y' | '2Y' | '5Y' | 'Max'
-const INDEC_TIMEFRAMES: IndecTimeframe[] = ['1Y', '2Y', '5Y', 'Max']
-
 export const IndecView: React.FC = () => {
   const [summary, setSummary] = useState<IndecSummaryResponse | null>(null)
   const [catalog, setCatalog] = useState<IndecCatalogItem[]>([])
@@ -26,12 +23,12 @@ export const IndecView: React.FC = () => {
   const [primaryIds, setPrimaryIds] = useState<string[]>(['ipc_general'])
   const [secondaryIds, setSecondaryIds] = useState<string[]>([])
 
-  // In-memory cache for series data: key is `${variable_id}_${timeframe}`
+  // In-memory cache for series data: key is variable_id
   const [seriesCache, setSeriesCache] = useState<
     Record<string, IndecSeriesPoint[]>
   >({})
 
-  const [timeframe, setTimeframe] = useState<IndecTimeframe>('1Y')
+  const [timeframe, setTimeframe] = useState<Timeframe>('1Y')
   const [loading, setLoading] = useState<boolean>(true)
   const [refreshing, setRefreshing] = useState<boolean>(false)
   const [chartLoading, setChartLoading] = useState<boolean>(false)
@@ -77,14 +74,12 @@ export const IndecView: React.FC = () => {
     loadDashboardData(true)
   }
 
-  // Fetch missing series data when active variables or timeframe change
+  // Fetch missing series data when active variables change (fetch Max once, MacroChart filters client-side)
   useEffect(() => {
     const allSelectedIds = Array.from(new Set([...primaryIds, ...secondaryIds]))
     if (allSelectedIds.length === 0) return
 
-    const missingIds = allSelectedIds.filter(
-      (id) => !seriesCache[`${id}_${timeframe}`]
-    )
+    const missingIds = allSelectedIds.filter((id) => !seriesCache[id])
 
     if (missingIds.length === 0) return
 
@@ -95,7 +90,7 @@ export const IndecView: React.FC = () => {
         const results = await Promise.all(
           missingIds.map((id) =>
             api
-              .getIndecSeries(id, timeframe)
+              .getIndecSeries(id, 'Max')
               .then((points) => ({ id, points }))
               .catch((err) => {
                 console.error(`Error fetching INDEC series ${id}:`, err)
@@ -110,7 +105,7 @@ export const IndecView: React.FC = () => {
           const updated = { ...prev }
           results.forEach((item) => {
             if (item.points && item.points.length > 0) {
-              updated[`${item.id}_${timeframe}`] = item.points
+              updated[item.id] = item.points
             }
           })
           return updated
@@ -126,7 +121,7 @@ export const IndecView: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [primaryIds, secondaryIds, timeframe])
+  }, [primaryIds, secondaryIds])
 
   // Initial load on mount
   useEffect(() => {
@@ -148,7 +143,7 @@ export const IndecView: React.FC = () => {
     const seriesList: ChartSeries[] = []
 
     primaryIds.forEach((id, idx) => {
-      const cachedPoints = seriesCache[`${id}_${timeframe}`] || []
+      const cachedPoints = seriesCache[id] || []
       const catItem = catalog.find((c) => c.variable_id === id)
       const indItem = summary?.indicators.find((i) => i.variable_id === id)
       const title = catItem?.name || indItem?.name || id
@@ -165,7 +160,7 @@ export const IndecView: React.FC = () => {
     })
 
     secondaryIds.forEach((id, idx) => {
-      const cachedPoints = seriesCache[`${id}_${timeframe}`] || []
+      const cachedPoints = seriesCache[id] || []
       const catItem = catalog.find((c) => c.variable_id === id)
       const indItem = summary?.indicators.find((i) => i.variable_id === id)
       const title = catItem?.name || indItem?.name || id
@@ -183,7 +178,7 @@ export const IndecView: React.FC = () => {
     })
 
     return seriesList
-  }, [primaryIds, secondaryIds, seriesCache, timeframe, catalog, summary])
+  }, [primaryIds, secondaryIds, seriesCache, catalog, summary])
 
   const totalObservations = useMemo(() => {
     return chartSeries.reduce((acc, s) => acc + s.data.length, 0)
@@ -305,7 +300,7 @@ export const IndecView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="indec-view-container">
       {/* Header controls row: Timestamp and Sync button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -349,7 +344,7 @@ export const IndecView: React.FC = () => {
         {Array.isArray(summary?.indicators) &&
           summary.indicators.map((ind: IndecIndicator) => {
             const isActive = primaryIds.includes(ind.variable_id)
-            const cachedSeries = seriesCache[`${ind.variable_id}_${timeframe}`]
+            const cachedSeries = seriesCache[ind.variable_id]
             const pointsForSparkline =
               ind.recent_points && ind.recent_points.length >= 2
                 ? ind.recent_points
@@ -375,7 +370,7 @@ export const IndecView: React.FC = () => {
           })}
       </div>
 
-      {/* Controls Toolbar: VariablePicker + Timeframe Switcher + Active Stats */}
+      {/* Controls Toolbar: VariablePicker + Active Stats */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-slate-900/40 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
           <VariablePicker
@@ -390,45 +385,17 @@ export const IndecView: React.FC = () => {
             searchPlaceholder="Buscar variable INDEC por nombre o categoría..."
           />
 
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Timeframe selector buttons (1Y, 2Y, 5Y, Max) */}
-            <div
-              className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5"
-              role="group"
-              aria-label="Plazo temporal"
-            >
-              {INDEC_TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  type="button"
-                  data-testid={`timeframe-${tf.toLowerCase()}`}
-                  onClick={() => setTimeframe(tf)}
-                  className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${timeframe === tf
-                    ? 'bg-blue-600 text-white font-medium shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
-                    }`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-
-            <span className="text-[11px] font-sans tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap">
-              {chartSeries.length} variable{chartSeries.length > 1 ? 's' : ''} activa{chartSeries.length > 1 ? 's' : ''} •{' '}
-              {totalObservations.toLocaleString('es-AR')} puntos
-            </span>
-          </div>
+          <span className="text-[11px] font-sans tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            {chartSeries.length} variable{chartSeries.length > 1 ? 's' : ''} activa{chartSeries.length > 1 ? 's' : ''} •{' '}
+            {totalObservations.toLocaleString('es-AR')} puntos
+          </span>
         </div>
 
         {/* Time-Series Chart */}
         <MacroChart
           series={chartSeries}
-          timeframe={timeframe === '2Y' ? 'Custom' : (timeframe as Timeframe)}
-          onTimeframeChange={(tf) => {
-            if (tf === '1Y' || tf === '5Y' || tf === 'Max') {
-              setTimeframe(tf)
-            }
-          }}
+          timeframe={timeframe}
+          onTimeframeChange={setTimeframe}
           loading={chartLoading}
         />
       </div>

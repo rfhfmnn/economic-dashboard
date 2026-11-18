@@ -226,24 +226,23 @@ describe('IndecView Component', () => {
     })
   })
 
-  it('renders timeframe selector buttons and switches timeframe', async () => {
+  it('renders timeframe selector buttons inside MacroChart and switches timeframe', async () => {
     render(<IndecView />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('timeframe-1y')).toBeDefined()
-      expect(screen.getByTestId('timeframe-2y')).toBeDefined()
-      expect(screen.getByTestId('timeframe-5y')).toBeDefined()
-      expect(screen.getByTestId('timeframe-max')).toBeDefined()
+      expect(screen.getByRole('button', { name: '1Y' })).toBeDefined()
+      expect(screen.getByRole('button', { name: '5Y' })).toBeDefined()
+      expect(screen.getByRole('button', { name: 'Max' })).toBeDefined()
     })
 
-    // Switch to 2Y
-    fireEvent.click(screen.getByTestId('timeframe-2y'))
+    // Switch to 5Y
+    fireEvent.click(screen.getByRole('button', { name: '5Y' }))
 
     // Switch to Max
-    fireEvent.click(screen.getByTestId('timeframe-max'))
+    fireEvent.click(screen.getByRole('button', { name: 'Max' }))
 
-    // Verify 1Y switch back
-    fireEvent.click(screen.getByTestId('timeframe-1y'))
+    // Switch back to 1Y
+    fireEvent.click(screen.getByRole('button', { name: '1Y' }))
   })
 
   it('renders informative alert banner on 401 missing token error with retry button', async () => {

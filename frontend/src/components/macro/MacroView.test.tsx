@@ -460,7 +460,8 @@ describe('MacroView Components', () => {
     // Click INDEC sub-tab
     fireEvent.click(screen.getByTestId('macro-subtab-indec'))
     await waitFor(() => {
-      expect(screen.getByText('Variables INDEC (Economía Real)')).toBeDefined()
+      expect(screen.getByText('Estadísticas oficiales INDEC (economía real)')).toBeDefined()
+      expect(screen.getByText('Variables INDEC (economía real)')).toBeDefined()
     })
 
     // Click BCRA sub-tab back
