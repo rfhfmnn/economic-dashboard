@@ -35,6 +35,15 @@ export interface MacroSeriesPoint {
   valor: number
 }
 
+export type Periodicity = 'original' | 'mensual' | 'trimestral'
+export type SeriesTaxonomy = 'fx' | 'rate' | 'stock' | 'flow' | 'index'
+
+export interface ResampledPoint extends MacroSeriesPoint {
+  isPartial?: boolean
+  count?: number
+  originalFecha?: string
+}
+
 export interface CpiPoint {
   fecha: string
   valor: number
