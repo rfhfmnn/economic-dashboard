@@ -356,9 +356,6 @@ export const MacroView: React.FC = () => {
               }`}
           >
             <span>Expectativas de mercado (REM)</span>
-            <span className="text-[10px] font-sans uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
-              Nuevo
-            </span>
           </button>
           <button
             type="button"
@@ -370,6 +367,9 @@ export const MacroView: React.FC = () => {
               }`}
           >
             <span>Variables INDEC (economía real)</span>
+            <span className="text-[10px] font-sans uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
+              Nuevo
+            </span>
           </button>
         </div>
 
