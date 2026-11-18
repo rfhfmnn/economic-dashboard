@@ -39,11 +39,17 @@ def normalize_indec_date(period_str: str) -> str:
     - Q3/T3 -> YYYY-09-30
     - Q4/T4 -> YYYY-12-31
 
-    Monthly periods (e.g. 2026-09) map to YYYY-MM-01.
+    Semestral periods (e.g. 20261S, 2026-S1, 2026-1S) map to semester-end:
+    - S1/1S -> YYYY-06-30
+    - S2/2S -> YYYY-12-31
+
+    Annual periods (e.g. 2022) map to YYYY-01-01.
+    Monthly periods (e.g. 2026-09 or 202609) map to YYYY-MM-01.
     ISO dates (e.g. 2026-09-15) are preserved.
     """
     s = str(period_str).strip()
     q_ends = {1: "03-31", 2: "06-30", 3: "09-30", 4: "12-31"}
+    s_ends = {1: "06-30", 2: "12-31"}
 
     # Pattern 1: 2026-T1, 2026-Q1, 2026T1, 2026_Q2, etc.
     m_q1 = re.match(r"^(\d{4})[-_ ]?[TtQq]([1-4])$", s)
@@ -69,6 +75,17 @@ def normalize_indec_date(period_str: str) -> str:
         q, year = int(m_q4.group(1)), m_q4.group(2)
         return f"{year}-{q_ends[q]}"
 
+    # Pattern Semesters: 2026-S1, 2026S1, 2026-1S, 20261S, 2026_S2
+    m_s1 = re.match(r"^(\d{4})[-_ ]?[Ss]([1-2])$", s)
+    if m_s1:
+        year, sem = m_s1.group(1), int(m_s1.group(2))
+        return f"{year}-{s_ends[sem]}"
+
+    m_s2 = re.match(r"^(\d{4})[-_ ]?([1-2])[Ss]$", s)
+    if m_s2:
+        year, sem = m_s2.group(1), int(m_s2.group(2))
+        return f"{year}-{s_ends[sem]}"
+
     # Pattern 5: Full ISO date YYYY-MM-DD (e.g. 2026-09-15 or 2026-09-15T00:00:00)
     m_d = re.match(r"^(\d{4})[-/](\d{2})[-/](\d{2})", s)
     if m_d:
@@ -93,17 +110,44 @@ def normalize_indec_date(period_str: str) -> str:
         month, year = m_my.group(1), m_my.group(2)
         return f"{year}-{month}-01"
 
+    # Pattern 8: Annual 4-digit YYYY (e.g. 2022)
+    m_y = re.match(r"^(\d{4})$", s)
+    if m_y:
+        return f"{m_y.group(1)}-01-01"
+
     return s
 
 
-def extract_indec_value(record: dict[str, Any]) -> float | None:
+def extract_indec_value(
+    record: dict[str, Any], target_field: str | None = None
+) -> float | None:
     """Extract and cast numeric observation value from raw record dictionary."""
+    if target_field and target_field in record and record[target_field] is not None:
+        raw = record[target_field]
+        if isinstance(raw, str):
+            raw = raw.replace(",", ".").strip()
+        try:
+            return float(raw)
+        except (ValueError, TypeError):
+            pass
+
     candidate_keys = (
         "valor",
         "tasa_de_desocupacion",
         "tasa_de_empleo",
         "tasa_de_actividad",
+        "tasa_de_subocupacion",
+        "tasa_pobreza_personas",
+        "tasa_pobreza_hogares",
+        "tasa_indigencia_personas",
+        "tasa_indigencia_hogares",
         "tot_1a3",
+        "tot_men1",
+        "tot_4a5",
+        "tot_6a12",
+        "poblacion",
+        "valor_FOB",
+        "valor_CIF",
         "indice",
         "tasa",
         "saldo",
@@ -177,17 +221,23 @@ def filter_by_timeframe(
     except ValueError:
         return points
 
-    years_map = {"1Y": 1, "2Y": 2, "5Y": 5}
-    if tf in years_map:
-        years = years_map[tf]
-        cutoff_year = latest_dt.year - years
-        # Safe leap year adjustment
-        day = (
-            28
-            if latest_dt.month == 2 and latest_dt.day == 29
-            else latest_dt.day
-        )
-        cutoff = latest_dt.replace(year=cutoff_year, day=day)
+    tf_months = {
+        "1M": 1,
+        "3M": 3,
+        "6M": 6,
+        "1Y": 12,
+        "2Y": 24,
+        "5Y": 60,
+    }
+    if tf in tf_months:
+        months = tf_months[tf]
+        year = latest_dt.year - (months // 12)
+        month = latest_dt.month - (months % 12)
+        if month <= 0:
+            month += 12
+            year -= 1
+        day = min(latest_dt.day, 28)
+        cutoff = latest_dt.replace(year=year, month=month, day=day)
     else:
         # Fallback to returning all points if unrecognized
         return points
@@ -239,7 +289,7 @@ class IndecService:
 
         Args:
             variable_id: Identifier registered in DATASET_REGISTRY.
-            timeframe: Period filter ('1Y', '2Y', '5Y', 'Max').
+            timeframe: Period filter ('1M', '3M', '6M', '1Y', '2Y', '5Y', 'Max').
             db: Optional SQLAlchemy Session for caching.
             refresh: If True, forces network refresh bypassing cache.
 
@@ -255,6 +305,11 @@ class IndecService:
             raise ValueError(
                 f"Variable '{variable_id}' no encontrada en catálogo INDEC"
             )
+
+        entry = DATASET_REGISTRY.get(variable_id, {})
+        value_field = entry.get("value_field")
+        scale = float(entry.get("scale", 1.0))
+        aggregate = entry.get("aggregate")
 
         raw_records = self.client.fetch_series(
             variable_id=variable_id,
@@ -277,24 +332,36 @@ class IndecService:
                 items_to_process = [raw_records]
 
         points: list[dict[str, Any]] = []
-        for item in items_to_process:
-            norm_date = extract_indec_date(item)
-            norm_val = extract_indec_value(item)
-            if norm_date and norm_val is not None:
-                points.append({"fecha": norm_date, "valor": norm_val})
+        if aggregate == "sum":
+            grouped: dict[str, float] = {}
+            for item in items_to_process:
+                norm_date = extract_indec_date(item)
+                norm_val = extract_indec_value(item, target_field=value_field)
+                if norm_date and norm_val is not None:
+                    grouped[norm_date] = grouped.get(norm_date, 0.0) + (norm_val * scale)
+            sorted_points = [
+                {"fecha": f, "valor": round(v, 4)}
+                for f, v in sorted(grouped.items(), key=lambda x: x[0])
+            ]
+        else:
+            for item in items_to_process:
+                norm_date = extract_indec_date(item)
+                norm_val = extract_indec_value(item, target_field=value_field)
+                if norm_date and norm_val is not None:
+                    points.append({"fecha": norm_date, "valor": round(norm_val * scale, 4)})
 
-        # Sort chronologically ascending
-        points.sort(key=lambda p: p["fecha"])
+            # Sort chronologically ascending
+            points.sort(key=lambda p: p["fecha"])
 
-        # Deduplicate by fecha keeping the last observation
-        unique_points: dict[str, float] = {}
-        for p in points:
-            unique_points[p["fecha"]] = p["valor"]
+            # Deduplicate by fecha keeping the last observation
+            unique_points: dict[str, float] = {}
+            for p in points:
+                unique_points[p["fecha"]] = p["valor"]
 
-        sorted_points = [
-            {"fecha": f, "valor": v}
-            for f, v in sorted(unique_points.items(), key=lambda x: x[0])
-        ]
+            sorted_points = [
+                {"fecha": f, "valor": v}
+                for f, v in sorted(unique_points.items(), key=lambda x: x[0])
+            ]
 
         # Apply timeframe filter
         return filter_by_timeframe(sorted_points, timeframe=timeframe)

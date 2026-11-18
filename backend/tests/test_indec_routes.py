@@ -106,6 +106,11 @@ def test_filter_by_timeframe():
     assert len(tf_5y) == 4
     assert tf_5y[0]["fecha"] == "2022-01-01"
 
+    # 1M: points >= 2026-08-01
+    tf_1m = filter_by_timeframe(points, "1M")
+    assert len(tf_1m) == 1
+    assert tf_1m[0]["fecha"] == "2026-09-01"
+
 
 def test_get_indec_catalog_all(client: TestClient):
     """Verify GET /api/macro/indec/catalog returns all registered variables."""
@@ -113,7 +118,7 @@ def test_get_indec_catalog_all(client: TestClient):
     assert response.status_code == 200
     catalog = response.json()
     assert isinstance(catalog, list)
-    assert len(catalog) >= 8
+    assert len(catalog) >= 30
 
     # Verify expected schema on every item
     for item in catalog:

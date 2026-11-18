@@ -328,3 +328,100 @@ def test_get_catalog_and_get_series_alias():
     result = client.get_series("ipc_general")
     assert result == [{"test": 123}]
     client.close()
+
+
+def test_expanded_dataset_registry_covers_all_official_datasets():
+    """Verify that DATASET_REGISTRY covers all INDEC official datasets with valid sentence case metadata."""
+    assert len(DATASET_REGISTRY) >= 30
+
+    expected_endpoints = {
+        "/ipc_nacional",
+        "/icc_precios_construccion",
+        "/sipm_precios_mayoristas",
+        "/redeterminacion_precios_contratos_obras_publicas",
+        "/indice_salarios",
+        "/estimador-mensual-de-actividad-economica-nivel-general",
+        "/estimador-mensual-de-actividad-economica-sectores",
+        "/ipi_manufacturero",
+        "/ipi_minero",
+        "/mercado_trabajo_eph",
+        "/valorizacion_canastas_cba_cbt",
+        "/pobreza_eph",
+        "/canasta-crianza",
+        "/comercio_exterior_exportacion_bienes",
+        "/comercio_exterior_importacion_bienes",
+        "/proyecciones_poblacion_jurisdiccion_2022_2040",
+        "/estimaciones_poblacion_departamento_2022_2035",
+    }
+
+    registered_endpoints = {entry["endpoint"] for entry in DATASET_REGISTRY.values()}
+    for ep in expected_endpoints:
+        assert ep in registered_endpoints, f"Expected endpoint {ep} not present in DATASET_REGISTRY"
+
+    # Sentence case verification: no title case
+    for var_id, entry in DATASET_REGISTRY.items():
+        name = entry["name"]
+        cat = entry["category"]
+        desc = entry["description"]
+        assert name and name[0].isupper(), f"Name in {var_id} should start with capital: {name}"
+        assert cat and cat[0].isupper(), f"Category in {var_id} should start with capital: {cat}"
+        assert desc and desc[0].isupper(), f"Description in {var_id} should start with capital: {desc}"
+
+
+def test_normalize_indec_date_semesters_and_annual():
+    """Verify normalize_indec_date parses semestral and annual formats to ISO dates."""
+    from backend.app.services.indec_service import normalize_indec_date
+
+    assert normalize_indec_date("20261S") == "2026-06-30"
+    assert normalize_indec_date("20262S") == "2026-12-31"
+    assert normalize_indec_date("2026-S1") == "2026-06-30"
+    assert normalize_indec_date("2026-2S") == "2026-12-31"
+    assert normalize_indec_date("2022") == "2022-01-01"
+    assert normalize_indec_date("202610") == "2026-10-01"
+    assert normalize_indec_date("20262T") == "2026-06-30"
+
+
+def test_extract_indec_value_with_target_field():
+    """Verify extract_indec_value correctly extracts target_field and falls back gracefully."""
+    from backend.app.services.indec_service import extract_indec_value
+
+    record = {
+        "periodo": "20261S",
+        "tasa_pobreza_personas": "32.3",
+        "tasa_pobreza_hogares": 24.4,
+        "tot_men1": 591320.30,
+        "poblacion": "46135579",
+    }
+
+    assert extract_indec_value(record, target_field="tasa_pobreza_personas") == 32.3
+    assert extract_indec_value(record, target_field="tasa_pobreza_hogares") == 24.4
+    assert extract_indec_value(record, target_field="tot_men1") == 591320.30
+    assert extract_indec_value(record, target_field="poblacion") == 46135579.0
+
+
+def test_indec_service_aggregation_and_scaling():
+    """Verify that get_series aggregates multi-row observations by date when aggregate='sum'."""
+    from backend.app.services.indec_service import IndecService
+
+    mock_records = [
+        {"Periodo": "202609", "rubro_cod": "1", "pais_cod": "IT", "valor_FOB": 1000000.0},
+        {"Periodo": "202609", "rubro_cod": "1", "pais_cod": "US", "valor_FOB": 2000000.0},
+        {"Periodo": "202608", "rubro_cod": "1", "pais_cod": "IT", "valor_FOB": 500000.0},
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=mock_records)
+
+    mock_transport = httpx.MockTransport(handler)
+    client = IndecClient(token="valid_token", transport=mock_transport)
+    service = IndecService(client=client)
+
+    series = service.get_series("comex_exportaciones_primarios", timeframe="1Y")
+    assert len(series) == 2
+    # 2026-08: 500,000 * 1e-6 = 0.5
+    assert series[0]["fecha"] == "2026-08-01"
+    assert series[0]["valor"] == 0.5
+    # 2026-09: (1,000,000 + 2,000,000) * 1e-6 = 3.0
+    assert series[1]["fecha"] == "2026-09-01"
+    assert series[1]["valor"] == 3.0
+    client.close()
