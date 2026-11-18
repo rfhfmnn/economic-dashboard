@@ -113,7 +113,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             {unit && <span className="text-xs font-sans text-slate-500 dark:text-slate-400">{unit}</span>}
           </div>
           {recentPoints && recentPoints.length >= 2 && (
-            <div className="shrink-0" title="Tendencia últimos 30 días">
+            <div className="shrink-0" title="Tendencia reciente">
               <Sparkline
                 points={recentPoints}
                 isPositive={isPositiveTrend}

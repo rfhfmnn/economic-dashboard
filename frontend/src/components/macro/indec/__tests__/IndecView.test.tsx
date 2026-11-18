@@ -11,83 +11,91 @@ import type {
 const MOCK_INDICATORS: IndecIndicator[] = [
   {
     variable_id: 'ipc_general',
-    name: 'IPC - Nivel General Nacional',
-    category: 'Precios y Costos',
+    name: 'IPC - nivel general nacional',
+    category: 'Precios y costos',
     unit: '% mensual',
     value: 4.2,
     date: '2024-05-01',
     delta_mom: -0.8,
     delta_yoy: 276.4,
+    recent_points: [3.2, 3.5, 3.8, 4.2],
   },
   {
     variable_id: 'ipc_core',
-    name: 'IPC - Núcleo',
-    category: 'Precios y Costos',
+    name: 'IPC - núcleo',
+    category: 'Precios y costos',
     unit: '% mensual',
     value: 3.8,
     date: '2024-05-01',
     delta_mom: -0.5,
     delta_yoy: 260.0,
+    recent_points: [3.0, 3.3, 3.6, 3.8],
   },
   {
     variable_id: 'emae_general',
-    name: 'EMAE - Nivel General',
-    category: 'Actividad y Producción',
+    name: 'EMAE - nivel general',
+    category: 'Actividad y producción',
     unit: 'Índice base 2004=100',
     value: 154.2,
     date: '2024-04-01',
     delta_mom: 0.3,
     delta_yoy: -1.7,
+    recent_points: [150.0, 151.2, 153.0, 154.2],
   },
   {
     variable_id: 'ipi_manuf',
-    name: 'IPI Manufacturero',
-    category: 'Actividad y Producción',
+    name: 'IPI manufacturero',
+    category: 'Actividad y producción',
     unit: 'Índice base 2004=100',
     value: 142.1,
     date: '2024-04-01',
     delta_mom: -0.2,
     delta_yoy: -3.5,
+    recent_points: [145.0, 144.0, 143.0, 142.1],
   },
   {
     variable_id: 'cbt',
-    name: 'Canasta Básica Total (CBT)',
-    category: 'Mercado de Trabajo y Social',
+    name: 'Canasta básica total (CBT)',
+    category: 'Mercado de trabajo y social',
     unit: 'ARS',
     value: 850000,
     date: '2024-05-01',
     delta_mom: 3.5,
     delta_yoy: 290.0,
+    recent_points: [780000, 800000, 820000, 850000],
   },
   {
     variable_id: 'eph_desempleo',
-    name: 'Tasa de Desocupación',
-    category: 'Mercado de Trabajo y Social',
+    name: 'Tasa de desocupación',
+    category: 'Mercado de trabajo y social',
     unit: '% PEA',
     value: 7.7,
     date: '2024-03-31',
     delta_mom: null,
     delta_yoy: 0.8,
+    recent_points: [6.9, 7.2, 7.5, 7.7],
   },
   {
     variable_id: 'ica_saldo',
-    name: 'Balanza Comercial (ICA)',
-    category: 'Sector Externo',
+    name: 'Balanza comercial (ICA)',
+    category: 'Sector externo',
     unit: 'Millones USD',
     value: 1800,
     date: '2024-04-01',
     delta_mom: 15.0,
     delta_yoy: 150.0,
+    recent_points: [1200, 1400, 1600, 1800],
   },
   {
     variable_id: 'icc_general',
-    name: 'Costo de la Construcción (ICC)',
-    category: 'Precios y Costos',
+    name: 'Costo de la construcción (ICC)',
+    category: 'Precios y costos',
     unit: '% mensual',
     value: 5.1,
     date: '2024-05-01',
     delta_mom: -1.2,
     delta_yoy: 255.0,
+    recent_points: [4.5, 4.8, 5.0, 5.1],
   },
 ]
 
@@ -302,5 +310,27 @@ describe('IndecView Component', () => {
     expect(screen.getByText('Error de conexión con INDEC')).toBeDefined()
     expect(screen.getByText('Error de conexión con api.indec.gob.ar')).toBeDefined()
     expect(screen.getByTestId('indec-retry-button')).toBeDefined()
+  })
+
+  it('renders small sparkline charts on metric cards and respects sentence case titles', async () => {
+    render(<IndecView />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('IPC - nivel general nacional').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Header adheres to sentence case
+    expect(screen.getByText('Estadísticas oficiales INDEC (economía real)')).toBeDefined()
+
+    // Metric cards adhere to sentence case
+    expect(screen.getAllByText('IPC - núcleo').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('EMAE - nivel general').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('IPI manufacturero').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Canasta básica total (CBT)').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Tasa de desocupación').length).toBeGreaterThanOrEqual(1)
+
+    // Sparklines are rendered in DOM for cards with recent_points
+    const sparklines = document.querySelectorAll('svg polyline')
+    expect(sparklines.length).toBeGreaterThanOrEqual(1)
   })
 })

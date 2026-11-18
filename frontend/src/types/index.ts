@@ -405,6 +405,7 @@ export interface IndecIndicator {
   date: string | null
   delta_mom: number | null
   delta_yoy: number | null
+  recent_points?: number[] | null
 }
 
 export interface IndecSummaryResponse {

@@ -141,6 +141,22 @@ The main session acts as the Orchestrator. It launches the PM, the Engineer, and
 - All monetary values, CUITs, rates, and percentages must use monospace tabular alignment (`font-mono` / `tabular-nums`).
 - The 1-page executive credit dossier must support clean printing via `@media print` stylesheets without clipping or page overflowing.
 
+### 7. Copywriting, Typography & Sentence Case Standard (Anti-Title Case)
+- **Strict Sentence Case Rule:** Never capitalize the first letter of each word in a phrase or sentence ("Title Case" / "Capitalize Each Word"). This applies strictly across **all** text without exception:
+  - Page titles, screen headers, card headers, modal titles, and section headings (H1, H2, H3, markdown `#`, `##`).
+  - Buttons, navigation tabs, dropdown options, table column labels, and metric labels.
+  - Badges, tooltips, alert messages, error descriptions, and confirmation dialogs.
+  - Markdown documentation, commit messages, and PR summaries.
+- **Capitalization Criteria:**
+  - Capitalize **only the initial letter of the first word** (sentence case):
+    - ✅ `"Resumen ejecutivo de deuda"` (NOT ❌ `"Resumen Ejecutivo De Deuda"`)
+    - ✅ `"Distribución de cartera bancaria"` (NOT ❌ `"Distribución De Cartera Bancaria"`)
+    - ✅ `"Detalle de cheques rechazados"` (NOT ❌ `"Detalle De Cheques Rechazados"`)
+    - ✅ `"Consultar deudor"` (NOT ❌ `"Consultar Deudor"`)
+    - ✅ `"Early warning alerts"` (NOT ❌ `"Early Warning Alerts"`)
+  - **Exceptions:** Only capitalize proper nouns (e.g., *"Banco Central"*, *"Argentina"*), official acronyms / abbreviations (e.g., *BCRA, CUIT, CUIL, MEP, CCL, CER, UVA, INDEC*), or standard syntactic requirements.
+  - **No Title Case for Emphasis:** Never use Title Case to highlight or emphasize words or phrases. Use font weight (`font-medium` / `font-semibold`), muted badge colors, or italics instead.
+
 ---
 
 ## 5. Definition of Done (DoD)
@@ -152,6 +168,7 @@ A task or GitHub issue is considered **Done** only when:
 4. **No Regressions:** Existing test suites continue to pass cleanly.
 5. **Clean Git Commit:** Code is committed with conventional commit messages (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`).
 6. **QA Verification:** The QA engineer has executed the test suite, verified the criteria, and provided a formal `## QA: PASS` verdict.
+7. **Typography & Casing Compliance:** All UI copy, headers, labels, and text strictly follow sentence case (no Title Case / Capitalize Each Word).
 
 ---
 

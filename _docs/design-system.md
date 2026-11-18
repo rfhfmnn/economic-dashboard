@@ -148,6 +148,13 @@ Financial analysts expect standard notation. Never mix formats.
    - Display format: `DD/MM/YYYY` (Argentine standard) or `DD MMM YYYY` (e.g. `22 Oct 2026`).
    - Timestamps: `DD/MM/YYYY HH:mm:ss`.
 
+### 3.4 Copywriting, Text Casing & Sentence Case Standard (Anti-Title Case)
+All user interface copy, headings, and labels must follow strict **sentence case**. Never capitalize every word in a title, label, or phrase (*Title Case*):
+- **Rule:** Capitalize only the first letter of the sentence or label (e.g. `"Resumen ejecutivo de deuda"` vs. ❌ `"Resumen Ejecutivo De Deuda"`).
+- **Scope:** Applies to all view headers (H1), card titles (H2), subsection headers (H3), buttons, badge texts, tabs, dropdown items, tooltips, and modal titles.
+- **Exceptions:** Proper nouns (*"Banco Central"*, *"Argentina"*), official abbreviations (*BCRA, CUIT, CUIL, MEP, CCL, CER, UVA, INDEC*).
+- **Emphasis:** Do not use Title Case or capitalization to emphasize concepts. Use font weight (`font-medium` / `font-semibold`), font color, or badge tokens.
+
 ---
 
 ## 4. Spacing, Elevation & Layout Grid

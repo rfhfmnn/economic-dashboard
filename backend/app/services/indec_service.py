@@ -329,6 +329,7 @@ class IndecService:
                     "date": None,
                     "delta_mom": None,
                     "delta_yoy": None,
+                    "recent_points": [],
                 })
                 continue
 
@@ -388,6 +389,9 @@ class IndecService:
                 "date": latest_date_str,
                 "delta_mom": delta_mom,
                 "delta_yoy": delta_yoy,
+                "recent_points": [
+                    p["valor"] for p in points[-15:] if p.get("valor") is not None
+                ],
             })
 
         now_iso = datetime.now(UTC).isoformat()

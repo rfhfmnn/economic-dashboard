@@ -44,11 +44,11 @@ class IndecResponseError(IndecClientError):
 DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     "ipc_general": {
         "endpoint": "/ipc_nacional",
-        "name": "IPC - Nivel General Nacional",
-        "category": "Precios y Costos",
+        "name": "IPC - nivel general nacional",
+        "category": "Precios y costos",
         "unit": "% mensual",
         "frequency": "mensual",
-        "description": "Índice de Precios al Consumidor - Nivel General Nacional",
+        "description": "Índice de precios al consumidor - nivel general nacional",
         "params": {
             "nivel": "eq.Nivel General",
             "region": "eq.Nacional",
@@ -58,11 +58,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "ipc_core": {
         "endpoint": "/ipc_nacional",
-        "name": "IPC - Núcleo",
-        "category": "Precios y Costos",
+        "name": "IPC - núcleo",
+        "category": "Precios y costos",
         "unit": "% mensual",
         "frequency": "mensual",
-        "description": "IPC Categoría Núcleo (desestacionalizado sin regulados ni estacionales)",
+        "description": "IPC categoría núcleo (desestacionalizado sin regulados ni estacionales)",
         "params": {
             "nivel": "eq.Categoría",
             "descripcion": "eq.Núcleo",
@@ -73,11 +73,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "emae_general": {
         "endpoint": "/estimador-mensual-de-actividad-economica-nivel-general",
-        "name": "EMAE - Nivel General",
-        "category": "Actividad y Producción",
+        "name": "EMAE - nivel general",
+        "category": "Actividad y producción",
         "unit": "Índice base 2004=100",
         "frequency": "mensual",
-        "description": "Estimador Mensual de Actividad Económica - Nivel General",
+        "description": "Estimador mensual de actividad económica - nivel general",
         "params": {
             "tipo_de_indicador_descripcion": "eq.Índice serie original",
             "order": "periodo.desc",
@@ -85,11 +85,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "ipi_manuf": {
         "endpoint": "/ipi_manufacturero",
-        "name": "IPI Manufacturero",
-        "category": "Actividad y Producción",
+        "name": "IPI manufacturero",
+        "category": "Actividad y producción",
         "unit": "% interanual",
         "frequency": "mensual",
-        "description": "Índice de Producción Industrial Manufacturero - Nivel General",
+        "description": "Índice de producción industrial manufacturero - nivel general",
         "params": {
             "descripcion": "eq.IPI Manufacturero - Nivel general",
             "tipo_de_indicador": "eq.Variación interanual",
@@ -99,11 +99,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "cbt": {
         "endpoint": "/valorizacion_canastas_cba_cbt",
-        "name": "Canasta Básica Total (CBT)",
-        "category": "Mercado de Trabajo y Social",
+        "name": "Canasta básica total (CBT)",
+        "category": "Mercado de trabajo y social",
         "unit": "ARS",
         "frequency": "mensual",
-        "description": "Canasta Básica Total - Línea de pobreza individual adulto equivalente",
+        "description": "Canasta básica total - línea de pobreza individual adulto equivalente",
         "params": {
             "codigo": "eq.CBT",
             "tipo_de_indicador_descripcion": "eq.Valores mensuales por adulto equivalente, expresados en pesos",
@@ -113,11 +113,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "cba": {
         "endpoint": "/valorizacion_canastas_cba_cbt",
-        "name": "Canasta Básica Alimentaria (CBA)",
-        "category": "Mercado de Trabajo y Social",
+        "name": "Canasta básica alimentaria (CBA)",
+        "category": "Mercado de trabajo y social",
         "unit": "ARS",
         "frequency": "mensual",
-        "description": "Canasta Básica Alimentaria - Línea de indigencia individual adulto equivalente",
+        "description": "Canasta básica alimentaria - línea de indigencia individual adulto equivalente",
         "params": {
             "codigo": "eq.CBA",
             "tipo_de_indicador_descripcion": "eq.Valores mensuales por adulto equivalente, expresados en pesos",
@@ -127,11 +127,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "eph_desempleo": {
         "endpoint": "/mercado_trabajo_eph",
-        "name": "Tasa de Desocupación",
-        "category": "Mercado de Trabajo y Social",
+        "name": "Tasa de desocupación",
+        "category": "Mercado de trabajo y social",
         "unit": "% PEA",
         "frequency": "trimestral",
-        "description": "Encuesta Permanente de Hogares - Tasa de Desocupación abierta",
+        "description": "Encuesta permanente de hogares - tasa de desocupación abierta",
         "params": {
             "area_geografica_nom": "eq.T_31_A",
             "order": "periodo.desc",
@@ -139,11 +139,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "icc_general": {
         "endpoint": "/icc_precios_construccion",
-        "name": "Costo de la Construcción (ICC)",
-        "category": "Precios y Costos",
+        "name": "Costo de la construcción (ICC)",
+        "category": "Precios y costos",
         "unit": "% mensual",
         "frequency": "mensual",
-        "description": "Índice del Costo de la Construcción en el Gran Buenos Aires - Nivel General",
+        "description": "Índice del costo de la construcción en el Gran Buenos Aires - nivel general",
         "params": {
             "nivel": "eq.Nivel general",
             "tipo_de_indicador": "eq.v_m",
@@ -152,22 +152,22 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "ica_saldo": {
         "endpoint": "/comercio_exterior_exportacion_bienes",
-        "name": "Balanza Comercial (ICA)",
-        "category": "Sector Externo",
+        "name": "Balanza comercial (ICA)",
+        "category": "Sector externo",
         "unit": "Millones USD",
         "frequency": "mensual",
-        "description": "Intercambio Comercial Argentino - Saldo de Balanza Comercial",
+        "description": "Intercambio comercial argentino - saldo de balanza comercial",
         "params": {
             "order": "Periodo.desc",
         },
     },
     "ipim_general": {
         "endpoint": "/sipm_precios_mayoristas",
-        "name": "Sistema de Precios Mayoristas (IPIM)",
-        "category": "Precios y Costos",
+        "name": "Sistema de precios mayoristas (IPIM)",
+        "category": "Precios y costos",
         "unit": "% mensual",
         "frequency": "mensual",
-        "description": "Índice de Precios Internos al por Mayor",
+        "description": "Índice de precios internos al por mayor",
         "params": {
             "indicador": "eq.IPIM",
             "tipo_de_indicador": "eq.v_m",
@@ -176,11 +176,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "eph_empleo": {
         "endpoint": "/mercado_trabajo_eph",
-        "name": "Tasa de Empleo",
-        "category": "Mercado de Trabajo y Social",
+        "name": "Tasa de empleo",
+        "category": "Mercado de trabajo y social",
         "unit": "% PEA",
         "frequency": "trimestral",
-        "description": "Encuesta Permanente de Hogares - Tasa de Empleo",
+        "description": "Encuesta permanente de hogares - tasa de empleo",
         "params": {
             "area_geografica_nom": "eq.T_31_A",
             "order": "periodo.desc",
@@ -188,11 +188,11 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "eph_actividad": {
         "endpoint": "/mercado_trabajo_eph",
-        "name": "Tasa de Actividad",
-        "category": "Mercado de Trabajo y Social",
+        "name": "Tasa de actividad",
+        "category": "Mercado de trabajo y social",
         "unit": "% PEA",
         "frequency": "trimestral",
-        "description": "Encuesta Permanente de Hogares - Tasa de Actividad",
+        "description": "Encuesta permanente de hogares - tasa de actividad",
         "params": {
             "area_geografica_nom": "eq.T_31_A",
             "order": "periodo.desc",

@@ -146,7 +146,7 @@ def test_get_indec_catalog_with_query_filter(client: TestClient):
     assert len(cat_items) >= 3
     for i in cat_items:
         assert (
-            "Precios y Costos" in i["category"]
+            "precios y costos" in i["category"].lower()
             or "precios" in i["name"].lower()
             or "precios" in i["description"].lower()
         )
@@ -343,8 +343,10 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
         assert "date" in ind
         assert "delta_mom" in ind
         assert "delta_yoy" in ind
+        assert "recent_points" in ind
         assert ind["value"] is not None
         assert ind["date"] is not None
+        assert isinstance(ind["recent_points"], list)
 
     # Verify specific indicator values and calculated deltas
     ipc_ind = next(i for i in indicators if i["variable_id"] == "ipc_general")

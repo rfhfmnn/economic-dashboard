@@ -310,7 +310,7 @@ export const IndecView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            Estadísticas Oficiales INDEC (economía real)
+            Estadísticas oficiales INDEC (economía real)
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Precios, actividad económica, empleo, salarios y balanza comercial argentina
@@ -349,6 +349,14 @@ export const IndecView: React.FC = () => {
         {Array.isArray(summary?.indicators) &&
           summary.indicators.map((ind: IndecIndicator) => {
             const isActive = primaryIds.includes(ind.variable_id)
+            const cachedSeries = seriesCache[`${ind.variable_id}_${timeframe}`]
+            const pointsForSparkline =
+              ind.recent_points && ind.recent_points.length >= 2
+                ? ind.recent_points
+                : cachedSeries && cachedSeries.length >= 2
+                ? cachedSeries.slice(-15).map((p) => p.valor)
+                : undefined
+
             return (
               <MetricCard
                 key={ind.variable_id}
@@ -359,6 +367,7 @@ export const IndecView: React.FC = () => {
                 unit={ind.unit}
                 momDelta={ind.delta_mom ?? undefined}
                 yoyDelta={ind.delta_yoy ?? undefined}
+                recentPoints={pointsForSparkline}
                 active={isActive}
                 onClick={() => handleSelectCard(ind.variable_id)}
               />
