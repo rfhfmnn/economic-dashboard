@@ -83,3 +83,20 @@ Description: Implement `CpiExpectationChart.tsx` in `frontend/src/components/mac
 ## 21. REM Nominal FX Trajectory and Consensus Breakdown Table
 Goal: Build the nominal exchange rate projection chart and the multi-indicator detailed consensus breakdown table.
 Description: Implement `FxProjectionChart.tsx` and `RemTable.tsx` in `frontend/src/components/macro/rem/` showing official exchange rate paths across future months alongside a comprehensive tabular breakdown. Structure the table with categorical filters (Precios, Tipo de Cambio, Tasas, Actividad) and monospace tabular columns for Median, Mean, Interquartile Range, Min/Max, and Participant counts. Add component tests verifying that category filters update table rows and that numeric values display with strict tabular monospace alignment.
+
+## 22. Monitor Macroeconómico Headland Header and Navigation Polish
+Goal: Update the top navigation bar to display solely "Monitor macroeconómico" without the "Series BCRA" badge.
+Description: Modify `Navbar.tsx` in `frontend/src/components/layout/` to remove the badge property for the macro tab. Update `frontend/src/App.test.tsx` and associated UI tests to verify that the navbar displays the unadorned header "Monitor macroeconómico". Ensure all existing frontend test suites pass cleanly.
+
+## 23. INDEC Official API Client and Caching Infrastructure
+Goal: Implement a resilient HTTP client for api.indec.gob.ar authenticated with Bearer JWT tokens and backed by SQLite caching.
+Description: Create `backend/app/clients/indec_client.py` using HTTPX with `INDEC_API_TOKEN` environment variable support. Define a dataset registry mapping standard economic variables (IPC, EMAE, IPI, Canastas, Desempleo, Balanza Comercial) to their PostgREST endpoints. Store fetched responses in the `indec_cache` table in `backend/app/database.py`. Write unit tests in `backend/tests/test_indec_client.py` verifying authentication headers, caching logic, and error handling for missing/invalid tokens.
+
+## 24. INDEC Economic Data Service and REST Endpoints
+Goal: Expose normalized FastAPI REST endpoints for INDEC indicators summary, variable catalog, and historical series.
+Description: Build `backend/app/services/indec_service.py` to calculate latest indicator values, monthly/interannual variations, and normalized date points. Expose `GET /api/macro/indec/summary`, `GET /api/macro/indec/catalog`, and `GET /api/macro/indec/series/{variable_id}` in `backend/app/routes/indec_routes.py` and register them in `backend/app/main.py`. Write API integration tests in `backend/tests/test_indec_routes.py` verifying response payloads and error scenarios.
+
+## 25. INDEC Macroeconomic Monitor View and Interactive Time-Series Board
+Goal: Build the interactive frontend tab for INDEC real-economy data mirroring the BCRA variable monitor layout.
+Description: Create `IndecView.tsx` in `frontend/src/components/macro/indec/` featuring the top 8 KPI cards, a categorized `VariablePicker` selector, and an interactive `MacroChart` supporting dual-axis comparison and timeframe toggles (1Y, 2Y, 5Y, Max). Add the third sub-navigation toggle in `MacroView.tsx` ("Variables INDEC & Economía Real"). Implement typed API methods in `frontend/src/services/api.ts` and write component tests in `frontend/src/components/macro/indec/__tests__/IndecView.test.tsx`.
+

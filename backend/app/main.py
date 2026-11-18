@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app.database import engine, init_db
 from backend.app.routes.export_routes import router as export_router
+from backend.app.routes.indec_routes import router as indec_router
 from backend.app.routes.macro_routes import router as macro_router
 from backend.app.routes.rem_routes import router as rem_router
 from backend.app.routes.risk_routes import router as risk_router
@@ -49,6 +50,7 @@ app.add_middleware(
 
 # Mount REST API routers
 app.include_router(macro_router)
+app.include_router(indec_router)
 app.include_router(rem_router)
 app.include_router(risk_router)
 app.include_router(export_router)
