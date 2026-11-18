@@ -7,16 +7,22 @@ export interface NavbarProps {
   onTabChange: (tab: TabType) => void
 }
 
+interface TabItem {
+  id: TabType
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: string
+}
+
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
-  const tabs = [
+  const tabs: TabItem[] = [
     {
-      id: 'macro' as TabType,
+      id: 'macro',
       label: 'Monitor macroeconómico',
       icon: TrendingUp,
-      badge: 'Series BCRA',
     },
     {
-      id: 'screener' as TabType,
+      id: 'screener',
       label: 'Central de deudores',
       icon: ShieldAlert,
       badge: 'Individual & batch',
@@ -42,15 +48,17 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
             >
               <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} />
               <span>{tab.label}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.5 rounded font-sans ${
-                  isActive
-                    ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                {tab.badge}
-              </span>
+              {tab.badge && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-sans ${
+                    isActive
+                      ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              )}
             </button>
           )
         })}

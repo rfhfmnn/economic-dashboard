@@ -63,6 +63,12 @@ describe('App Shell & Navigation', () => {
             json: () => Promise.resolve({ official_base: 1000, rates: {}, spreads: {}, timestamp: '' }),
           })
         }
+        if (url.includes('/macro/cpi')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([]),
+          })
+        }
         return Promise.reject(new Error('Unknown url'))
       })
     )
@@ -79,6 +85,20 @@ describe('App Shell & Navigation', () => {
           screen.queryByText(/Modo mock sintético activo/i)
       ).toBeDefined()
     })
+  })
+
+  it('renders navigation tabs with clean Monitor macroeconómico and without Series BCRA badge', () => {
+    render(<App />)
+
+    // "Monitor macroeconómico" is rendered properly
+    const macroTab = screen.getByRole('button', { name: /^Monitor macroeconómico$/i })
+    expect(macroTab).toBeDefined()
+
+    // "Series BCRA" badge must not be present in the document
+    expect(screen.queryByText(/Series BCRA/i)).toBeNull()
+
+    // "Central de deudores" tab continues to display its badge "Individual & batch"
+    expect(screen.getByText(/Individual & batch/i)).toBeDefined()
   })
 
   it('navigates between Macro, Screener, and Batch tabs', () => {
