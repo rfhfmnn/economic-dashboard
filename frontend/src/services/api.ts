@@ -8,6 +8,8 @@ import type {
   DebtorReport,
   FxHistoryResponse,
   FxSpreadsResponse,
+  IndecCatalogItem,
+  IndecSummaryResponse,
   IndicatorsSummaryResponse,
   MacroIndicator,
   MacroSeriesResponse,
@@ -18,6 +20,7 @@ import type {
   RemSummaryResponse,
   RemTableResponse,
   SystemStatusResponse,
+  TimeSeriesPoint,
   VariableCatalogItem,
 } from '../types'
 import { KNOWN_BCRA_VARIABLES } from '../types'
@@ -47,7 +50,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     } catch {
       // Body not JSON
     }
-    throw new Error(errorDetail || `HTTP Error ${response.status}`)
+    const err = new Error(errorDetail || `HTTP Error ${response.status}`)
+    ;(err as any).status = response.status
+    ;(err as any).statusCode = response.status
+    throw err
   }
 
   return response.json() as Promise<T>
@@ -294,4 +300,31 @@ export const api = {
 
   getRemModularKpis: (period: string = 'ultimo', cohort: RemCohort = 'todos') =>
     request<RemModularKpisResponse>(`/macro/rem/modular-kpis?period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}`),
+
+  // -------------------------------------------------------------
+  // INDEC (Economía Real) Endpoints
+  // -------------------------------------------------------------
+  getIndecSummary: (refresh: boolean = false): Promise<IndecSummaryResponse> => {
+    const qs = refresh ? '?refresh=true' : ''
+    return request<IndecSummaryResponse>(`/macro/indec/summary${qs}`)
+  },
+
+  getIndecCatalog: (q?: string): Promise<IndecCatalogItem[]> => {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : ''
+    return request<IndecCatalogItem[]>(`/macro/indec/catalog${qs}`)
+  },
+
+  getIndecSeries: (
+    variableId: string,
+    timeframe: string = '1Y',
+    refresh: boolean = false
+  ): Promise<TimeSeriesPoint[]> => {
+    const params = new URLSearchParams()
+    if (timeframe) params.append('timeframe', timeframe)
+    if (refresh) params.append('refresh', 'true')
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request<TimeSeriesPoint[]>(
+      `/macro/indec/series/${encodeURIComponent(variableId)}${qs}`
+    )
+  },
 }

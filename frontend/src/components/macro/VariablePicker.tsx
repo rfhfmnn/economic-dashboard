@@ -1,24 +1,26 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Search, Layers, X, Filter, Check } from 'lucide-react'
 import { VariableCatalogItem, KNOWN_BCRA_VARIABLES } from '../../types'
 import { formatGrammaticalTitle } from '../../utils/formatters'
 
-export interface VariablePickerProps {
+export interface VariablePickerProps<T extends number | string = any> {
   catalog: VariableCatalogItem[]
-  selectedPrimaryIds: number[]
-  selectedSecondaryIds: number[]
-  onTogglePrimary: (id: number) => void
-  onToggleSecondary: (id: number) => void
-  onRemovePrimary?: (id: number) => void
-  onRemoveSecondary?: (id: number) => void
+  selectedPrimaryIds: T[]
+  selectedSecondaryIds: T[]
+  onTogglePrimary: (id: T) => void
+  onToggleSecondary: (id: T) => void
+  onRemovePrimary?: (id: T) => void
+  onRemoveSecondary?: (id: T) => void
+  title?: string
+  searchPlaceholder?: string
   // Backward compatibility props
-  selectedPrimaryId?: number
-  selectedSecondaryId?: number
-  onSelectPrimary?: (id: number) => void
-  onSelectSecondary?: (id: number | undefined) => void
+  selectedPrimaryId?: T
+  selectedSecondaryId?: T
+  onSelectPrimary?: (id: T) => void
+  onSelectSecondary?: (id: T | undefined) => void
 }
 
-export const VariablePicker: React.FC<VariablePickerProps> = ({
+export const VariablePicker = <T extends number | string = any>({
   catalog,
   selectedPrimaryIds,
   selectedSecondaryIds,
@@ -26,11 +28,13 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
   onToggleSecondary,
   onRemovePrimary,
   onRemoveSecondary,
+  title = 'Selector multi-variable BCRA',
+  searchPlaceholder = 'Buscar variable BCRA por nombre o número de serie...',
   selectedPrimaryId,
   selectedSecondaryId,
   onSelectPrimary,
   onSelectSecondary,
-}) => {
+}: VariablePickerProps<T>) => {
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas')
   const [isOpen, setIsOpen] = useState(false)
@@ -40,13 +44,13 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
   const activePrimaryIds = useMemo(() => {
     if (selectedPrimaryIds && selectedPrimaryIds.length > 0) return selectedPrimaryIds
     if (selectedPrimaryId !== undefined) return [selectedPrimaryId]
-    return [1]
+    return [] as T[]
   }, [selectedPrimaryIds, selectedPrimaryId])
 
   const activeSecondaryIds = useMemo(() => {
     if (selectedSecondaryIds) return selectedSecondaryIds
     if (selectedSecondaryId !== undefined) return [selectedSecondaryId]
-    return []
+    return [] as T[]
   }, [selectedSecondaryIds, selectedSecondaryId])
 
   // Click outside listener
@@ -88,7 +92,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
     })
   }, [catalog, search, selectedCategory])
 
-  const handleToggleP = (id: number) => {
+  const handleToggleP = (id: T) => {
     if (onTogglePrimary) {
       onTogglePrimary(id)
     } else if (onSelectPrimary) {
@@ -96,7 +100,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
     }
   }
 
-  const handleToggleS = (id: number) => {
+  const handleToggleS = (id: T) => {
     if (onToggleSecondary) {
       onToggleSecondary(id)
     } else if (onSelectSecondary) {
@@ -108,7 +112,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
     }
   }
 
-  const handleRemoveP = (id: number) => {
+  const handleRemoveP = (id: T) => {
     if (onRemovePrimary) {
       onRemovePrimary(id)
     } else {
@@ -116,7 +120,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
     }
   }
 
-  const handleRemoveS = (id: number) => {
+  const handleRemoveS = (id: T) => {
     if (onRemoveSecondary) {
       onRemoveSecondary(id)
     } else {
@@ -135,17 +139,22 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
           </span>
           {activePrimaryIds.map((id) => {
             const item = catalog.find((c) => c.idVariable === id)
-            const rawTitle = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
-            const title = formatGrammaticalTitle(rawTitle)
-            const unit = item?.unit || KNOWN_BCRA_VARIABLES[id]?.unit
+            const rawTitle =
+              item?.descripcion ||
+              (typeof id === 'number' ? KNOWN_BCRA_VARIABLES[id]?.name : null) ||
+              `Serie #${id}`
+            const titleText = formatGrammaticalTitle(rawTitle)
+            const unit = item?.unit || (typeof id === 'number' ? KNOWN_BCRA_VARIABLES[id]?.unit : undefined)
             return (
               <span
                 key={id}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-700/60 text-xs text-blue-900 dark:text-blue-200 shadow-sm"
               >
-                <span className="font-sans tabular-nums text-[10px] text-blue-600 dark:text-blue-400 font-semibold">#{id}</span>
+                <span className="font-sans tabular-nums text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                  {typeof id === 'number' ? `#${id}` : id}
+                </span>
                 <span className="font-medium truncate max-w-[140px] sm:max-w-[200px]">
-                  {title}
+                  {titleText}
                 </span>
                 {unit && (
                   <span className="text-[10px] font-sans text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-1 rounded">
@@ -174,17 +183,22 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             </span>
             {activeSecondaryIds.map((id) => {
               const item = catalog.find((c) => c.idVariable === id)
-              const rawTitle = item?.descripcion || KNOWN_BCRA_VARIABLES[id]?.name || `Serie #${id}`
-              const title = formatGrammaticalTitle(rawTitle)
-              const unit = item?.unit || KNOWN_BCRA_VARIABLES[id]?.unit
+              const rawTitle =
+                item?.descripcion ||
+                (typeof id === 'number' ? KNOWN_BCRA_VARIABLES[id]?.name : null) ||
+                `Serie #${id}`
+              const titleText = formatGrammaticalTitle(rawTitle)
+              const unit = item?.unit || (typeof id === 'number' ? KNOWN_BCRA_VARIABLES[id]?.unit : undefined)
               return (
                 <span
                   key={id}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-700/60 text-xs text-indigo-900 dark:text-indigo-200 shadow-sm"
                 >
-                  <span className="font-sans tabular-nums text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">#{id}</span>
+                  <span className="font-sans tabular-nums text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                    {typeof id === 'number' ? `#${id}` : id}
+                  </span>
                   <span className="font-medium truncate max-w-[140px] sm:max-w-[200px]">
-                    {title}
+                    {titleText}
                   </span>
                   {unit && (
                     <span className="text-[10px] font-sans text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 px-1 rounded">
@@ -229,7 +243,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                 <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-200">
-                  Selector multi-variable BCRA
+                  {title}
                 </h4>
               </div>
               <div className="flex items-center gap-2 text-[11px] font-sans tabular-nums">
@@ -247,7 +261,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               <input
                 type="text"
-                placeholder="Buscar variable BCRA por nombre o número de serie..."
+                placeholder={searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 font-sans transition-colors"
@@ -281,8 +295,8 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
               </div>
             ) : (
               filtered.map((item) => {
-                const isPrimary = activePrimaryIds.includes(item.idVariable)
-                const isSecondary = activeSecondaryIds.includes(item.idVariable)
+                const isPrimary = activePrimaryIds.includes(item.idVariable as T)
+                const isSecondary = activeSecondaryIds.includes(item.idVariable as T)
 
                 return (
                   <div
@@ -293,7 +307,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-sans tabular-nums text-[10px] text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                          #{item.idVariable}
+                          {typeof item.idVariable === 'number' ? `#${item.idVariable}` : item.idVariable}
                         </span>
                         <span className="text-slate-900 dark:text-slate-200 font-medium truncate">
                           {formatGrammaticalTitle(item.descripcion)}
@@ -316,7 +330,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
                     <div className="flex items-center gap-1.5 shrink-0">
                       {/* Principal Button */}
                       <button
-                        onClick={() => handleToggleP(item.idVariable)}
+                        onClick={() => handleToggleP(item.idVariable as T)}
                         className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-sans border transition-all cursor-pointer ${isPrimary
                           ? 'bg-blue-600 text-white border-blue-500 font-medium shadow-sm'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-500/60 hover:text-blue-600 dark:hover:text-white'
@@ -329,7 +343,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
 
                       {/* Dual Button */}
                       <button
-                        onClick={() => handleToggleS(item.idVariable)}
+                        onClick={() => handleToggleS(item.idVariable as T)}
                         className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-sans border transition-all cursor-pointer ${isSecondary
                           ? 'bg-indigo-600 text-white border-indigo-500 font-medium shadow-sm'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-500/60 hover:text-indigo-600 dark:hover:text-white'

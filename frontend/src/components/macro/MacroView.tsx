@@ -13,13 +13,16 @@ import { MacroChart, type Timeframe, type ChartSeries } from './MacroChart'
 import { MetricCard } from './MetricCard'
 import { VariablePicker } from './VariablePicker'
 import { RemView } from './rem/RemView'
+import { IndecView } from './indec/IndecView'
 import { formatGrammaticalTitle, isInflationMetric } from '../../utils/formatters'
 
 const PRIMARY_COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#38bdf8', '#14b8a6']
 const SECONDARY_COLORS = ['#8b5cf6', '#f59e0b', '#ec4899', '#a855f7', '#fb923c']
 
+export type MacroSubTab = 'bcra_fx' | 'rem' | 'indec'
+
 export const MacroView: React.FC = () => {
-  const [subTab, setSubTab] = useState<'bcra_fx' | 'rem'>('bcra_fx')
+  const [subTab, setSubTab] = useState<MacroSubTab>('bcra_fx')
   const [summary, setSummary] = useState<IndicatorsSummaryResponse | null>(null)
   const [catalog, setCatalog] = useState<VariableCatalogItem[]>([])
   const [fxData, setFxData] = useState<FxSpreadsResponse | null>(null)
@@ -329,9 +332,9 @@ export const MacroView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sub-Navigation Toggle: BCRA & FX vs. Expectativas REM */}
+      {/* Sub-Navigation Toggle: BCRA & FX vs. Expectativas REM vs. INDEC */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             data-testid="macro-subtab-bcra"
@@ -359,6 +362,18 @@ export const MacroView: React.FC = () => {
               Nuevo
             </span>
           </button>
+          <button
+            type="button"
+            data-testid="macro-subtab-indec"
+            onClick={() => setSubTab('indec')}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
+              subTab === 'indec'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <span>Variables INDEC (Economía Real)</span>
+          </button>
         </div>
 
         {subTab === 'bcra_fx' && (
@@ -385,6 +400,8 @@ export const MacroView: React.FC = () => {
 
       {subTab === 'rem' ? (
         <RemView />
+      ) : subTab === 'indec' ? (
+        <IndecView />
       ) : (
         <>
           {/* Top Indicators KPI Grid */}

@@ -10,6 +10,53 @@ describe('MacroView Components', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/macro/indec/summary')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                indicators: [
+                  {
+                    variable_id: 'ipc_general',
+                    name: 'IPC - Nivel General Nacional',
+                    category: 'Precios y Costos',
+                    unit: '% mensual',
+                    value: 4.2,
+                    date: '2024-05-01',
+                    delta_mom: -0.8,
+                    delta_yoy: 276.4,
+                  },
+                ],
+                last_updated: '2024-05-10T12:00:00',
+              }),
+          })
+        }
+        if (url.includes('/macro/indec/catalog')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                {
+                  variable_id: 'ipc_general',
+                  name: 'IPC - Nivel General Nacional',
+                  category: 'Precios y Costos',
+                  unit: '% mensual',
+                  frequency: 'mensual',
+                  description: 'Índice de Precios al Consumidor - Nivel General Nacional',
+                },
+              ]),
+          })
+        }
+        if (url.includes('/macro/indec/series')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                { fecha: '2024-01-01', valor: 20.6 },
+                { fecha: '2024-05-01', valor: 4.2 },
+              ]),
+          })
+        }
         if (url.includes('/macro/summary')) {
           return Promise.resolve({
             ok: true,
@@ -399,6 +446,27 @@ describe('MacroView Components', () => {
     fireEvent.click(refreshBtn)
     await waitFor(() => {
       expect(screen.getByText('Actualizar datos')).toBeDefined()
+    })
+  })
+
+  it('switches between bcra_fx, rem, and indec sub-tabs', async () => {
+    render(<MacroView />)
+    await waitFor(() => {
+      expect(screen.getByTestId('macro-subtab-bcra')).toBeDefined()
+      expect(screen.getByTestId('macro-subtab-rem')).toBeDefined()
+      expect(screen.getByTestId('macro-subtab-indec')).toBeDefined()
+    })
+
+    // Click INDEC sub-tab
+    fireEvent.click(screen.getByTestId('macro-subtab-indec'))
+    await waitFor(() => {
+      expect(screen.getByText('Variables INDEC (Economía Real)')).toBeDefined()
+    })
+
+    // Click BCRA sub-tab back
+    fireEvent.click(screen.getByTestId('macro-subtab-bcra'))
+    await waitFor(() => {
+      expect(screen.getByTestId('macro-refresh-button')).toBeDefined()
     })
   })
 })

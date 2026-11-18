@@ -50,7 +50,7 @@ export interface MacroSeriesResponse {
 }
 
 export interface VariableCatalogItem {
-  idVariable: number
+  idVariable: number | string
   descripcion: string
   categoria?: string
   unit?: string
@@ -391,3 +391,40 @@ export interface RemTableResponse {
   categories: string[]
   rows: RemTableRow[]
 }
+
+// -------------------------------------------------------------
+// INDEC Macroeconomic Monitor Interfaces
+// -------------------------------------------------------------
+
+export interface IndecIndicator {
+  variable_id: string
+  name: string
+  category: string
+  unit: string
+  value: number | null
+  date: string | null
+  delta_mom: number | null
+  delta_yoy: number | null
+}
+
+export interface IndecSummaryResponse {
+  indicators: IndecIndicator[]
+  last_updated: string
+}
+
+export interface IndecCatalogItem {
+  variable_id: string
+  name: string
+  category: string
+  unit: string
+  frequency: string
+  description: string
+}
+
+export interface IndecSeriesPoint {
+  fecha: string
+  valor: number
+}
+
+export type TimeSeriesPoint = IndecSeriesPoint
+
