@@ -219,28 +219,50 @@ class IndecClient:
             self.base_url = f"{clean_base}/v1"
         else:
             self.base_url = clean_base
-        if token is not None:
-            self.token = token.strip() if token else None
-        else:
-            token_env = os.getenv("INDEC_API_TOKEN")
-            self.token = token_env.strip() if token_env else None
 
+        self._explicit_token = token
         self.timeout = timeout
         self.cache_ttl_seconds = cache_ttl_seconds
         self._transport = transport
 
-        headers = {
-            "User-Agent": "EconomicRiskDashboard/1.0",
-            "Accept": "application/json",
-        }
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-
         self.client = httpx.Client(
             timeout=self.timeout,
-            headers=headers,
+            headers={
+                "User-Agent": "EconomicRiskDashboard/1.0",
+                "Accept": "application/json",
+            },
             transport=self._transport,
         )
+
+    @property
+    def token(self) -> str | None:
+        """Resolve INDEC API token dynamically from explicit param, os.environ, or .env."""
+        if self._explicit_token is not None:
+            return self._explicit_token.strip() if self._explicit_token else None
+
+        tok = os.getenv("INDEC_API_TOKEN")
+        if tok and tok.strip():
+            return tok.strip()
+
+        # In runtime outside pytest, attempt to reload .env from root if not present in os.environ
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            try:
+                from dotenv import find_dotenv, load_dotenv
+
+                dotenv_path = find_dotenv()
+                if dotenv_path:
+                    load_dotenv(dotenv_path=dotenv_path, override=False)
+                    tok = os.getenv("INDEC_API_TOKEN")
+                    if tok and tok.strip():
+                        return tok.strip()
+            except Exception:
+                pass
+
+        return None
+
+    @token.setter
+    def token(self, value: str | None) -> None:
+        self._explicit_token = value
 
     def _ensure_authenticated(self) -> None:
         """Validate that an INDEC_API_TOKEN is configured before sending network requests."""

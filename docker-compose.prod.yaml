@@ -45,6 +45,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DEPLOYED_VERSION: ${DEPLOYED_VERSION:-0.1.0}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://observability-otel-collector:4318}
+      INDEC_API_TOKEN: ${INDEC_API_TOKEN:-}
     ports:
       - "${PORT:-8080}:8000"
     healthcheck:
