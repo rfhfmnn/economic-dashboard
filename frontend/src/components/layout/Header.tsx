@@ -71,7 +71,7 @@ export const Header: React.FC = () => {
               title="Conectado exitosamente a BCRA y DolarApi"
             >
               <Radio className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
-              <span>BCRA API en línea</span>
+              <span>APIs en línea</span>
             </div>
           )}
 

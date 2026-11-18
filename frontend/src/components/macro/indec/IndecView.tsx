@@ -310,7 +310,7 @@ export const IndecView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            Estadísticas Oficiales INDEC (Economía Real)
+            Estadísticas Oficiales INDEC (economía real)
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Precios, actividad económica, empleo, salarios y balanza comercial argentina
@@ -336,9 +336,8 @@ export const IndecView: React.FC = () => {
             title="Sincronizar últimas observaciones con la API del INDEC"
           >
             <RefreshCw
-              className={`w-3.5 h-3.5 ${
-                refreshing ? 'animate-spin text-blue-500 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
-              }`}
+              className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-500 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+                }`}
             />
             <span>{refreshing ? 'Sincronizando...' : 'Actualizar datos'}</span>
           </button>
@@ -395,11 +394,10 @@ export const IndecView: React.FC = () => {
                   type="button"
                   data-testid={`timeframe-${tf.toLowerCase()}`}
                   onClick={() => setTimeframe(tf)}
-                  className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
-                    timeframe === tf
+                  className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${timeframe === tf
                       ? 'bg-blue-600 text-white font-medium shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
-                  }`}
+                    }`}
                 >
                   {tf}
                 </button>
