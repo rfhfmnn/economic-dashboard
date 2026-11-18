@@ -1,16 +1,18 @@
 """SQLite database connection, session management, and SQLAlchemy ORM models."""
 
 import os
+from collections.abc import Generator
+from datetime import date as date_type
+from datetime import datetime
 from pathlib import Path
-from datetime import date as date_type, datetime
-from typing import Any, Dict, Generator, Optional
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Date,
     DateTime,
     Float,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -26,24 +28,28 @@ DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH.as_posix()
 # Standardize postgres:// or generic postgresql:// to postgresql+psycopg2:// for SQLAlchemy & psycopg2-binary compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
-elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith(
+    "postgresql+"
+):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine_kwargs: Dict[str, Any] = {"connect_args": connect_args}
+engine_kwargs: dict[str, Any] = {"connect_args": connect_args}
 if not DATABASE_URL.startswith("sqlite"):
-    engine_kwargs.update({
-        "pool_pre_ping": True,
-        "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
-        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
-    })
+    engine_kwargs.update(
+        {
+            "pool_pre_ping": True,
+            "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
+            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
+        }
+    )
 
 engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_upsert_stmt(model: Any, db: Optional[Session] = None):
+def get_upsert_stmt(model: Any, db: Session | None = None):
     """Return dialect-specific insert statement supporting on_conflict_do_update for PostgreSQL or SQLite."""
     dialect_name = "sqlite"
     if db is not None:
@@ -51,23 +57,23 @@ def get_upsert_stmt(model: Any, db: Optional[Session] = None):
             bind = getattr(db, "bind", None) or db.get_bind()
             if bind:
                 dialect_name = bind.dialect.name
-        except Exception:
+        except Exception:  # noqa: BLE001
             dialect_name = "sqlite"
     elif engine is not None:
         dialect_name = engine.dialect.name
 
     if dialect_name == "postgresql":
         from sqlalchemy.dialects.postgresql import insert as pg_insert
+
         return pg_insert(model)
     else:
         from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-        return sqlite_insert(model)
 
+        return sqlite_insert(model)
 
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy ORM models."""
-    pass
 
 
 class MacroSeries(Base):
@@ -95,8 +101,8 @@ class MacroVariable(Base):
 
     variable_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    unit: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
 class CuitCache(Base):
@@ -105,10 +111,10 @@ class CuitCache(Base):
     __tablename__ = "cuit_cache"
 
     cuit: Mapped[str] = mapped_column(String(20), primary_key=True)
-    denomination: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    worst_situation: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    total_debt: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    raw_payload: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    denomination: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    worst_situation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_debt: Mapped[float | None] = mapped_column(Float, nullable=True)
+    raw_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     last_updated: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
@@ -124,7 +130,7 @@ class PortfolioItem(Base):
         String(100), default="Default", nullable=False
     )
     cuit: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -136,7 +142,9 @@ class RemReport(Base):
     __tablename__ = "rem_reports"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    period: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
+    period: Mapped[str] = mapped_column(
+        String(20), nullable=False, unique=True, index=True
+    )
     raw_payload: Mapped[Any] = mapped_column(JSON, nullable=False)
     cached_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
@@ -153,6 +161,23 @@ class MacroSyncLog(Base):
         DateTime, server_default=func.now(), nullable=False
     )
 
+
+class IndecCache(Base):
+    """Cached raw responses from INDEC official API to minimize external requests and enforce TTL."""
+
+    __tablename__ = "indec_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    variable_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    period: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    raw_payload: Mapped[Any] = mapped_column(JSON, nullable=False)
+    cached_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("variable_id", "period", name="uq_indec_cache_var_period"),
+    )
 
 
 def init_db(bind_engine=None) -> None:

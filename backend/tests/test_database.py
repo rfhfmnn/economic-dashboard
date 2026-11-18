@@ -1,6 +1,7 @@
 """Unit tests for SQLite database schema, ORM models, and CRUD operations."""
 
 from datetime import date
+
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError
@@ -9,18 +10,21 @@ from sqlalchemy.orm import sessionmaker
 from backend.app.database import (
     Base,
     CuitCache,
+    IndecCache,
     MacroSeries,
     MacroVariable,
     PortfolioItem,
-    init_db,
     get_db,
+    init_db,
 )
 
 
 @pytest.fixture
 def test_db_session():
     """Provides an isolated in-memory SQLite database session."""
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     init_db(bind_engine=engine)
 
@@ -90,7 +94,9 @@ def test_cuit_cache_crud(test_db_session):
         denomination="ACME CORP S.A.",
         worst_situation=2,
         total_debt=1250000.0,
-        raw_payload={"entidades": [{"entidad": "BANCO NACION", "situacion": 2, "monto": 1250000}]},
+        raw_payload={
+            "entidades": [{"entidad": "BANCO NACION", "situacion": 2, "monto": 1250000}]
+        },
     )
     test_db_session.add(cuit_record)
     test_db_session.commit()
@@ -134,3 +140,38 @@ def test_get_db_generator():
         next(gen)
     except StopIteration:
         pass
+
+
+def test_indec_cache_crud_and_uniqueness(test_db_session):
+    """Verify IndecCache insertion, payload storage, and composite uniqueness constraint."""
+    entry = IndecCache(
+        variable_id="ipc_general",
+        period="2026-09",
+        raw_payload={"valor": 3.5, "periodo": "2026-09"},
+    )
+    test_db_session.add(entry)
+    test_db_session.commit()
+
+    retrieved = test_db_session.scalar(
+        select(IndecCache).where(
+            IndecCache.variable_id == "ipc_general",
+            IndecCache.period == "2026-09",
+        )
+    )
+    assert retrieved is not None
+    assert retrieved.id is not None
+    assert retrieved.variable_id == "ipc_general"
+    assert retrieved.period == "2026-09"
+    assert retrieved.raw_payload == {"valor": 3.5, "periodo": "2026-09"}
+    assert retrieved.cached_at is not None
+
+    # Test composite uniqueness on (variable_id, period)
+    duplicate = IndecCache(
+        variable_id="ipc_general",
+        period="2026-09",
+        raw_payload={"valor": 4.0, "periodo": "2026-09"},
+    )
+    test_db_session.add(duplicate)
+    with pytest.raises(IntegrityError):
+        test_db_session.commit()
+    test_db_session.rollback()
