@@ -18,9 +18,15 @@ import {
   buildDeflatorModel,
   isSeriesEligibleForDeflation,
 } from '../../utils/deflator'
+import {
+  resampleChartSeries,
+  inferSeriesTaxonomy,
+  type Periodicity,
+} from '../../utils/resampler'
 import { api } from '../../services/api'
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max' | 'Custom'
+export type { Periodicity }
 
 export interface ChartSeries {
   id: number | string
@@ -47,6 +53,8 @@ export interface MacroChartProps {
   cpiData?: CpiPoint[]
   isRealMode?: boolean
   onRealModeChange?: (real: boolean) => void
+  periodicity?: Periodicity
+  onPeriodicityChange?: (periodicity: Periodicity) => void
 }
 
 const TIMEFRAMES: Timeframe[] = ['1M', '3M', '6M', '1Y', '5Y', 'Max']
@@ -66,6 +74,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   cpiData: propCpiData,
   isRealMode: propIsRealMode,
   onRealModeChange,
+  periodicity: propPeriodicity,
+  onPeriodicityChange,
 }) => {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -73,6 +83,14 @@ export const MacroChart: React.FC<MacroChartProps> = ({
   const [internalStartDate, setInternalStartDate] = useState<string>('')
   const [internalEndDate, setInternalEndDate] = useState<string>('')
   const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false)
+
+  // Periodicity state (Original vs Mensual vs Trimestral)
+  const [internalPeriodicity, setInternalPeriodicity] = useState<Periodicity>('original')
+  const periodicity = propPeriodicity !== undefined ? propPeriodicity : internalPeriodicity
+  const setPeriodicity = (val: Periodicity) => {
+    setInternalPeriodicity(val)
+    if (onPeriodicityChange) onPeriodicityChange(val)
+  }
 
   // Inflation deflation mode state (Nominal vs Real IPC)
   const [internalRealMode, setInternalRealMode] = useState<boolean>(false)
@@ -160,10 +178,27 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     return result
   }, [series, primaryTitle, primaryData, secondaryTitle, secondaryData])
 
+  // Resample series according to active periodicity
+  const resampledSeries = useMemo(() => {
+    if (periodicity === 'original') {
+      return rawSeries.map((s) => ({
+        ...s,
+        taxonomy: inferSeriesTaxonomy(s),
+        aggregationMethod: 'Frecuencia original',
+        hasPartialPeriod: false,
+      }))
+    }
+    return rawSeries.map((s) => resampleChartSeries(s, periodicity))
+  }, [rawSeries, periodicity])
+
+  const hasPartialPeriod = useMemo(() => {
+    return resampledSeries.some((s) => s.hasPartialPeriod)
+  }, [resampledSeries])
+
   // Check if at least one selected series is eligible for inflation adjustment
   const hasEligibleSeries = useMemo(() => {
-    return rawSeries.some(isSeriesEligibleForDeflation)
-  }, [rawSeries])
+    return resampledSeries.some(isSeriesEligibleForDeflation)
+  }, [resampledSeries])
 
   // Build cumulative price index and deflator factors
   const deflator = useMemo(() => {
@@ -174,7 +209,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
   // Effective series reflecting (pesos constantes) unit annotation when deflated
   const effectiveSeries = useMemo<ChartSeries[]>(() => {
-    return rawSeries.map((s) => {
+    return resampledSeries.map((s) => {
       const isEligible = isSeriesEligibleForDeflation(s)
       if (activeReal && isEligible) {
         const baseUnit = s.unit ? `${s.unit} (pesos constantes)` : 'pesos constantes'
@@ -182,16 +217,16 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       }
       return s
     })
-  }, [rawSeries, activeReal])
+  }, [resampledSeries, activeReal])
 
   // Merge series by date with inflation deflation applied to eligible series
   const { chartData, hasPendingObservations } = useMemo(() => {
-    if (rawSeries.length === 0) return { chartData: [], hasPendingObservations: false }
+    if (resampledSeries.length === 0) return { chartData: [], hasPendingObservations: false }
 
     const map = new Map<string, { fecha: string; [key: string]: any }>()
     let pendingObs = false
 
-    rawSeries.forEach((s) => {
+    resampledSeries.forEach((s) => {
       const key = `var_${s.id}`
       const isEligible = isSeriesEligibleForDeflation(s)
       const shouldDeflate = activeReal && isEligible
@@ -199,6 +234,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       s.data.forEach((p) => {
         const existing = map.get(p.fecha)
         const monthKey = p.fecha.slice(0, 7)
+        const isPartial = (p as any).isPartial || false
 
         let plotValue = p.valor
         if (shouldDeflate) {
@@ -213,12 +249,20 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
         if (existing) {
           existing[key] = plotValue
+          if (isPartial) {
+            existing[`${key}_partial`] = true
+            existing.isPartial = true
+          }
           if (shouldDeflate) {
             existing[`${key}_nominal`] = p.valor
             existing[`${key}_deflated`] = true
           }
         } else {
           const item: any = { fecha: p.fecha, [key]: plotValue }
+          if (isPartial) {
+            item[`${key}_partial`] = true
+            item.isPartial = true
+          }
           if (shouldDeflate) {
             item[`${key}_nominal`] = p.valor
             item[`${key}_deflated`] = true
@@ -258,7 +302,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     }
 
     return { chartData: filtered, hasPendingObservations: pendingObs }
-  }, [rawSeries, activeReal, deflator, timeframe, startDate, endDate])
+  }, [resampledSeries, activeReal, deflator, timeframe, startDate, endDate])
 
   const leftSeries = effectiveSeries.filter((s) => s.axis === 'left')
   const rightSeries = effectiveSeries.filter((s) => s.axis === 'right')
@@ -269,7 +313,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
     const headerCols = [
       'Fecha',
-      ...rawSeries.map((s) => {
+      ...resampledSeries.map((s) => {
         const isDeflated = activeReal && isSeriesEligibleForDeflation(s)
         const realTag = isDeflated ? ` [Real - Base ${deflator.baseMonthFormatted}]` : ''
         const baseUnit = s.unit
@@ -284,7 +328,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
     const rows = chartData.map((item) => {
       const cols = [item.fecha]
-      rawSeries.forEach((s) => {
+      resampledSeries.forEach((s) => {
         const val = item[`var_${s.id}`]
         cols.push(val !== undefined && val !== null ? String(val) : '')
       })
@@ -298,7 +342,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     a.href = url
     const dateStr = new Date().toISOString().split('T')[0]
     const modeTag = activeReal ? '_real' : '_nominal'
-    a.download = `series_macro_bcra${modeTag}_${timeframe.toLowerCase()}_${dateStr}.csv`
+    const periodicityTag = periodicity !== 'original' ? `_${periodicity}` : ''
+    a.download = `series_macro_bcra${modeTag}${periodicityTag}_${timeframe.toLowerCase()}_${dateStr}.csv`
     document.body.appendChild(a)
     a.click()
     window.URL.revokeObjectURL(url)
@@ -353,7 +398,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const displayTitle = titleText.length > 70 ? titleText.slice(0, 67) + '...' : titleText
     ctx.fillText(displayTitle, paddingX, 32)
 
-    // Period / Timeframe subtitle with Real mode annotation
+    // Period / Timeframe subtitle with Real mode and periodicity annotation
     ctx.fillStyle = subtitleColor
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const periodText =
@@ -363,7 +408,11 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     const realSubtitle = activeReal
       ? ` · Real (precios constantes de ${deflator.baseMonthFormatted} - IPC INDEC)`
       : ''
-    ctx.fillText(`${periodText}${realSubtitle}`, paddingX, 52)
+    const periodicitySubtitle =
+      periodicity !== 'original'
+        ? ` · Periodicidad: ${periodicity}`
+        : ''
+    ctx.fillText(`${periodText}${realSubtitle}${periodicitySubtitle}`, paddingX, 52)
 
     // Draw Legend series on top right of the canvas
     let legendX = totalWidth - paddingX
@@ -414,7 +463,8 @@ export const MacroChart: React.FC<MacroChartProps> = ({
       a.href = pngUrl
       const dateStr = new Date().toISOString().split('T')[0]
       const modeTag = activeReal ? '_real' : ''
-      a.download = `grafico_bcra${modeTag}_${timeframe.toLowerCase()}_${dateStr}.png`
+      const periodicityTag = periodicity !== 'original' ? `_${periodicity}` : ''
+      a.download = `grafico_bcra${modeTag}${periodicityTag}_${timeframe.toLowerCase()}_${dateStr}.png`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -426,15 +476,27 @@ export const MacroChart: React.FC<MacroChartProps> = ({
     img.src = url
   }
 
-  // Custom elevated tooltip for MacroChart displaying both Real and Nominal values
+  // Custom elevated tooltip for MacroChart displaying both Real and Nominal values and partial periods
   const MacroCustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null
 
+    const isPointPartial = payload.some(
+      (item: any) => item.payload?.isPartial || item.payload?.[`${item.dataKey}_partial`]
+    )
+
     return (
       <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 rounded-lg p-3 shadow-xl backdrop-blur-md text-xs font-sans tabular-nums min-w-[240px]">
-        <p className="text-slate-500 dark:text-slate-400 font-medium mb-1.5 border-b border-slate-100 dark:border-slate-800 pb-1">
-          Fecha: {label}
-        </p>
+        <div className="text-slate-500 dark:text-slate-400 font-medium mb-1.5 border-b border-slate-100 dark:border-slate-800 pb-1 flex items-center justify-between gap-2">
+          <span>Fecha: {label}</span>
+          {isPointPartial && (
+            <span
+              data-testid="tooltip-partial-badge"
+              className="text-[10px] text-amber-600 dark:text-amber-400 font-sans font-normal"
+            >
+              (mes parcial en curso)
+            </span>
+          )}
+        </div>
         <div className="space-y-1.5">
           {payload.map((item: any) => {
             const s = effectiveSeries.find(
@@ -450,6 +512,7 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
             const isDeflated = item.payload && item.payload[`${item.dataKey}_deflated`]
             const nominalVal = item.payload ? item.payload[`${item.dataKey}_nominal`] : undefined
+            const isItemPartial = item.payload && item.payload[`${item.dataKey}_partial`]
 
             const val =
               typeof item.value === 'number'
@@ -468,6 +531,11 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                     {isDeflated && (
                       <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-normal">
                         (Real)
+                      </span>
+                    )}
+                    {isItemPartial && (
+                      <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400 font-sans font-normal">
+                        (Parcial)
                       </span>
                     )}
                   </span>
@@ -538,6 +606,34 @@ export const MacroChart: React.FC<MacroChartProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Evolución histórica y comparación temporal multi-variable de series BCRA
           </p>
+
+          {/* Informative Aggregation Rule Badge & Partial Period Indicator */}
+          {periodicity !== 'original' && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span
+                data-testid="aggregation-rule-badge"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-xs"
+                title={`Método de agregación temporal: ${resampledSeries.map((s) => `${s.title}: ${s.aggregationMethod}`).join(' · ')}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span>
+                  {resampledSeries.length === 1
+                    ? resampledSeries[0].aggregationMethod
+                    : resampledSeries.map((s) => `${s.title}: ${s.aggregationMethod}`).join(' · ')}
+                </span>
+              </span>
+              {hasPartialPeriod && (
+                <span
+                  data-testid="partial-period-badge"
+                  className="text-[10px] font-sans text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50"
+                  title="El último período contiene datos parciales acumulados a la fecha"
+                >
+                  (Mes parcial en curso)
+                </span>
+              )}
+            </div>
+          )}
+
           {activeReal && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span
@@ -559,8 +655,53 @@ export const MacroChart: React.FC<MacroChartProps> = ({
             </div>
           )}
         </div>
-        {/* Toolbar: Deflation Toggle + Timeframe pill switcher + Export actions */}
+
+        {/* Toolbar: Periodicity control + Deflation Toggle + Timeframe pill switcher + Export actions */}
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Periodicity Segmented Control: Original, Mensual, Trimestral */}
+          <div
+            className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5"
+            role="group"
+            aria-label="Periodicidad temporal"
+          >
+            <button
+              type="button"
+              data-testid="periodicity-original"
+              onClick={() => setPeriodicity('original')}
+              className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
+                periodicity === 'original'
+                  ? 'bg-blue-600 text-white font-medium shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+              }`}
+            >
+              Original
+            </button>
+            <button
+              type="button"
+              data-testid="periodicity-mensual"
+              onClick={() => setPeriodicity('mensual')}
+              className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
+                periodicity === 'mensual'
+                  ? 'bg-blue-600 text-white font-medium shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+              }`}
+            >
+              Mensual
+            </button>
+            <button
+              type="button"
+              data-testid="periodicity-trimestral"
+              onClick={() => setPeriodicity('trimestral')}
+              className={`px-2.5 py-1 text-xs font-sans rounded transition-colors cursor-pointer ${
+                periodicity === 'trimestral'
+                  ? 'bg-blue-600 text-white font-medium shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-900'
+              }`}
+            >
+              Trimestral
+            </button>
+          </div>
+
           {/* Nominal / Real (IPC) Segmented Toggle */}
           <div
             className="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-0.5"
@@ -812,7 +953,23 @@ export const MacroChart: React.FC<MacroChartProps> = ({
                   stroke={s.color}
                   strokeWidth={2}
                   strokeDasharray={s.strokeDasharray || (s.axis === 'right' ? '4 4' : undefined)}
-                  dot={false}
+                  dot={(props: any) => {
+                    if (props.payload && (props.payload.isPartial || props.payload[`${props.dataKey}_partial`])) {
+                      return (
+                        <circle
+                          key={props.key || `partial-${props.cx}-${props.cy}`}
+                          cx={props.cx}
+                          cy={props.cy}
+                          r={4.5}
+                          fill="none"
+                          stroke={props.stroke}
+                          strokeWidth={2}
+                          strokeDasharray="2 2"
+                        />
+                      )
+                    }
+                    return <circle key={props.key || `empty-${props.cx}-${props.cy}`} cx={props.cx} cy={props.cy} r={0} fill="none" />
+                  }}
                   activeDot={{ r: 4, stroke: s.color, strokeWidth: 2 }}
                 />
               ))}
