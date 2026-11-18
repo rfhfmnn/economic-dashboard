@@ -25,6 +25,15 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DB_PATH = BACKEND_DIR / "economic_dashboard.db"
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH.as_posix()}")
 
+# If running on host outside Docker and DATABASE_URL points to unreachable Docker service name 'postgres'
+if "@postgres:" in DATABASE_URL:
+    import socket
+
+    try:
+        socket.gethostbyname("postgres")
+    except socket.gaierror:
+        DATABASE_URL = f"sqlite:///{DEFAULT_DB_PATH.as_posix()}"
+
 # Standardize postgres:// or generic postgresql:// to postgresql+psycopg2:// for SQLAlchemy & psycopg2-binary compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)

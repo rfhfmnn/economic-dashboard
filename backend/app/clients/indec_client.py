@@ -43,40 +43,43 @@ class IndecResponseError(IndecClientError):
 
 DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     "ipc_general": {
-        "endpoint": "/ipc",
+        "endpoint": "/ipc_nacional",
         "name": "IPC - Nivel General Nacional",
         "category": "Precios y Costos",
         "unit": "% mensual",
         "frequency": "mensual",
         "description": "Índice de Precios al Consumidor - Nivel General Nacional",
         "params": {
-            "clasificador": "eq.general",
-            "region": "eq.nacional",
+            "nivel": "eq.Nivel General",
+            "region": "eq.Nacional",
+            "tipo_de_indicador": "eq.v_m",
             "order": "periodo.desc",
         },
     },
     "ipc_core": {
-        "endpoint": "/ipc",
+        "endpoint": "/ipc_nacional",
         "name": "IPC - Núcleo",
         "category": "Precios y Costos",
         "unit": "% mensual",
         "frequency": "mensual",
         "description": "IPC Categoría Núcleo (desestacionalizado sin regulados ni estacionales)",
         "params": {
-            "clasificador": "eq.nucleo",
-            "region": "eq.nacional",
+            "nivel": "eq.Categoría",
+            "descripcion": "eq.Núcleo",
+            "region": "eq.Nacional",
+            "tipo_de_indicador": "eq.v_m",
             "order": "periodo.desc",
         },
     },
     "emae_general": {
-        "endpoint": "/emae",
+        "endpoint": "/estimador-mensual-de-actividad-economica-nivel-general",
         "name": "EMAE - Nivel General",
         "category": "Actividad y Producción",
         "unit": "Índice base 2004=100",
         "frequency": "mensual",
         "description": "Estimador Mensual de Actividad Económica - Nivel General",
         "params": {
-            "sector": "eq.general",
+            "tipo_de_indicador_descripcion": "eq.Índice serie original",
             "order": "periodo.desc",
         },
     },
@@ -84,134 +87,114 @@ DATASET_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoint": "/ipi_manufacturero",
         "name": "IPI Manufacturero",
         "category": "Actividad y Producción",
-        "unit": "Índice base 2004=100",
+        "unit": "% interanual",
         "frequency": "mensual",
-        "description": "Índice de Producción Industrial Manufacturero",
+        "description": "Índice de Producción Industrial Manufacturero - Nivel General",
         "params": {
-            "rubro": "eq.general",
+            "descripcion": "eq.IPI Manufacturero - Nivel general",
+            "tipo_de_indicador": "eq.Variación interanual",
+            "serie": "eq.Serie original",
             "order": "periodo.desc",
         },
     },
     "cbt": {
-        "endpoint": "/canastas_basicas",
+        "endpoint": "/valorizacion_canastas_cba_cbt",
         "name": "Canasta Básica Total (CBT)",
         "category": "Mercado de Trabajo y Social",
         "unit": "ARS",
         "frequency": "mensual",
         "description": "Canasta Básica Total - Línea de pobreza individual adulto equivalente",
         "params": {
-            "tipo": "eq.cbt",
-            "region": "eq.gba",
+            "codigo": "eq.CBT",
+            "tipo_de_indicador_descripcion": "eq.Valores mensuales por adulto equivalente, expresados en pesos",
+            "region": "eq.GBA",
             "order": "periodo.desc",
         },
     },
-    "eph_desempleo": {
-        "endpoint": "/eph_tasas",
-        "name": "Tasa de Desocupación",
-        "category": "Mercado de Trabajo y Social",
-        "unit": "% PEA",
-        "frequency": "trimestral",
-        "description": "Encuesta Permanente de Hogares - Tasa de Desocupación abierta",
-        "params": {
-            "indicador": "eq.desocupacion",
-            "order": "periodo.desc",
-        },
-    },
-    "ica_saldo": {
-        "endpoint": "/ica",
-        "name": "Balanza Comercial (ICA)",
-        "category": "Sector Externo",
-        "unit": "Millones USD",
-        "frequency": "mensual",
-        "description": "Intercambio Comercial Argentino - Saldo de Balanza Comercial",
-        "params": {
-            "flujo": "eq.saldo",
-            "order": "periodo.desc",
-        },
-    },
-    "icc_general": {
-        "endpoint": "/icc",
-        "name": "Costo de la Construcción (ICC)",
-        "category": "Precios y Costos",
-        "unit": "% mensual",
-        "frequency": "mensual",
-        "description": "Índice del Costo de la Construcción en el Gran Buenos Aires - Nivel General",
-        "params": {
-            "apertura": "eq.general",
-            "order": "periodo.desc",
-        },
-    },
-    # Subseries y series complementarias
     "cba": {
-        "endpoint": "/canastas_basicas",
+        "endpoint": "/valorizacion_canastas_cba_cbt",
         "name": "Canasta Básica Alimentaria (CBA)",
         "category": "Mercado de Trabajo y Social",
         "unit": "ARS",
         "frequency": "mensual",
         "description": "Canasta Básica Alimentaria - Línea de indigencia individual adulto equivalente",
         "params": {
-            "tipo": "eq.cba",
-            "region": "eq.gba",
+            "codigo": "eq.CBA",
+            "tipo_de_indicador_descripcion": "eq.Valores mensuales por adulto equivalente, expresados en pesos",
+            "region": "eq.GBA",
             "order": "periodo.desc",
         },
     },
+    "eph_desempleo": {
+        "endpoint": "/mercado_trabajo_eph",
+        "name": "Tasa de Desocupación",
+        "category": "Mercado de Trabajo y Social",
+        "unit": "% PEA",
+        "frequency": "trimestral",
+        "description": "Encuesta Permanente de Hogares - Tasa de Desocupación abierta",
+        "params": {
+            "area_geografica_nom": "eq.T_31_A",
+            "order": "periodo.desc",
+        },
+    },
+    "icc_general": {
+        "endpoint": "/icc_precios_construccion",
+        "name": "Costo de la Construcción (ICC)",
+        "category": "Precios y Costos",
+        "unit": "% mensual",
+        "frequency": "mensual",
+        "description": "Índice del Costo de la Construcción en el Gran Buenos Aires - Nivel General",
+        "params": {
+            "nivel": "eq.Nivel general",
+            "tipo_de_indicador": "eq.v_m",
+            "order": "periodo.desc",
+        },
+    },
+    "ica_saldo": {
+        "endpoint": "/comercio_exterior_exportacion_bienes",
+        "name": "Balanza Comercial (ICA)",
+        "category": "Sector Externo",
+        "unit": "Millones USD",
+        "frequency": "mensual",
+        "description": "Intercambio Comercial Argentino - Saldo de Balanza Comercial",
+        "params": {
+            "order": "Periodo.desc",
+        },
+    },
     "ipim_general": {
-        "endpoint": "/ipim",
+        "endpoint": "/sipm_precios_mayoristas",
         "name": "Sistema de Precios Mayoristas (IPIM)",
         "category": "Precios y Costos",
         "unit": "% mensual",
         "frequency": "mensual",
-        "description": "Índice de Precios Internos al por Mayor - Nivel General",
+        "description": "Índice de Precios Internos al por Mayor",
         "params": {
-            "nivel": "eq.general",
-            "order": "periodo.desc",
-        },
-    },
-    "ica_expo": {
-        "endpoint": "/ica",
-        "name": "Exportaciones Totales (ICA)",
-        "category": "Sector Externo",
-        "unit": "Millones USD",
-        "frequency": "mensual",
-        "description": "Intercambio Comercial Argentino - Exportaciones Totales FOB",
-        "params": {
-            "flujo": "eq.exportaciones",
-            "order": "periodo.desc",
-        },
-    },
-    "ica_impo": {
-        "endpoint": "/ica",
-        "name": "Importaciones Totales (ICA)",
-        "category": "Sector Externo",
-        "unit": "Millones USD",
-        "frequency": "mensual",
-        "description": "Intercambio Comercial Argentino - Importaciones Totales CIF",
-        "params": {
-            "flujo": "eq.importaciones",
+            "indicador": "eq.IPIM",
+            "tipo_de_indicador": "eq.v_m",
             "order": "periodo.desc",
         },
     },
     "eph_empleo": {
-        "endpoint": "/eph_tasas",
+        "endpoint": "/mercado_trabajo_eph",
         "name": "Tasa de Empleo",
         "category": "Mercado de Trabajo y Social",
         "unit": "% PEA",
         "frequency": "trimestral",
         "description": "Encuesta Permanente de Hogares - Tasa de Empleo",
         "params": {
-            "indicador": "eq.empleo",
+            "area_geografica_nom": "eq.T_31_A",
             "order": "periodo.desc",
         },
     },
     "eph_actividad": {
-        "endpoint": "/eph_tasas",
+        "endpoint": "/mercado_trabajo_eph",
         "name": "Tasa de Actividad",
         "category": "Mercado de Trabajo y Social",
         "unit": "% PEA",
         "frequency": "trimestral",
         "description": "Encuesta Permanente de Hogares - Tasa de Actividad",
         "params": {
-            "indicador": "eq.actividad",
+            "area_geografica_nom": "eq.T_31_A",
             "order": "periodo.desc",
         },
     },
@@ -231,10 +214,17 @@ class IndecClient:
         cache_ttl_seconds: int = 86400,  # 24 hours
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.token = token if token is not None else os.getenv("INDEC_API_TOKEN")
-        if self.token:
-            self.token = self.token.strip()
+        clean_base = base_url.rstrip("/")
+        if not clean_base.endswith("/v1"):
+            self.base_url = f"{clean_base}/v1"
+        else:
+            self.base_url = clean_base
+        if token is not None:
+            self.token = token.strip() if token else None
+        else:
+            token_env = os.getenv("INDEC_API_TOKEN")
+            self.token = token_env.strip() if token_env else None
+
         self.timeout = timeout
         self.cache_ttl_seconds = cache_ttl_seconds
         self._transport = transport

@@ -1,6 +1,15 @@
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Ensure .env is loaded from project root into os.environ
+_root_env = Path(__file__).resolve().parents[2] / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env, override=True)
+else:
+    load_dotenv(override=True)
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse

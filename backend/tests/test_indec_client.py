@@ -60,14 +60,13 @@ def test_dataset_registry_contains_all_8_key_series():
         assert "frequency" in entry
 
     # Verify specific expected endpoints
-    assert DATASET_REGISTRY["ipc_general"]["endpoint"] == "/ipc"
-    assert DATASET_REGISTRY["ipc_core"]["endpoint"] == "/ipc"
-    assert DATASET_REGISTRY["emae_general"]["endpoint"] == "/emae"
+    assert DATASET_REGISTRY["ipc_general"]["endpoint"] == "/ipc_nacional"
+    assert DATASET_REGISTRY["ipc_core"]["endpoint"] == "/ipc_nacional"
+    assert DATASET_REGISTRY["emae_general"]["endpoint"] == "/estimador-mensual-de-actividad-economica-nivel-general"
     assert DATASET_REGISTRY["ipi_manuf"]["endpoint"] == "/ipi_manufacturero"
-    assert DATASET_REGISTRY["cbt"]["endpoint"] == "/canastas_basicas"
-    assert DATASET_REGISTRY["eph_desempleo"]["endpoint"] == "/eph_tasas"
-    assert DATASET_REGISTRY["ica_saldo"]["endpoint"] == "/ica"
-    assert DATASET_REGISTRY["icc_general"]["endpoint"] == "/icc"
+    assert DATASET_REGISTRY["cbt"]["endpoint"] == "/valorizacion_canastas_cba_cbt"
+    assert DATASET_REGISTRY["eph_desempleo"]["endpoint"] == "/mercado_trabajo_eph"
+    assert DATASET_REGISTRY["icc_general"]["endpoint"] == "/icc_precios_construccion"
 
 
 def test_bearer_header_injection_on_request():
@@ -89,7 +88,8 @@ def test_bearer_header_injection_on_request():
     req = captured_requests[0]
     assert req.headers.get("authorization") == "Bearer test_jwt_secret_token"
     assert req.headers.get("accept") == "application/json"
-    assert "api.indec.gob.ar/ipc" in str(req.url)
+    assert "api.indec.gob.ar" in str(req.url)
+    assert "ipc" in str(req.url)
     client.close()
 
 

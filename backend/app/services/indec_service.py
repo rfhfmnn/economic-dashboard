@@ -24,8 +24,8 @@ KEY_INDEC_INDICATORS: list[str] = [
     "emae_general",
     "ipi_manuf",
     "cbt",
+    "cba",
     "eph_desempleo",
-    "ica_saldo",
     "icc_general",
 ]
 
@@ -81,6 +81,12 @@ def normalize_indec_date(period_str: str) -> str:
         year, month = m_m.group(1), m_m.group(2)
         return f"{year}-{month}-01"
 
+    # Pattern 6b: 6-digit monthly YYYYMM (e.g. 202610)
+    m_ym = re.match(r"^(\d{4})(\d{2})$", s)
+    if m_ym:
+        year, month = m_ym.group(1), m_ym.group(2)
+        return f"{year}-{month}-01"
+
     # Pattern 7: MM-YYYY
     m_my = re.match(r"^(\d{2})[-/](\d{4})$", s)
     if m_my:
@@ -92,7 +98,18 @@ def normalize_indec_date(period_str: str) -> str:
 
 def extract_indec_value(record: dict[str, Any]) -> float | None:
     """Extract and cast numeric observation value from raw record dictionary."""
-    candidate_keys = ("valor", "indice", "tasa", "saldo", "monto", "value")
+    candidate_keys = (
+        "valor",
+        "tasa_de_desocupacion",
+        "tasa_de_empleo",
+        "tasa_de_actividad",
+        "tot_1a3",
+        "indice",
+        "tasa",
+        "saldo",
+        "monto",
+        "value",
+    )
     for key in candidate_keys:
         if key in record and record[key] is not None:
             raw = record[key]
@@ -137,7 +154,7 @@ def extract_indec_value(record: dict[str, Any]) -> float | None:
 
 def extract_indec_date(record: dict[str, Any]) -> str | None:
     """Extract raw date/period field from record and normalize to YYYY-MM-DD."""
-    for key in ("periodo", "fecha", "date"):
+    for key in ("periodo", "Periodo", "fecha", "date", "Fecha"):
         if key in record and record[key] is not None:
             return normalize_indec_date(str(record[key]))
     return None
@@ -373,7 +390,9 @@ class IndecService:
                 "delta_yoy": delta_yoy,
             })
 
+        now_iso = datetime.now(UTC).isoformat()
         return {
             "indicators": indicators,
-            "last_updated": datetime.now(UTC).isoformat(),
+            "last_updated": now_iso,
+            "timestamp": now_iso,
         }

@@ -253,7 +253,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
     # Build realistic multi-month history for each of the 8 key series
     def handler(request: httpx.Request) -> httpx.Response:
         url_path = request.url.path
-        if "/ipc" in url_path:
+        if "ipc" in url_path:
             return httpx.Response(
                 200,
                 json=[
@@ -263,7 +263,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
                     {"periodo": "2026-09", "valor": 3.5},
                 ],
             )
-        elif "/emae" in url_path:
+        elif "emae" in url_path:
             return httpx.Response(
                 200,
                 json=[
@@ -272,7 +272,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
                     {"periodo": "2026-08", "valor": 105.0},
                 ],
             )
-        elif "/ipi_manufacturero" in url_path:
+        elif "ipi" in url_path:
             return httpx.Response(
                 200,
                 json=[
@@ -280,7 +280,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
                     {"periodo": "2026-08", "valor": 96.5},
                 ],
             )
-        elif "/canastas_basicas" in url_path:
+        elif "canastas" in url_path:
             return httpx.Response(
                 200,
                 json=[
@@ -289,7 +289,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
                     {"periodo": "2026-09", "valor": 980000.0},
                 ],
             )
-        elif "/eph_tasas" in url_path:
+        elif "eph" in url_path or "mercado_trabajo" in url_path:
             return httpx.Response(
                 200,
                 json=[
@@ -298,7 +298,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
                     {"periodo": "2026-T2", "valor": 7.6},
                 ],
             )
-        elif "/ica" in url_path:
+        elif "ica" in url_path or "comercio" in url_path:
             return httpx.Response(
                 200,
                 json=[
@@ -306,7 +306,7 @@ def test_get_indec_summary_success_with_8_indicators(client: TestClient, monkeyp
                     {"periodo": "2026-09", "valor": 1500.0},
                 ],
             )
-        elif "/icc" in url_path:
+        elif "icc" in url_path:
             return httpx.Response(
                 200,
                 json=[
