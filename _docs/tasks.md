@@ -287,13 +287,13 @@ Ensure external trade series (ICA and exports) retrieve and display the complete
 
 ## Acceptance criteria
 
-- [ ] `backend/app/clients/indec_client.py` implements offset pagination or range chunking for multidimensional datasets with high row counts per period (e.g. `/comercio_exterior_exportacion_bienes` and `/comercio_exterior_importacion_bienes`) that exceed the server's 1000-row page cap.
-- [ ] `backend/app/services/indec_service.py` aggregates monthly sums across all countries/subrubros for each period, producing full historical monthly observations.
-- [ ] Aggregated series payloads are cached in SQLite `IndecCache` under a consolidated key to guarantee fast subsequent lookups.
-- [ ] In `frontend/src/components/workbench/WorkbenchView.tsx`, `fetchSeriesData` dynamically passes the active timeframe (`'Max'`, `'5Y'`, etc.) to `api.getIndecSeries(varId, timeframe)` instead of hardcoding `'5Y'`.
-- [ ] Selecting "Max" on an export series (e.g. `indec_comex_exportaciones_primarios` or `indec_ica_saldo`) displays complete historical data points across multiple years instead of just 3 observations.
-- [ ] Automated backend and frontend tests verify paginated comex fetching, monthly aggregation, and dynamic timeframe propagation.
-- [ ] Strict sentence case across all labels and error notifications.
+- [x] `backend/app/clients/indec_client.py` implements offset pagination or range chunking for multidimensional datasets with high row counts per period (e.g. `/comercio_exterior_exportacion_bienes` and `/comercio_exterior_importacion_bienes`) that exceed the server's 1000-row page cap.
+- [x] `backend/app/services/indec_service.py` aggregates monthly sums across all countries/subrubros for each period, producing full historical monthly observations.
+- [x] Aggregated series payloads are cached in SQLite `IndecCache` under a consolidated key to guarantee fast subsequent lookups.
+- [x] In `frontend/src/components/workbench/WorkbenchView.tsx`, `fetchSeriesData` dynamically passes the active timeframe (`'Max'`, `'5Y'`, etc.) to `api.getIndecSeries(varId, timeframe)` instead of hardcoding `'5Y'`.
+- [x] Selecting "Max" on an export series (e.g. `indec_comex_exportaciones_primarios` or `indec_ica_saldo`) displays complete historical data points across multiple years instead of just 3 observations.
+- [x] Automated backend and frontend tests verify paginated comex fetching, monthly aggregation, and dynamic timeframe propagation.
+- [x] Strict sentence case across all labels and error notifications.
 
 ## Out of scope
 
@@ -315,15 +315,15 @@ Integrate REM series into the workbench with valid ISO dates, seamlessly connect
 
 ## Acceptance criteria
 
-- [ ] `backend/app/services/rem_service.py` implements `get_rem_series(variable_key: str)` returning a unified chronological array of points with valid ISO dates (`YYYY-MM-01`).
-- [ ] The returned series pairs past historical months (actual INDEC observations and past expectations) with future projected months from the latest REM consensus report.
-- [ ] Each point includes metadata such as `is_forecast: boolean` and consensus metrics (`mediana`, `p25`, `p75`).
-- [ ] Exposed via `GET /api/macro/rem/series/{variable_key}` in `backend/app/routes/rem_routes.py`.
-- [ ] In `frontend/src/components/workbench/WorkbenchView.tsx`, selecting a REM series fetches the complete historical and forecast series without date parsing errors.
-- [ ] In `WorkbenchChart.tsx`, REM series render visible curves across both past history and future projection dates without being clipped by historical-only date filters.
-- [ ] Forecast projection segments are visually distinguished with dashed stroke styling (`strokeDasharray="4 4"`) or informative tooltip badges (`"Proyección REM"`).
-- [ ] Automated backend and frontend tests verify combined historical-forecast series generation and chart rendering.
-- [ ] Strict sentence case across all labels and badges.
+- [x] `backend/app/services/rem_service.py` implements `get_rem_series(variable_key: str)` returning a unified chronological array of points with valid ISO dates (`YYYY-MM-01`).
+- [x] The returned series pairs past historical months (actual INDEC observations and past expectations) with future projected months from the latest REM consensus report.
+- [x] Each point includes metadata such as `is_forecast: boolean` and consensus metrics (`mediana`, `p25`, `p75`).
+- [x] Exposed via `GET /api/macro/rem/series/{variable_key}` in `backend/app/routes/rem_routes.py`.
+- [x] In `frontend/src/components/workbench/WorkbenchView.tsx`, selecting a REM series fetches the complete historical and forecast series without date parsing errors.
+- [x] In `WorkbenchChart.tsx`, REM series render visible curves across both past history and future projection dates without being clipped by historical-only date filters.
+- [x] Forecast projection segments are visually distinguished with dashed stroke styling (`strokeDasharray="4 4"`) or informative tooltip badges (`"Proyección REM"`).
+- [x] Automated backend and frontend tests verify combined historical-forecast series generation and chart rendering.
+- [x] Strict sentence case across all labels and badges.
 
 ## Out of scope
 
