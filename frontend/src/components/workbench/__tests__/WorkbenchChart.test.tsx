@@ -223,6 +223,38 @@ describe('WorkbenchChart Component', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('renders dual Y-axes for 3 series when one is explicitly assigned to right axis', () => {
+    const rightAssignedSeries: WorkbenchSeriesData = {
+      ...fxSeries,
+      axis: 'right',
+    }
+    const thirdSeries: WorkbenchSeriesData = {
+      id: 'indec_ipi',
+      source: 'INDEC',
+      name: 'IPI manufacturero',
+      color: '#f59e0b',
+      unit: 'Índice base 2004=100',
+      frequency: 'mensual',
+      isArs: false,
+      status: 'success',
+      points: [],
+      axis: 'left',
+    }
+
+    render(
+      <WorkbenchChart
+        viewMode="normalized"
+        expressionMode="original"
+        alignedData={sampleAlignedData}
+        activeSeries={[sampleSeries[0], thirdSeries, rightAssignedSeries]}
+        correlationPoints={[]}
+      />
+    )
+
+    expect(screen.getByText(/Eje izquierdo \(Y₁\):/)).toBeInTheDocument()
+    expect(screen.getByText(/Eje derecho \(Y₂\):/)).toBeInTheDocument()
+  })
+
   describe('formatPeriodDate helper', () => {
     it('formats dates as YYYY-MM in monthly periodicity', () => {
       expect(formatPeriodDate('2026-01-31', 'mensual')).toBe('2026-01')

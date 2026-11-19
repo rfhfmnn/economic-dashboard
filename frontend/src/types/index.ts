@@ -484,6 +484,7 @@ export interface WorkbenchSeriesData {
   isArs: boolean
   status: 'loading' | 'success' | 'delayed' | 'error'
   points: MacroSeriesPoint[]
+  axis?: 'left' | 'right'
 }
 
 export interface RollingCorrelationPoint {

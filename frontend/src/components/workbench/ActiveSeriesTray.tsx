@@ -5,6 +5,7 @@ import type { WorkbenchSeriesData, WorkbenchSource } from '../../types'
 export interface ActiveSeriesTrayProps {
   seriesList: WorkbenchSeriesData[]
   onRemoveSeries: (id: string) => void
+  onToggleAxis?: (id: string) => void
   maxSeries: number
 }
 
@@ -18,6 +19,7 @@ const SOURCE_BADGES: Record<WorkbenchSource, { label: string; className: string 
 export const ActiveSeriesTray: React.FC<ActiveSeriesTrayProps> = ({
   seriesList,
   onRemoveSeries,
+  onToggleAxis,
   maxSeries,
 }) => {
   if (seriesList.length === 0) {
@@ -81,6 +83,22 @@ export const ActiveSeriesTray: React.FC<ActiveSeriesTrayProps> = ({
                   <AlertTriangle className="w-3 h-3 text-amber-500" />
                   <span>Dato demorado</span>
                 </span>
+              )}
+
+              {/* Axis toggle button */}
+              {onToggleAxis && (
+                <button
+                  type="button"
+                  onClick={() => onToggleAxis(s.id)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-medium transition-colors cursor-pointer ${
+                    s.axis === 'right'
+                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                  }`}
+                  title="Cambiar entre eje izquierdo (principal) y derecho (secundario)"
+                >
+                  {s.axis === 'right' ? 'Eje der. (Y₂)' : 'Eje izq. (Y₁)'}
+                </button>
               )}
 
               {/* Remove button */}

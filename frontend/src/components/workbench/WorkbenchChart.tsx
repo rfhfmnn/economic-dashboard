@@ -216,33 +216,65 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
     return Array.from(new Set(activeSeries.map((s) => (s.unit || '').trim().toLowerCase())))
   }, [activeSeries])
 
-  // Dual-axis condition: exactly 2 series in original unit mode with distinct units
+  const leftSeries = useMemo(() => {
+    const explicitRight = activeSeries.filter((s) => s.axis === 'right')
+    if (explicitRight.length > 0) {
+      return activeSeries.filter((s) => s.axis !== 'right')
+    }
+    // Backward compatibility: if 2 series with different units and no explicit axis, series 0 is left
+    if (
+      activeSeries.length === 2 &&
+      (activeSeries[0].unit || '').trim().toLowerCase() !==
+        (activeSeries[1].unit || '').trim().toLowerCase()
+    ) {
+      return [activeSeries[0]]
+    }
+    return activeSeries
+  }, [activeSeries])
+
+  const rightSeries = useMemo(() => {
+    const explicitRight = activeSeries.filter((s) => s.axis === 'right')
+    if (explicitRight.length > 0) {
+      return explicitRight
+    }
+    // Backward compatibility: if 2 series with different units and no explicit axis, series 1 is right
+    if (
+      activeSeries.length === 2 &&
+      (activeSeries[0].unit || '').trim().toLowerCase() !==
+        (activeSeries[1].unit || '').trim().toLowerCase()
+    ) {
+      return [activeSeries[1]]
+    }
+    return []
+  }, [activeSeries])
+
+  // Dual-axis condition: active series distributed across left and right axes in original unit mode
   const isDualAxis =
     viewMode === 'normalized' &&
     mode === 'original' &&
-    activeSeries.length === 2 &&
-    (activeSeries[0].unit || '').trim().toLowerCase() !==
-      (activeSeries[1].unit || '').trim().toLowerCase()
+    leftSeries.length > 0 &&
+    rightSeries.length > 0
 
-  // Heterogeneous units warning: 3+ series in original unit mode with disparate units
+  // Heterogeneous units warning: 3+ series in original unit mode with disparate units when not separated by dual axes
   const hasHeterogeneousUnits =
     viewMode === 'normalized' &&
     mode === 'original' &&
     activeSeries.length >= 3 &&
-    uniqueUnits.length > 1
+    uniqueUnits.length > 1 &&
+    !isDualAxis
 
-  const series1 = activeSeries[0]
-  const series2 = activeSeries[1]
+  const series1 = leftSeries[0] || activeSeries[0]
+  const series2 = rightSeries[0] || activeSeries[1]
 
   const leftDomain = useMemo(() => {
-    if (!isDualAxis || !series1) return undefined
-    return calculateDomain(alignedData, [series1.id], scaleMode)
-  }, [isDualAxis, alignedData, series1, scaleMode])
+    if (!isDualAxis || leftSeries.length === 0) return undefined
+    return calculateDomain(alignedData, leftSeries.map((s) => s.id), scaleMode)
+  }, [isDualAxis, alignedData, leftSeries, scaleMode])
 
   const rightDomain = useMemo(() => {
-    if (!isDualAxis || !series2) return undefined
-    return calculateDomain(alignedData, [series2.id], scaleMode)
-  }, [isDualAxis, alignedData, series2, scaleMode])
+    if (!isDualAxis || rightSeries.length === 0) return undefined
+    return calculateDomain(alignedData, rightSeries.map((s) => s.id), scaleMode)
+  }, [isDualAxis, alignedData, rightSeries, scaleMode])
 
   const singleDomain = useMemo(() => {
     if (isDualAxis) return undefined
@@ -406,22 +438,30 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
         </span>
       </div>
 
-      {/* Dual Y-axis visual legend when 2 series have different units */}
+      {/* Dual Y-axis visual legend when series are split between left and right axes */}
       {isDualAxis && (
         <div className="mb-3 flex flex-wrap items-center gap-4 text-xs font-medium">
-          <div className="flex items-center gap-1.5" style={{ color: series1.color }}>
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: series1.color }} />
-            <span>
-              Eje izquierdo (Y₁): [{series1.source}] {series1.name}{' '}
-              {series1.unit ? `(${series1.unit})` : ''}
-            </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-slate-500 dark:text-slate-400">Eje izquierdo (Y₁):</span>
+            {leftSeries.map((s) => (
+              <span key={s.id} className="inline-flex items-center gap-1 mr-2" style={{ color: s.color }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                <span>
+                  [{s.source}] {s.name} {s.unit ? `(${s.unit})` : ''}
+                </span>
+              </span>
+            ))}
           </div>
-          <div className="flex items-center gap-1.5" style={{ color: series2.color }}>
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: series2.color }} />
-            <span>
-              Eje derecho (Y₂): [{series2.source}] {series2.name}{' '}
-              {series2.unit ? `(${series2.unit})` : ''}
-            </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-slate-500 dark:text-slate-400">Eje derecho (Y₂):</span>
+            {rightSeries.map((s) => (
+              <span key={s.id} className="inline-flex items-center gap-1 mr-2" style={{ color: s.color }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                <span>
+                  [{s.source}] {s.name} {s.unit ? `(${s.unit})` : ''}
+                </span>
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -553,8 +593,9 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
             {mode === 'base100' && (
               <ReferenceLine yAxisId="left" y={100} stroke="#94a3b8" strokeDasharray="3 3" />
             )}
-            {activeSeries.map((s, idx) => {
-              const yAxisId = isDualAxis ? (idx === 0 ? 'left' : 'right') : 'left'
+            {activeSeries.map((s) => {
+              const isRight = isDualAxis && rightSeries.some((r) => r.id === s.id)
+              const yAxisId = isRight ? 'right' : 'left'
               const isRem = s.source === 'REM'
               const hasForecast = isRem && s.points.some((p) => p.is_forecast)
 
@@ -599,6 +640,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
                   name={s.id}
                   stroke={s.color}
                   strokeWidth={2}
+                  strokeDasharray={isRight ? '4 4' : undefined}
                   dot={false}
                   isAnimationActive={false}
                   connectNulls={true}

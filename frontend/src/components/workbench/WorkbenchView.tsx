@@ -51,7 +51,7 @@ export const WorkbenchView: React.FC = () => {
   const [timeframe, setTimeframe] = useState<TimeframeOption>('1Y')
   const [customStart, setCustomStart] = useState<string>('')
   const [customEnd, setCustomEnd] = useState<string>('')
-  const [expressionMode, setExpressionMode] = useState<ExpressionMode>('base100')
+  const [expressionMode, setExpressionMode] = useState<ExpressionMode>('original')
   const [scaleMode, setScaleMode] = useState<ScaleMode>('auto')
   const [periodicity, setPeriodicity] = useState<Periodicity>('original')
   const [lineStyle, setLineStyle] = useState<LineStyleOption>('monotone')
@@ -153,6 +153,11 @@ export const WorkbenchView: React.FC = () => {
 
       const assignedColor = SERIES_COLORS[activeSeries.length % SERIES_COLORS.length]
 
+      const isRightAxis =
+        activeSeries.length > 0 &&
+        (activeSeries[0].unit || '').trim().toLowerCase() !==
+          (item.unit || '').trim().toLowerCase()
+
       const newSeries: WorkbenchSeriesData = {
         id: item.id,
         source: item.source,
@@ -163,6 +168,7 @@ export const WorkbenchView: React.FC = () => {
         isArs: item.isArs,
         status: 'loading',
         points: [],
+        axis: isRightAxis ? 'right' : 'left',
       }
 
       setActiveSeries((prev) => [...prev, newSeries])
@@ -239,6 +245,15 @@ export const WorkbenchView: React.FC = () => {
   // 4. Remove series handler
   const handleRemoveSeries = useCallback((id: string) => {
     setActiveSeries((prev) => prev.filter((s) => s.id !== id))
+  }, [])
+
+  // 4b. Toggle axis handler (left vs right)
+  const handleToggleAxis = useCallback((id: string) => {
+    setActiveSeries((prev) =>
+      prev.map((s) =>
+        s.id === id ? { ...s, axis: s.axis === 'right' ? 'left' : 'right' } : s
+      )
+    )
   }, [])
 
   // Update default Series A & B for correlation
@@ -510,6 +525,7 @@ export const WorkbenchView: React.FC = () => {
           <ActiveSeriesTray
             seriesList={activeSeries}
             onRemoveSeries={handleRemoveSeries}
+            onToggleAxis={handleToggleAxis}
             maxSeries={MAX_SERIES}
           />
         </div>

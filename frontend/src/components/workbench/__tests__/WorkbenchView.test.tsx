@@ -221,14 +221,14 @@ describe('WorkbenchView Component', () => {
       expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
     })
 
-    // By default, base 100 mode is active
-    expect(screen.getByText('Índice de base 100 dinámico (t₀ = 100)')).toBeInTheDocument()
-    expect(screen.getByText('Último valor (base 100)')).toBeInTheDocument()
-
-    // Switch to Unidad original
-    fireEvent.click(screen.getByText('Unidad original'))
+    // By default, original unit / native index mode is active
     expect(screen.getByText('Valores en unidad original')).toBeInTheDocument()
     expect(screen.getByText('Último valor')).toBeInTheDocument()
+
+    // Switch to Base 100
+    fireEvent.click(screen.getByText('Base 100 (t₀ = 100)'))
+    expect(screen.getByText('Índice de base 100 dinámico (t₀ = 100)')).toBeInTheDocument()
+    expect(screen.getByText('Último valor (base 100)')).toBeInTheDocument()
 
     // Switch to MoM %
     fireEvent.click(screen.getByText('Variación intermensual (MoM %)'))
@@ -391,5 +391,34 @@ describe('WorkbenchView Component', () => {
       expect(api.getRemSeries).toHaveBeenCalledWith('tipo_cambio', 'todos')
       expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
     })
+  })
+
+  it('allows toggling series axis between left and right in active series tray', async () => {
+    render(<WorkbenchView />)
+
+    const searchInput = screen.getByPlaceholderText('Buscar serie en BCRA, INDEC, FX y REM...')
+    fireEvent.focus(searchInput)
+    fireEvent.change(searchInput, { target: { value: 'base' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Base monetaria')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Base monetaria').closest('button')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
+    })
+
+    // First series defaults to left axis (Eje izq.)
+    const axisToggleBtn = screen.getByText('Eje izq. (Y₁)')
+    expect(axisToggleBtn).toBeInTheDocument()
+
+    // Toggle to right axis
+    fireEvent.click(axisToggleBtn)
+    expect(screen.getByText('Eje der. (Y₂)')).toBeInTheDocument()
+
+    // Toggle back to left axis
+    fireEvent.click(screen.getByText('Eje der. (Y₂)'))
+    expect(screen.getByText('Eje izq. (Y₁)')).toBeInTheDocument()
   })
 })
