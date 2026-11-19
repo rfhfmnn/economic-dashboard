@@ -90,7 +90,7 @@ The main session acts as the Orchestrator. It launches the PM, the Engineer, and
 
 - **Single Tasking:** Tasks are strictly GitHub issues. The Orchestrator and agents must process them **one at a time** (no parallel implementation of multiple issues).
 - **Context Awareness:** The Engineer MUST read the acceptance criteria before writing the first line of code, and re-read them before calling `@qa-engineer ready for review`.
-- **Version Control:** The Engineer must commit work regularly using conventional commits, rather than making a single massive commit at the end.
+- **Version control & strict no-push policy:** The Engineer must commit work regularly using conventional commits, rather than making a single massive commit at the end. Under NO circumstance should any agent execute `git push` or push branches/tags to any remote repository. Commits must remain strictly local so the implementation can be inspected and tested locally before any deployment.
 - **Do not skip step 2:** No code can be written without PM grooming.
 - **Strict Role Boundaries:** The Engineer MUST NOT close the issue. QA MUST NOT fix the code (only outputs PASS or FAIL with reasons).
 - **The Circuit Breaker:** If a task receives 3 consecutive FAIL verdicts from QA, the Orchestrator MUST pause, leave the issue open, and request human intervention. Do not loop endlessly.
@@ -157,6 +157,11 @@ The main session acts as the Orchestrator. It launches the PM, the Engineer, and
   - **Exceptions:** Only capitalize proper nouns (e.g., *"Banco Central"*, *"Argentina"*), official acronyms / abbreviations (e.g., *BCRA, CUIT, CUIL, MEP, CCL, CER, UVA, INDEC*), or standard syntactic requirements.
   - **No Title Case for Emphasis:** Never use Title Case to highlight or emphasize words or phrases. Use font weight (`font-medium` / `font-semibold`), muted badge colors, or italics instead.
 
+### 8. Strict no-push policy (local commits only)
+- **Rule:** Under no circumstance should any agent execute `git push` or push changes/tags to any remote repository.
+- All code changes must be committed **locally only** using conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`).
+- Remote synchronization and production deployment are strictly human-triggered actions to guarantee full local testing and verification before triggering CI/CD pipelines.
+
 ---
 
 ## 5. Definition of Done (DoD)
@@ -166,7 +171,7 @@ A task or GitHub issue is considered **Done** only when:
 2. **Automated Tests Passing:** Unit or integration tests are written and pass (`pytest` for backend, `vitest` for frontend).
 3. **Linting & Formatting:** Code adheres to styling guidelines (no Ruff or ESLint warnings).
 4. **No Regressions:** Existing test suites continue to pass cleanly.
-5. **Clean Git Commit:** Code is committed with conventional commit messages (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`).
+5. **Clean local git commit (no push):** Code is committed locally with conventional commit messages (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`). Never execute `git push`.
 6. **QA Verification:** The QA engineer has executed the test suite, verified the criteria, and provided a formal `## QA: PASS` verdict.
 7. **Typography & Casing Compliance:** All UI copy, headers, labels, and text strictly follow sentence case (no Title Case / Capitalize Each Word).
 
@@ -213,4 +218,6 @@ gh issue comment <issue-number> --body "@qa-engineer ready for review"
 
 # Close verified issue
 gh issue close <issue-number> --comment "Verified by QA - all acceptance criteria passed"
+
+# NOTE: NEVER execute `git push` — keep all commits local for human testing and verification!
 ```

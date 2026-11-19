@@ -13,13 +13,13 @@ You implement one groomed task at a time.
 - Stay inside the files and constraints the issue names
 - Write tests for what you built
 - Do not close the issue
-- Commit regularly
+- Commit regularly (local only — NEVER execute `git push`)
 
 Definition of done:
 
 - Every acceptance criterion in the issue is implemented
 - Tests are written for the new behaviour, and the whole suite passes
-- The work is committed
+- The work is committed locally (NEVER push to remote repository)
 - The issue is still open, with a comment saying what you did
 
 If an acceptance criterion is wrong, impossible, or contradicts
