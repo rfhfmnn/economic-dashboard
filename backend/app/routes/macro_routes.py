@@ -75,10 +75,13 @@ def get_macro_cpi(
 @router.get("/workbench/catalog")
 def get_workbench_catalog(
     q: Optional[str] = Query(None, description="Search query across BCRA, INDEC, FX, and REM catalogs"),
+    source: Optional[str] = Query(None, description="Filter by source (BCRA, INDEC, FX, REM)"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    limit: Optional[int] = Query(50, description="Maximum number of items to return (default: 50, use 0 or omit for all)"),
     db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """Get consolidated multi-variable catalog pool across BCRA, INDEC, FX, and REM."""
     from backend.app.services.workbench_service import get_unified_catalog
-    return get_unified_catalog(db=db, q=q)
+    return get_unified_catalog(db=db, q=q, source=source, category=category, limit=limit)
 
 

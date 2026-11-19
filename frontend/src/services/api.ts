@@ -22,6 +22,7 @@ import type {
   SystemStatusResponse,
   TimeSeriesPoint,
   VariableCatalogItem,
+  WorkbenchCatalogItem,
 } from '../types'
 import { KNOWN_BCRA_VARIABLES } from '../types'
 
@@ -331,9 +332,19 @@ export const api = {
   // -------------------------------------------------------------
   // Universal Multi-Variable Workbench Endpoints
   // -------------------------------------------------------------
-  getWorkbenchCatalog: (q?: string): Promise<any[]> => {
-    const qs = q ? `?q=${encodeURIComponent(q)}` : ''
-    return request<any[]>(`/macro/workbench/catalog${qs}`)
+  getWorkbenchCatalog: (
+    q?: string,
+    source?: string,
+    limit?: number,
+    category?: string
+  ): Promise<WorkbenchCatalogItem[]> => {
+    const params = new URLSearchParams()
+    if (q) params.append('q', q)
+    if (source && source !== 'all') params.append('source', source)
+    if (category && category !== 'all') params.append('category', category)
+    if (limit !== undefined && limit !== null) params.append('limit', String(limit))
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request<WorkbenchCatalogItem[]>(`/macro/workbench/catalog${qs}`)
   },
 
   downloadWorkbenchExcel: async (payload: {

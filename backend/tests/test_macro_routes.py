@@ -123,3 +123,39 @@ def test_get_macro_cpi_fallback(client: TestClient, monkeypatch):
     assert len(data) > 0
     assert data[0]["indice"] == 100.0
 
+
+def test_get_workbench_catalog_endpoint(client: TestClient):
+    """Verify GET /api/macro/workbench/catalog with search query, source, category, and limit parameters."""
+    # 1. Default catalog (50 items)
+    res_default = client.get("/api/macro/workbench/catalog")
+    assert res_default.status_code == 200
+    default_data = res_default.json()
+    assert isinstance(default_data, list)
+    assert len(default_data) == 50
+
+    # 2. Filtered by source
+    res_indec = client.get("/api/macro/workbench/catalog?source=INDEC&limit=25")
+    assert res_indec.status_code == 200
+    indec_data = res_indec.json()
+    assert len(indec_data) == 25
+    assert all(item["source"] == "INDEC" for item in indec_data)
+
+    # 3. Filtered by query with accent insensitivity
+    res_query = client.get("/api/macro/workbench/catalog?q=inflacion")
+    assert res_query.status_code == 200
+    query_data = res_query.json()
+    assert len(query_data) > 0
+
+    # 4. Filtered by category
+    res_cat = client.get("/api/macro/workbench/catalog?category=Cambiario")
+    assert res_cat.status_code == 200
+    cat_data = res_cat.json()
+    assert len(cat_data) > 0
+    assert all("cambiario" in item["category"].lower() for item in cat_data)
+
+    # 5. Custom limit
+    res_limit = client.get("/api/macro/workbench/catalog?limit=5")
+    assert res_limit.status_code == 200
+    assert len(res_limit.json()) == 5
+
+

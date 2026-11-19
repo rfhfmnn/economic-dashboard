@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Search, X, AlertCircle } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { Search, X, AlertCircle, Loader2 } from 'lucide-react'
+import { api } from '../../services/api'
 import type { WorkbenchCatalogItem, WorkbenchSource } from '../../types'
 
 export interface UniversalSearchBarProps {
-  catalog: WorkbenchCatalogItem[]
+  catalog?: WorkbenchCatalogItem[]
   activeSeriesIds: string[]
   onSelectSeries: (item: WorkbenchCatalogItem) => void
   maxSeriesReached: boolean
@@ -25,8 +26,13 @@ export const UniversalSearchBar: React.FC<UniversalSearchBarProps> = ({
   const [query, setQuery] = useState('')
   const [selectedSource, setSelectedSource] = useState<string>('all')
   const [isOpen, setIsOpen] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [results, setResults] = useState<WorkbenchCatalogItem[]>(catalog || [])
   const containerRef = useRef<HTMLDivElement>(null)
+  const requestIdRef = useRef(0)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -37,19 +43,55 @@ export const UniversalSearchBar: React.FC<UniversalSearchBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const filteredCatalog = catalog.filter((item) => {
-    const matchesSource = selectedSource === 'all' || item.source === selectedSource
-    if (!matchesSource) return false
+  // Sync initial catalog prop if results are empty
+  useEffect(() => {
+    if (catalog && catalog.length > 0 && results.length === 0 && !query) {
+      setResults(catalog)
+    }
+  }, [catalog, results.length, query])
 
-    if (!query.trim()) return true
-    const q = query.toLowerCase().trim()
-    return (
-      item.name.toLowerCase().includes(q) ||
-      item.category.toLowerCase().includes(q) ||
-      item.source.toLowerCase().includes(q) ||
-      (item.description && item.description.toLowerCase().includes(q))
-    )
-  })
+  // Asynchronous performSearch with race condition prevention
+  const performSearch = useCallback(
+    async (qText: string, sourceFilter: string) => {
+      const currentRequestId = ++requestIdRef.current
+      setIsSearching(true)
+      try {
+        const sourceParam = sourceFilter === 'all' ? undefined : sourceFilter
+        const queryParam = qText.trim() ? qText.trim() : undefined
+        const data = await api.getWorkbenchCatalog(queryParam, sourceParam, 50)
+        // Race condition guard: only update if this is still the most recent request
+        if (requestIdRef.current === currentRequestId) {
+          setResults(data)
+        }
+      } catch (err) {
+        if (requestIdRef.current === currentRequestId) {
+          console.error('Failed to search workbench catalog:', err)
+        }
+      } finally {
+        if (requestIdRef.current === currentRequestId) {
+          setIsSearching(false)
+        }
+      }
+    },
+    []
+  )
+
+  // Debounced search trigger (300 ms)
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(query, selectedSource)
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [query, selectedSource, performSearch])
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -97,17 +139,25 @@ export const UniversalSearchBar: React.FC<UniversalSearchBarProps> = ({
             setIsOpen(true)
           }}
           placeholder="Buscar serie en BCRA, INDEC, FX y REM..."
-          className="w-full pl-9 pr-9 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+          className="w-full pl-9 pr-16 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
         />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery('')}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1.5">
+          {isSearching && (
+            <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" data-testid="search-spinner" />
+          )}
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('')
+              }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Limit notice */}
@@ -121,15 +171,23 @@ export const UniversalSearchBar: React.FC<UniversalSearchBarProps> = ({
       {/* Dropdown results */}
       {isOpen && (
         <div className="absolute z-30 mt-1.5 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
-          {filteredCatalog.length === 0 ? (
+          {isSearching && results.length === 0 ? (
+            <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+              <span>Buscando series...</span>
+            </div>
+          ) : results.length === 0 ? (
             <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
               No se encontraron series que coincidan con la búsqueda.
             </div>
           ) : (
-            filteredCatalog.slice(0, 15).map((item) => {
+            results.map((item) => {
               const isAlreadyActive = activeSeriesIds.includes(item.id)
               const isDisabled = isAlreadyActive || maxSeriesReached
-              const badge = SOURCE_BADGES[item.source]
+              const badge = SOURCE_BADGES[item.source] || {
+                label: item.source,
+                className: 'bg-slate-100 text-slate-800',
+              }
 
               return (
                 <button
@@ -160,7 +218,7 @@ export const UniversalSearchBar: React.FC<UniversalSearchBarProps> = ({
                         {item.name}
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                        {item.category} • {item.unit}
+                        {item.category} • {item.unit || 'Sin unidad'} • {item.frequency || 'diaria'}
                       </div>
                     </div>
                   </div>
