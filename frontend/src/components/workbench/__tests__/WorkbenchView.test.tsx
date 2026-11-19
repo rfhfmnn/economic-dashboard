@@ -253,4 +253,60 @@ describe('WorkbenchView Component', () => {
     fireEvent.click(autoBtn)
     expect(autoBtn).toHaveClass('font-medium')
   })
+
+  it('allows switching periodicity between Original, Mensual, and Trimestral and updates stats', async () => {
+    render(<WorkbenchView />)
+
+    // Add Base monetaria series
+    const searchInput = screen.getByPlaceholderText('Buscar serie en BCRA, INDEC, FX y REM...')
+    fireEvent.focus(searchInput)
+    fireEvent.change(searchInput, { target: { value: 'base' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Base monetaria')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Base monetaria').closest('button')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
+    })
+
+    const originalBtn = screen.getByText('Original')
+    const mensualBtn = screen.getByText('Mensual')
+    const trimestralBtn = screen.getByText('Trimestral')
+
+    expect(originalBtn).toBeInTheDocument()
+    expect(mensualBtn).toBeInTheDocument()
+    expect(trimestralBtn).toBeInTheDocument()
+
+    // Switch to Mensual
+    fireEvent.click(mensualBtn)
+    expect(mensualBtn).toHaveClass('font-medium')
+
+    // Switch to Trimestral
+    fireEvent.click(trimestralBtn)
+    expect(trimestralBtn).toHaveClass('font-medium')
+
+    // Switch back to Original
+    fireEvent.click(originalBtn)
+    expect(originalBtn).toHaveClass('font-medium')
+  })
+
+  it('allows switching line style between Curva continua and Escalonada', async () => {
+    render(<WorkbenchView />)
+
+    const continuousBtn = screen.getByText('Curva continua')
+    const stepBtn = screen.getByText('Escalonada (forward-fill)')
+
+    expect(continuousBtn).toBeInTheDocument()
+    expect(stepBtn).toBeInTheDocument()
+
+    // Switch to step
+    fireEvent.click(stepBtn)
+    expect(stepBtn).toHaveClass('font-medium')
+
+    // Switch back to continuous
+    fireEvent.click(continuousBtn)
+    expect(continuousBtn).toHaveClass('font-medium')
+  })
 })

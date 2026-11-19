@@ -10,6 +10,7 @@ import {
   calculateEffectiveRate,
   resampleSeriesPoints,
   resampleChartSeries,
+  resampleSeries,
 } from './resampler'
 import type { ChartSeries } from '../components/macro/MacroChart'
 
@@ -348,6 +349,38 @@ describe('Temporal Periodicity Resampler Engine', () => {
       expect(resampled.taxonomy).toBe('rate')
       expect(resampled.unit).toBe('% TET')
       expect(resampled.aggregationMethod).toBe('Tasa efectiva trimestral capitalizada (TET)')
+    })
+  })
+
+  describe('resampleSeries Universal Helper', () => {
+    it('resamples Workbench series object correctly', () => {
+      const workbenchSeries = {
+        id: 'bcra_15',
+        name: 'Base monetaria',
+        unit: 'Millones ARS',
+        frequency: 'diaria' as const,
+        points: [
+          { fecha: '2026-08-01', valor: 10000 },
+          { fecha: '2026-08-31', valor: 12000 },
+        ],
+      }
+
+      const resampled = resampleSeries(workbenchSeries, 'mensual')
+      expect(resampled.taxonomy).toBe('stock')
+      expect(resampled.frequency).toBe('mensual')
+      expect(resampled.points).toHaveLength(1)
+      expect(resampled.points[0].valor).toBe(12000)
+    })
+
+    it('resamples raw points array overload', () => {
+      const points = [
+        { fecha: '2026-08-01', valor: 1000 },
+        { fecha: '2026-08-31', valor: 1100 },
+      ]
+
+      const resampled = resampleSeries(points, 'fx', 'mensual')
+      expect(resampled).toHaveLength(1)
+      expect(resampled[0].valor).toBe(1050)
     })
   })
 })

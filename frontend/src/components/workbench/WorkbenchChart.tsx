@@ -14,6 +14,7 @@ import type {
   WorkbenchSeriesData,
   RollingCorrelationPoint,
   WorkbenchScaleMode,
+  Periodicity,
 } from '../../types'
 import type { AlignedPoint } from '../../utils/alignment'
 import type { ExpressionMode } from '../../utils/transforms'
@@ -31,6 +32,30 @@ export interface WorkbenchChartProps {
   seriesAName?: string
   seriesBName?: string
   scaleMode?: ScaleMode
+  lineStyle?: 'monotone' | 'step'
+  periodicity?: Periodicity
+}
+
+/**
+ * Formats a canonical ISO or period date string based on active periodicity.
+ * E.g. '2026-01-31' -> '2026-01' in monthly mode; '2026-03-31' -> '2026-Q1' in quarterly mode.
+ */
+export function formatPeriodDate(dateStr?: string | null, periodicity?: Periodicity): string {
+  if (!dateStr) return ''
+  const clean = String(dateStr).slice(0, 10)
+  if (periodicity === 'mensual') {
+    return clean.slice(0, 7)
+  }
+  if (periodicity === 'trimestral') {
+    if (clean.includes('-Q')) return clean
+    const month = parseInt(clean.slice(5, 7), 10)
+    if (!isNaN(month) && month >= 1 && month <= 12) {
+      const q = Math.ceil(month / 3)
+      return `${clean.slice(0, 4)}-Q${q}`
+    }
+    return clean.slice(0, 7)
+  }
+  return clean
 }
 
 /**
@@ -85,6 +110,8 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
   seriesAName,
   seriesBName,
   scaleMode = 'auto',
+  lineStyle = 'monotone',
+  periodicity = 'original',
 }) => {
   const mode: ExpressionMode =
     expressionMode ??
@@ -172,6 +199,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
                 tick={{ fontSize: 11, fill: '#64748b' }}
                 tickLine={false}
                 axisLine={{ stroke: '#cbd5e1' }}
+                tickFormatter={(val) => formatPeriodDate(String(val), periodicity)}
               />
               <YAxis
                 domain={[-1.0, 1.0]}
@@ -193,7 +221,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
                   value !== null && value !== undefined ? Number(value).toFixed(4) : 'N/A',
                   'Coeficiente r',
                 ]}
-                labelFormatter={(label) => `Fecha: ${label}`}
+                labelFormatter={(label) => `Fecha: ${formatPeriodDate(String(label), periodicity)}`}
               />
               <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
               <ReferenceLine y={0.5} stroke="#10b981" strokeDasharray="2 2" opacity={0.5} />
@@ -286,6 +314,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
               tick={{ fontSize: 11, fill: '#64748b' }}
               tickLine={false}
               axisLine={{ stroke: '#cbd5e1' }}
+              tickFormatter={(val) => formatPeriodDate(String(val), periodicity)}
             />
 
             {/* Left Y-axis (or single Y-axis) */}
@@ -386,7 +415,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
                 }
                 return [formatted, label]
               }}
-              labelFormatter={(label) => `Fecha: ${label}`}
+              labelFormatter={(label) => `Fecha: ${formatPeriodDate(String(label), periodicity)}`}
             />
             {(mode === 'mom' || mode === 'yoy') && (
               <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="3 3" />
@@ -400,11 +429,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
                 <Line
                   key={s.id}
                   yAxisId={yAxisId}
-                  type={
-                    s.frequency === 'mensual' || s.frequency === 'trimestral'
-                      ? 'stepAfter'
-                      : 'monotone'
-                  }
+                  type={lineStyle === 'step' ? 'stepAfter' : 'monotone'}
                   dataKey={s.id}
                   name={s.id}
                   stroke={s.color}

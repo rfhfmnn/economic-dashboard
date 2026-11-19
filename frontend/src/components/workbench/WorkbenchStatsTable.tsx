@@ -1,10 +1,12 @@
 import React from 'react'
-import type { WorkbenchSeriesStats, WorkbenchSource } from '../../types'
+import type { WorkbenchSeriesStats, WorkbenchSource, Periodicity } from '../../types'
 import type { ExpressionMode } from '../../utils/transforms'
+import { formatPeriodDate } from './WorkbenchChart'
 
 export interface WorkbenchStatsTableProps {
   stats: WorkbenchSeriesStats[]
   expressionMode?: ExpressionMode
+  periodicity?: Periodicity
 }
 
 const SOURCE_BADGES: Record<WorkbenchSource, { label: string; className: string }> = {
@@ -17,6 +19,7 @@ const SOURCE_BADGES: Record<WorkbenchSource, { label: string; className: string 
 export const WorkbenchStatsTable: React.FC<WorkbenchStatsTableProps> = ({
   stats,
   expressionMode = 'base100',
+  periodicity = 'original',
 }) => {
   if (stats.length === 0) return null
 
@@ -172,7 +175,7 @@ export const WorkbenchStatsTable: React.FC<WorkbenchStatsTableProps> = ({
                     {latestFormatted}
                   </td>
                   <td className="py-2.5 px-3 text-center font-mono tabular-nums text-slate-500">
-                    {row.fechaUltimo ? row.fechaUltimo.slice(0, 10) : '—'}
+                    {row.fechaUltimo ? formatPeriodDate(row.fechaUltimo, periodicity) : '—'}
                   </td>
                   <td className={`py-2.5 px-3 text-right font-mono tabular-nums font-medium ${secondaryColor}`}>
                     {secondaryVal}

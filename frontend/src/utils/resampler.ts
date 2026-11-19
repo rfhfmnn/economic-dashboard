@@ -30,6 +30,7 @@ export interface ResampledSeriesResult {
 export function inferSeriesTaxonomy(series: {
   id?: number | string
   title?: string
+  name?: string
   unit?: string
 }): SeriesTaxonomy {
   const numId = typeof series.id === 'number' ? series.id : Number(String(series.id || '').replace(/\D/g, ''))
@@ -72,7 +73,7 @@ export function inferSeriesTaxonomy(series: {
   }
 
   const rawUnit = (series.unit || (numId && KNOWN_BCRA_VARIABLES[numId]?.unit) || '').trim().toLowerCase()
-  const rawTitle = (series.title || (numId && KNOWN_BCRA_VARIABLES[numId]?.name) || '').trim().toLowerCase()
+  const rawTitle = (series.title || series.name || (numId && KNOWN_BCRA_VARIABLES[numId]?.name) || '').trim().toLowerCase()
 
   // Rates
   if (
@@ -488,3 +489,88 @@ export function resampleChartSeries(
     hasPartialPeriod,
   }
 }
+
+/**
+ * Universal series resampler helper.
+ * Supports both series object (WorkbenchSeriesData / ChartSeries) and raw points array.
+ */
+export function resampleSeries<
+  T extends {
+    id?: number | string
+    name?: string
+    title?: string
+    unit?: string
+    frequency?: 'diaria' | 'mensual' | 'trimestral'
+    points?: MacroSeriesPoint[]
+    data?: MacroSeriesPoint[]
+  }
+>(
+  series: T,
+  periodicity: Periodicity,
+  referenceDate?: Date
+): T & {
+  points: ResampledPoint[]
+  data: ResampledPoint[]
+  taxonomy: SeriesTaxonomy
+  aggregationMethod: string
+  hasPartialPeriod: boolean
+  frequency: 'diaria' | 'mensual' | 'trimestral'
+}
+export function resampleSeries(
+  points: MacroSeriesPoint[],
+  taxonomy: SeriesTaxonomy,
+  periodicity: Periodicity,
+  referenceDate?: Date
+): ResampledPoint[]
+export function resampleSeries(
+  seriesOrPoints: any,
+  taxonomyOrPeriodicity: any,
+  periodicityOrRefDate?: any,
+  referenceDate?: Date
+): any {
+  if (Array.isArray(seriesOrPoints)) {
+    return resampleSeriesPoints(
+      seriesOrPoints,
+      taxonomyOrPeriodicity as SeriesTaxonomy,
+      periodicityOrRefDate as Periodicity,
+      referenceDate
+    )
+  }
+
+  const series = seriesOrPoints
+  const periodicity = taxonomyOrPeriodicity as Periodicity
+  const refDate = periodicityOrRefDate instanceof Date ? periodicityOrRefDate : referenceDate
+
+  const taxonomy = inferSeriesTaxonomy({
+    id: series.id,
+    title: series.title,
+    name: series.name,
+    unit: series.unit,
+  })
+  const aggregationMethod = getTaxonomyAggregationLabel(taxonomy, periodicity)
+  const pts = series.points || series.data || []
+  const resampledData = resampleSeriesPoints(pts, taxonomy, periodicity, refDate)
+  const hasPartialPeriod = resampledData.some((p: ResampledPoint) => p.isPartial)
+
+  let unit = series.unit
+  if (taxonomy === 'rate') {
+    if (periodicity === 'mensual') {
+      unit = '% TEM'
+    } else if (periodicity === 'trimestral') {
+      unit = '% TET'
+    }
+  }
+
+  return {
+    ...series,
+    unit,
+    points: resampledData,
+    data: resampledData,
+    frequency: periodicity === 'original' ? (series.frequency || 'diaria') : periodicity,
+    taxonomy,
+    aggregationMethod,
+    periodicity,
+    hasPartialPeriod,
+  }
+}
+

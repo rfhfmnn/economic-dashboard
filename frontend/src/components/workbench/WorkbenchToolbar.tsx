@@ -1,12 +1,13 @@
 import React from 'react'
 import { Download, ArrowRightLeft } from 'lucide-react'
-import type { WorkbenchSeriesData } from '../../types'
+import type { WorkbenchSeriesData, Periodicity } from '../../types'
 import type { ExpressionMode } from '../../utils/transforms'
 
 export type WorkbenchViewMode = 'normalized' | 'correlation'
 export type NormalizationType = 'base100' | 'percent' | ExpressionMode
 export type TimeframeOption = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max'
 export type ScaleMode = 'auto' | 'zero'
+export type LineStyleOption = 'monotone' | 'step'
 export type { ExpressionMode }
 
 export interface WorkbenchToolbarProps {
@@ -23,6 +24,10 @@ export interface WorkbenchToolbarProps {
   onChangeScaleMode?: (mode: ScaleMode) => void
   normalization?: NormalizationType
   onChangeNormalization?: (norm: NormalizationType) => void
+  periodicity?: Periodicity
+  onChangePeriodicity?: (periodicity: Periodicity) => void
+  lineStyle?: LineStyleOption
+  onChangeLineStyle?: (style: LineStyleOption) => void
   adjustInflation: boolean
   onToggleAdjustInflation: (adjust: boolean) => void
   hasArsSeries: boolean
@@ -55,6 +60,10 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
   onChangeScaleMode,
   normalization,
   onChangeNormalization,
+  periodicity = 'original',
+  onChangePeriodicity,
+  lineStyle = 'monotone',
+  onChangeLineStyle,
   adjustInflation,
   onToggleAdjustInflation,
   hasArsSeries,
@@ -229,6 +238,74 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
                 }`}
               >
                 Variación interanual (YoY %)
+              </button>
+            </div>
+
+            {/* Periodicity segmented selector */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md text-xs">
+              <button
+                type="button"
+                onClick={() => onChangePeriodicity?.('original')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  periodicity === 'original'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Frecuencia original de publicación"
+              >
+                Original
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangePeriodicity?.('mensual')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  periodicity === 'mensual'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Sumarización mensual armonizada"
+              >
+                Mensual
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangePeriodicity?.('trimestral')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  periodicity === 'trimestral'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Sumarización trimestral armonizada"
+              >
+                Trimestral
+              </button>
+            </div>
+
+            {/* Line style toggle */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md text-xs">
+              <button
+                type="button"
+                onClick={() => onChangeLineStyle?.('monotone')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  lineStyle === 'monotone'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Trazado continuo y suave entre observaciones"
+              >
+                Curva continua
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeLineStyle?.('step')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  lineStyle === 'step'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Trazado escalonado con retención de último valor"
+              >
+                Escalonada (forward-fill)
               </button>
             </div>
 

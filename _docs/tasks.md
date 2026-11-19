@@ -258,14 +258,14 @@ Allow users to select temporal aggregation periodicity ('Original', 'Mensual', '
 
 ## Acceptance criteria
 
-- [ ] `WorkbenchToolbar.tsx` displays a periodicity selector: `"Original"`, `"Mensual"`, `"Trimestral"`.
-- [ ] When `"Mensual"` or `"Trimestral"` is selected, daily series (FX, policy rates, balances) are intelligently aggregated using `resampler.ts` taxonomies (averages for FX, TEM for rates, closing for balances).
-- [ ] In `WorkbenchChart.tsx`, monthly and quarterly series connect data points with continuous smooth curves (`monotone`) by default rather than forced right-angle stairs (`stepAfter`).
-- [ ] An optional line style toggle in `WorkbenchToolbar.tsx` allows choosing between `"Curva continua"` and `"Escalonada (forward-fill)"`.
-- [ ] Tooltip and date formatting adapt to the selected periodicity (e.g. `YYYY-MM` in monthly mode).
-- [ ] Summary statistics table recalculates observations and metrics matching the chosen periodicity.
-- [ ] Automated tests in `WorkbenchChart.test.tsx`, `WorkbenchToolbar.test.tsx`, and `WorkbenchView.test.tsx` verify periodicity switching and curve rendering.
-- [ ] Strict sentence case across all labels, buttons, and tooltips.
+- [x] `WorkbenchToolbar.tsx` displays a periodicity selector: `"Original"`, `"Mensual"`, `"Trimestral"`.
+- [x] When `"Mensual"` or `"Trimestral"` is selected, daily series (FX, policy rates, balances) are intelligently aggregated using `resampler.ts` taxonomies (averages for FX, TEM for rates, closing for balances).
+- [x] In `WorkbenchChart.tsx`, monthly and quarterly series connect data points with continuous smooth curves (`monotone`) by default rather than forced right-angle stairs (`stepAfter`).
+- [x] An optional line style toggle in `WorkbenchToolbar.tsx` allows choosing between `"Curva continua"` and `"Escalonada (forward-fill)"`.
+- [x] Tooltip and date formatting adapt to the selected periodicity (e.g. `YYYY-MM` in monthly mode).
+- [x] Summary statistics table recalculates observations and metrics matching the chosen periodicity.
+- [x] Automated tests in `WorkbenchChart.test.tsx`, `WorkbenchToolbar.test.tsx`, and `WorkbenchView.test.tsx` verify periodicity switching and curve rendering.
+- [x] Strict sentence case across all labels, buttons, and tooltips.
 
 ## Out of scope
 

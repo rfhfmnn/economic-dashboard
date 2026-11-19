@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { UniversalSearchBar } from './UniversalSearchBar'
 import { ActiveSeriesTray } from './ActiveSeriesTray'
-import { WorkbenchToolbar, type WorkbenchViewMode, type TimeframeOption, type ScaleMode } from './WorkbenchToolbar'
+import {
+  WorkbenchToolbar,
+  type WorkbenchViewMode,
+  type TimeframeOption,
+  type ScaleMode,
+  type LineStyleOption,
+} from './WorkbenchToolbar'
 import { WorkbenchChart } from './WorkbenchChart'
 import { WorkbenchStatsTable } from './WorkbenchStatsTable'
 import { api } from '../../services/api'
@@ -11,10 +17,12 @@ import type {
   MacroSeriesPoint,
   WorkbenchSeriesStats,
   CpiPoint,
+  Periodicity,
 } from '../../types'
 import { alignTimeSeries } from '../../utils/alignment'
 import { calculateRollingCorrelation, calculateSeriesStats } from '../../utils/correlation'
 import { buildDeflatorModel, deflateSeries } from '../../utils/deflator'
+import { resampleSeries, getMonthEndDate, getQuarterEndDate } from '../../utils/resampler'
 import {
   type ExpressionMode,
   transformOriginal,
@@ -45,6 +53,8 @@ export const WorkbenchView: React.FC = () => {
   const [customEnd, setCustomEnd] = useState<string>('')
   const [expressionMode, setExpressionMode] = useState<ExpressionMode>('base100')
   const [scaleMode, setScaleMode] = useState<ScaleMode>('auto')
+  const [periodicity, setPeriodicity] = useState<Periodicity>('original')
+  const [lineStyle, setLineStyle] = useState<LineStyleOption>('monotone')
   const [adjustInflation, setAdjustInflation] = useState<boolean>(false)
 
   // Correlation controls
@@ -218,9 +228,56 @@ export const WorkbenchView: React.FC = () => {
     })
   }, [activeSeries, adjustInflation, deflatorModel])
 
+  // Resample series when monthly or quarterly periodicity is selected
+  const summarizedSeries = useMemo(() => {
+    if (periodicity === 'original') {
+      return effectiveSeries
+    }
+    return effectiveSeries.map((s) => {
+      if (s.frequency === 'diaria') {
+        const resampled = resampleSeries(s, periodicity)
+        return {
+          ...s,
+          points: resampled.points,
+          unit: resampled.unit || s.unit,
+          frequency: periodicity,
+        }
+      }
+      if (s.frequency === 'mensual' && periodicity === 'trimestral') {
+        const resampled = resampleSeries(s, periodicity)
+        return {
+          ...s,
+          points: resampled.points,
+          unit: resampled.unit || s.unit,
+          frequency: periodicity,
+        }
+      }
+      return s
+    })
+  }, [effectiveSeries, periodicity])
+
+  // Compute effective end date expanding to period boundary to avoid clipping current period
+  const effectiveEndDate = useMemo(() => {
+    if (!customEnd) return undefined
+    if (periodicity === 'mensual') {
+      const year = parseInt(customEnd.slice(0, 4), 10)
+      const month = parseInt(customEnd.slice(5, 7), 10)
+      if (!isNaN(year) && !isNaN(month)) {
+        return getMonthEndDate(year, month)
+      }
+    } else if (periodicity === 'trimestral') {
+      const year = parseInt(customEnd.slice(0, 4), 10)
+      const month = parseInt(customEnd.slice(5, 7), 10)
+      if (!isNaN(year) && !isNaN(month)) {
+        return getQuarterEndDate(year, Math.ceil(month / 3))
+      }
+    }
+    return customEnd
+  }, [customEnd, periodicity])
+
   // 6. Aligned data for normalized time-series chart
   const alignedData = useMemo(() => {
-    const entries = effectiveSeries.map((s) => ({
+    const entries = summarizedSeries.map((s) => ({
       key: s.id,
       frequency: s.frequency,
       points: s.points,
@@ -229,14 +286,14 @@ export const WorkbenchView: React.FC = () => {
     return alignTimeSeries(entries, {
       expressionMode,
       startDate: customStart || undefined,
-      endDate: customEnd || undefined,
+      endDate: effectiveEndDate,
     })
-  }, [effectiveSeries, expressionMode, customStart, customEnd])
+  }, [summarizedSeries, expressionMode, customStart, effectiveEndDate])
 
   // 7. Rolling correlation computation
   const { correlationPoints, isDownsampled } = useMemo(() => {
-    const sA = effectiveSeries.find((s) => s.id === seriesA)
-    const sB = effectiveSeries.find((s) => s.id === seriesB)
+    const sA = summarizedSeries.find((s) => s.id === seriesA)
+    const sB = summarizedSeries.find((s) => s.id === seriesB)
 
     if (!sA || !sB || sA.id === sB.id) {
       return { correlationPoints: [], isDownsampled: false }
@@ -248,9 +305,9 @@ export const WorkbenchView: React.FC = () => {
       ptsA = ptsA.filter((p) => p.fecha >= customStart)
       ptsB = ptsB.filter((p) => p.fecha >= customStart)
     }
-    if (customEnd) {
-      ptsA = ptsA.filter((p) => p.fecha <= customEnd)
-      ptsB = ptsB.filter((p) => p.fecha <= customEnd)
+    if (effectiveEndDate) {
+      ptsA = ptsA.filter((p) => p.fecha <= effectiveEndDate)
+      ptsB = ptsB.filter((p) => p.fecha <= effectiveEndDate)
     }
 
     const res = calculateRollingCorrelation(
@@ -263,11 +320,11 @@ export const WorkbenchView: React.FC = () => {
       correlationPoints: res.points,
       isDownsampled: res.isDownsampled,
     }
-  }, [effectiveSeries, seriesA, seriesB, correlationWindow, customStart, customEnd])
+  }, [summarizedSeries, seriesA, seriesB, correlationWindow, customStart, effectiveEndDate])
 
   // 8. Statistics table summary
   const statsList = useMemo<WorkbenchSeriesStats[]>(() => {
-    return effectiveSeries.map((s) => {
+    return summarizedSeries.map((s) => {
       let pts = s.points
 
       if (expressionMode === 'mom') {
@@ -277,7 +334,7 @@ export const WorkbenchView: React.FC = () => {
       }
 
       if (customStart) pts = pts.filter((p) => p.fecha >= customStart)
-      if (customEnd) pts = pts.filter((p) => p.fecha <= customEnd)
+      if (effectiveEndDate) pts = pts.filter((p) => p.fecha <= effectiveEndDate)
 
       if (expressionMode === 'base100') {
         pts = transformBase100(pts)
@@ -287,7 +344,7 @@ export const WorkbenchView: React.FC = () => {
 
       return calculateSeriesStats(s.id, s.name, s.source, pts, s.unit)
     })
-  }, [effectiveSeries, expressionMode, customStart, customEnd])
+  }, [summarizedSeries, expressionMode, customStart, effectiveEndDate])
 
   // 9. Export to CSV handler
   const handleExportCsv = useCallback(() => {
@@ -398,6 +455,10 @@ export const WorkbenchView: React.FC = () => {
         onChangeExpressionMode={setExpressionMode}
         scaleMode={scaleMode}
         onChangeScaleMode={setScaleMode}
+        periodicity={periodicity}
+        onChangePeriodicity={setPeriodicity}
+        lineStyle={lineStyle}
+        onChangeLineStyle={setLineStyle}
         adjustInflation={adjustInflation}
         onToggleAdjustInflation={setAdjustInflation}
         hasArsSeries={hasArsSeries}
@@ -419,15 +480,21 @@ export const WorkbenchView: React.FC = () => {
         viewMode={viewMode}
         expressionMode={expressionMode}
         scaleMode={scaleMode}
+        periodicity={periodicity}
+        lineStyle={lineStyle}
         alignedData={alignedData}
-        activeSeries={activeSeries}
+        activeSeries={summarizedSeries}
         correlationPoints={correlationPoints}
         seriesAName={activeSeries.find((s) => s.id === seriesA)?.name}
         seriesBName={activeSeries.find((s) => s.id === seriesB)?.name}
       />
 
       {/* Summary Statistics Table */}
-      <WorkbenchStatsTable stats={statsList} expressionMode={expressionMode} />
+      <WorkbenchStatsTable
+        stats={statsList}
+        expressionMode={expressionMode}
+        periodicity={periodicity}
+      />
     </div>
   )
 }

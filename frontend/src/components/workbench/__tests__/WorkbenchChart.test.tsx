@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { WorkbenchChart, calculateDomain } from '../WorkbenchChart'
+import { WorkbenchChart, calculateDomain, formatPeriodDate } from '../WorkbenchChart'
 import type { WorkbenchSeriesData } from '../../../types'
 
 describe('calculateDomain helper', () => {
@@ -221,5 +221,77 @@ describe('WorkbenchChart Component', () => {
       />
     )
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  describe('formatPeriodDate helper', () => {
+    it('formats dates as YYYY-MM in monthly periodicity', () => {
+      expect(formatPeriodDate('2026-01-31', 'mensual')).toBe('2026-01')
+      expect(formatPeriodDate('2026-12-31', 'mensual')).toBe('2026-12')
+      expect(formatPeriodDate('2026-05-15', 'mensual')).toBe('2026-05')
+    })
+
+    it('formats dates as YYYY-Q[1-4] in quarterly periodicity', () => {
+      expect(formatPeriodDate('2026-03-31', 'trimestral')).toBe('2026-Q1')
+      expect(formatPeriodDate('2026-06-30', 'trimestral')).toBe('2026-Q2')
+      expect(formatPeriodDate('2026-09-30', 'trimestral')).toBe('2026-Q3')
+      expect(formatPeriodDate('2026-12-31', 'trimestral')).toBe('2026-Q4')
+      expect(formatPeriodDate('2026-Q1', 'trimestral')).toBe('2026-Q1')
+    })
+
+    it('preserves full ISO date in original periodicity or when missing', () => {
+      expect(formatPeriodDate('2026-01-31', 'original')).toBe('2026-01-31')
+      expect(formatPeriodDate('2026-01-31')).toBe('2026-01-31')
+      expect(formatPeriodDate('')).toBe('')
+      expect(formatPeriodDate(null)).toBe('')
+    })
+  })
+
+  describe('Line curve style and periodicity rendering', () => {
+    const monthlySeries: WorkbenchSeriesData = {
+      id: 'indec_ipc',
+      source: 'INDEC',
+      name: 'IPC nacional',
+      color: '#f59e0b',
+      unit: '% mensual',
+      frequency: 'mensual',
+      isArs: false,
+      status: 'success',
+      points: [
+        { fecha: '2026-01-31', valor: 2.5 },
+        { fecha: '2026-02-28', valor: 2.2 },
+      ],
+    }
+
+    it('renders chart with continuous curve (monotone) by default even for monthly series', () => {
+      const { container } = render(
+        <WorkbenchChart
+          viewMode="normalized"
+          expressionMode="original"
+          periodicity="mensual"
+          lineStyle="monotone"
+          alignedData={[{ fecha: '2026-01-31', indec_ipc: 2.5 }]}
+          activeSeries={[monthlySeries]}
+          correlationPoints={[]}
+        />
+      )
+
+      expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument()
+    })
+
+    it('renders stepped chart when lineStyle is set to step', () => {
+      const { container } = render(
+        <WorkbenchChart
+          viewMode="normalized"
+          expressionMode="original"
+          periodicity="mensual"
+          lineStyle="step"
+          alignedData={[{ fecha: '2026-01-31', indec_ipc: 2.5 }]}
+          activeSeries={[monthlySeries]}
+          correlationPoints={[]}
+        />
+      )
+
+      expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument()
+    })
   })
 })

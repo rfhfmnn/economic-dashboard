@@ -121,4 +121,74 @@ describe('WorkbenchToolbar Component', () => {
     })
     expect(checkbox).toBeDisabled()
   })
+
+  it('renders periodicity selector in strict sentence case and triggers onChangePeriodicity', () => {
+    const onChangePeriodicity = vi.fn()
+    const { rerender } = render(
+      <WorkbenchToolbar
+        {...defaultProps}
+        periodicity="original"
+        onChangePeriodicity={onChangePeriodicity}
+      />
+    )
+
+    const originalBtn = screen.getByText('Original')
+    const mensualBtn = screen.getByText('Mensual')
+    const trimestralBtn = screen.getByText('Trimestral')
+
+    expect(originalBtn).toBeInTheDocument()
+    expect(mensualBtn).toBeInTheDocument()
+    expect(trimestralBtn).toBeInTheDocument()
+
+    // Click Mensual
+    fireEvent.click(mensualBtn)
+    expect(onChangePeriodicity).toHaveBeenCalledWith('mensual')
+
+    // Click Trimestral
+    fireEvent.click(trimestralBtn)
+    expect(onChangePeriodicity).toHaveBeenCalledWith('trimestral')
+
+    // Rerender with mensual active and click Original
+    rerender(
+      <WorkbenchToolbar
+        {...defaultProps}
+        periodicity="mensual"
+        onChangePeriodicity={onChangePeriodicity}
+      />
+    )
+    fireEvent.click(originalBtn)
+    expect(onChangePeriodicity).toHaveBeenCalledWith('original')
+  })
+
+  it('renders line style toggle in strict sentence case and triggers onChangeLineStyle', () => {
+    const onChangeLineStyle = vi.fn()
+    const { rerender } = render(
+      <WorkbenchToolbar
+        {...defaultProps}
+        lineStyle="monotone"
+        onChangeLineStyle={onChangeLineStyle}
+      />
+    )
+
+    const continuousBtn = screen.getByText('Curva continua')
+    const stepBtn = screen.getByText('Escalonada (forward-fill)')
+
+    expect(continuousBtn).toBeInTheDocument()
+    expect(stepBtn).toBeInTheDocument()
+
+    // Click Escalonada (forward-fill)
+    fireEvent.click(stepBtn)
+    expect(onChangeLineStyle).toHaveBeenCalledWith('step')
+
+    // Rerender with step active and click Curva continua
+    rerender(
+      <WorkbenchToolbar
+        {...defaultProps}
+        lineStyle="step"
+        onChangeLineStyle={onChangeLineStyle}
+      />
+    )
+    fireEvent.click(continuousBtn)
+    expect(onChangeLineStyle).toHaveBeenCalledWith('monotone')
+  })
 })
