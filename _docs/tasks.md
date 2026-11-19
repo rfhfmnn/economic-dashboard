@@ -167,17 +167,17 @@ Expose the complete catalog of all available series (>1000 BCRA variables from d
 
 ## Acceptance criteria
 
-- [ ] `backend/app/services/workbench_service.py` queries `MacroVariable` from database to expose all >1000 BCRA variables dynamically.
-- [ ] `workbench_service.py` includes all 118 datasets from INDEC `DATASET_REGISTRY` (IPI, IPC divisions/regions, EMAE branches, Canastas, etc.).
-- [ ] `workbench_service.py` includes all financial FX quotes (oficial mayorista, minorista, MEP, CCL, blue, tarjeta, cripto).
-- [ ] `workbench_service.py` includes REM forecast series (mediana y top 10).
-- [ ] `GET /api/macro/workbench/catalog` accepts `q`, `source`, `category`, and `limit` query parameters with accent-insensitive search and server-side filtering.
-- [ ] `UniversalSearchBar.tsx` implements debounced search (300ms) calling `api.getWorkbenchCatalog(q, source, limit)`.
-- [ ] Search results display source badge (`[BCRA]`, `[INDEC]`, `[FX]`, `[REM]`), canonical name, unit, frequency, and category.
-- [ ] Search input handles fast typing without race conditions or memory lag.
-- [ ] Active series limit of 5 is preserved.
-- [ ] Automated tests verify catalog retrieval with query filters, limit parameters, and search UI debounce.
-- [ ] Strict sentence case across all labels, placeholders, and tooltips.
+- [x] `backend/app/services/workbench_service.py` queries `MacroVariable` from database to expose all >1000 BCRA variables dynamically.
+- [x] `workbench_service.py` includes all 118 datasets from INDEC `DATASET_REGISTRY` (IPI, IPC divisions/regions, EMAE branches, Canastas, etc.).
+- [x] `workbench_service.py` includes all financial FX quotes (oficial mayorista, minorista, MEP, CCL, blue, tarjeta, cripto).
+- [x] `workbench_service.py` includes REM forecast series (mediana y top 10).
+- [x] `GET /api/macro/workbench/catalog` accepts `q`, `source`, `category`, and `limit` query parameters with accent-insensitive search and server-side filtering.
+- [x] `UniversalSearchBar.tsx` implements debounced search (300ms) calling `api.getWorkbenchCatalog(q, source, limit)`.
+- [x] Search results display source badge (`[BCRA]`, `[INDEC]`, `[FX]`, `[REM]`), canonical name, unit, frequency, and category.
+- [x] Search input handles fast typing without race conditions or memory lag.
+- [x] Active series limit of 5 is preserved.
+- [x] Automated tests verify catalog retrieval with query filters, limit parameters, and search UI debounce.
+- [x] Strict sentence case across all labels, placeholders, and tooltips.
 
 ## Out of scope
 
@@ -246,6 +246,93 @@ Ensure time series variations are clearly perceptible by computing dynamic Y-axi
 ## Constraints
 
 - Files: `frontend/src/components/workbench/WorkbenchChart.tsx`, `frontend/src/components/workbench/WorkbenchToolbar.tsx`, `frontend/src/components/workbench/WorkbenchView.tsx`.
+- Follow strict sentence case and tabular numbers.
+
+
+## 32. Selector de sumarización de periodicidad (Original, Mensual, Trimestral) y trazado continuo en el banco de trabajo
+GitHub issue: #35
+
+## Goal
+
+Allow users to select temporal aggregation periodicity ('Original', 'Mensual', 'Trimestral') to harmonize mixed-frequency series and provide smooth continuous curves instead of rigid stepped staircases.
+
+## Acceptance criteria
+
+- [ ] `WorkbenchToolbar.tsx` displays a periodicity selector: `"Original"`, `"Mensual"`, `"Trimestral"`.
+- [ ] When `"Mensual"` or `"Trimestral"` is selected, daily series (FX, policy rates, balances) are intelligently aggregated using `resampler.ts` taxonomies (averages for FX, TEM for rates, closing for balances).
+- [ ] In `WorkbenchChart.tsx`, monthly and quarterly series connect data points with continuous smooth curves (`monotone`) by default rather than forced right-angle stairs (`stepAfter`).
+- [ ] An optional line style toggle in `WorkbenchToolbar.tsx` allows choosing between `"Curva continua"` and `"Escalonada (forward-fill)"`.
+- [ ] Tooltip and date formatting adapt to the selected periodicity (e.g. `YYYY-MM` in monthly mode).
+- [ ] Summary statistics table recalculates observations and metrics matching the chosen periodicity.
+- [ ] Automated tests in `WorkbenchChart.test.tsx`, `WorkbenchToolbar.test.tsx`, and `WorkbenchView.test.tsx` verify periodicity switching and curve rendering.
+- [ ] Strict sentence case across all labels, buttons, and tooltips.
+
+## Out of scope
+
+- Frequency upsampling with cubic splines (interpolation) between discrete survey releases.
+- Custom fiscal calendar aggregations outside standard Gregorian calendar quarters.
+
+## Constraints
+
+- Files: `frontend/src/components/workbench/WorkbenchToolbar.tsx`, `frontend/src/components/workbench/WorkbenchChart.tsx`, `frontend/src/components/workbench/WorkbenchView.tsx`, `frontend/src/utils/resampler.ts`.
+- Follow strict sentence case and tabular numbers.
+
+
+## 33. Paginación y extracción histórica completa de comercio exterior (ICA y exportaciones) en INDEC
+GitHub issue: #36
+
+## Goal
+
+Ensure external trade series (ICA and exports) retrieve and display the complete historical time-series when selecting wide timeframes such as '5Y' or 'Max'.
+
+## Acceptance criteria
+
+- [ ] `backend/app/clients/indec_client.py` implements offset pagination or range chunking for multidimensional datasets with high row counts per period (e.g. `/comercio_exterior_exportacion_bienes` and `/comercio_exterior_importacion_bienes`) that exceed the server's 1000-row page cap.
+- [ ] `backend/app/services/indec_service.py` aggregates monthly sums across all countries/subrubros for each period, producing full historical monthly observations.
+- [ ] Aggregated series payloads are cached in SQLite `IndecCache` under a consolidated key to guarantee fast subsequent lookups.
+- [ ] In `frontend/src/components/workbench/WorkbenchView.tsx`, `fetchSeriesData` dynamically passes the active timeframe (`'Max'`, `'5Y'`, etc.) to `api.getIndecSeries(varId, timeframe)` instead of hardcoding `'5Y'`.
+- [ ] Selecting "Max" on an export series (e.g. `indec_comex_exportaciones_primarios` or `indec_ica_saldo`) displays complete historical data points across multiple years instead of just 3 observations.
+- [ ] Automated backend and frontend tests verify paginated comex fetching, monthly aggregation, and dynamic timeframe propagation.
+- [ ] Strict sentence case across all labels and error notifications.
+
+## Out of scope
+
+- Drill-down per country of destination within the macro time-series chart canvas.
+- Real-time customs tariff code itemized queries outside official INDEC datasets.
+
+## Constraints
+
+- Files: `backend/app/clients/indec_client.py`, `backend/app/services/indec_service.py`, `frontend/src/components/workbench/WorkbenchView.tsx`.
+- Follow strict sentence case and tabular numbers.
+
+
+## 34. Integración completa de series del REM con empalme de valores históricos y proyecciones futuras
+GitHub issue: #37
+
+## Goal
+
+Integrate REM series into the workbench with valid ISO dates, seamlessly connecting historical observed data with forward-looking forecast trajectories.
+
+## Acceptance criteria
+
+- [ ] `backend/app/services/rem_service.py` implements `get_rem_series(variable_key: str)` returning a unified chronological array of points with valid ISO dates (`YYYY-MM-01`).
+- [ ] The returned series pairs past historical months (actual INDEC observations and past expectations) with future projected months from the latest REM consensus report.
+- [ ] Each point includes metadata such as `is_forecast: boolean` and consensus metrics (`mediana`, `p25`, `p75`).
+- [ ] Exposed via `GET /api/macro/rem/series/{variable_key}` in `backend/app/routes/rem_routes.py`.
+- [ ] In `frontend/src/components/workbench/WorkbenchView.tsx`, selecting a REM series fetches the complete historical and forecast series without date parsing errors.
+- [ ] In `WorkbenchChart.tsx`, REM series render visible curves across both past history and future projection dates without being clipped by historical-only date filters.
+- [ ] Forecast projection segments are visually distinguished with dashed stroke styling (`strokeDasharray="4 4"`) or informative tooltip badges (`"Proyección REM"`).
+- [ ] Automated backend and frontend tests verify combined historical-forecast series generation and chart rendering.
+- [ ] Strict sentence case across all labels and badges.
+
+## Out of scope
+
+- Participant-level microdata distribution modeling outside aggregated consensus percentiles.
+- Interactive user recalculation of REM consensus weights.
+
+## Constraints
+
+- Files: `backend/app/services/rem_service.py`, `backend/app/routes/rem_routes.py`, `frontend/src/services/api.ts`, `frontend/src/components/workbench/WorkbenchView.tsx`, `frontend/src/components/workbench/WorkbenchChart.tsx`.
 - Follow strict sentence case and tabular numbers.
 
 
