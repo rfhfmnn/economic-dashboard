@@ -353,3 +353,127 @@ def generate_batch_excel_portfolio(batch_data: Dict[str, Any]) -> bytes:
     output = io.BytesIO()
     wb.save(output)
     return output.getvalue()
+
+
+def generate_workbench_excel(
+    aligned_data: List[Dict[str, Any]],
+    stats_data: Optional[List[Dict[str, Any]]] = None,
+    series_headers: Optional[List[Dict[str, str]]] = None,
+) -> bytes:
+    """Generate a multi-sheet Excel workbook for the multi-variable workbench."""
+    wb = openpyxl.Workbook()
+
+    header_font = Font(name="Arial", size=10, bold=True, color="FFFFFF")
+    regular_font = Font(name="Arial", size=10)
+    title_font = Font(name="Arial", size=14, bold=True, color="1E3A8A")
+    subtitle_font = Font(name="Arial", size=10, italic=True, color="475569")
+    header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+    cell_border = Border(
+        left=Side(style="thin", color="E2E8F0"),
+        right=Side(style="thin", color="E2E8F0"),
+        top=Side(style="thin", color="E2E8F0"),
+        bottom=Side(style="thin", color="E2E8F0"),
+    )
+
+    # Sheet 1: Series consolidadas
+    ws1 = wb.active
+    ws1.title = "Series consolidadas"
+
+    ws1.cell(row=2, column=1, value="Banco de trabajo multivariable — Series consolidadas").font = title_font
+    ws1.cell(row=3, column=1, value="Datos macroeconómicos armonizados por fecha").font = subtitle_font
+
+    if aligned_data:
+        # Determine column keys
+        keys = list(aligned_data[0].keys())
+        # Sort so 'fecha' is first
+        if "fecha" in keys:
+            keys.remove("fecha")
+            keys = ["fecha"] + keys
+
+        header_names = {}
+        if series_headers:
+            for sh in series_headers:
+                header_names[sh.get("key", "")] = sh.get("name", sh.get("key", ""))
+
+        current_row = 5
+        for col_idx, k in enumerate(keys, start=1):
+            cell = ws1.cell(row=current_row, column=col_idx, value=header_names.get(k, k))
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        current_row = 6
+        for item in aligned_data:
+            for col_idx, k in enumerate(keys, start=1):
+                val = item.get(k)
+                cell = ws1.cell(row=current_row, column=col_idx, value=val)
+                cell.font = regular_font
+                cell.border = cell_border
+                if k == "fecha":
+                    cell.alignment = Alignment(horizontal="center")
+                else:
+                    cell.alignment = Alignment(horizontal="right")
+                    if isinstance(val, (int, float)):
+                        cell.number_format = "#,##0.00"
+            current_row += 1
+
+        for col in ws1.columns:
+            max_len = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                if cell.row < 5:
+                    continue
+                if cell.value:
+                    max_len = max(max_len, len(str(cell.value)))
+            ws1.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    # Sheet 2: Resumen estadístico
+    ws2 = wb.create_sheet(title="Resumen estadístico")
+    ws2.cell(row=2, column=1, value="Resumen estadístico de series").font = title_font
+
+    stat_headers = ["Serie", "Origen", "Último valor", "Fecha último", "Variación período (%)", "Mínimo", "Máximo", "Desvío estándar"]
+    for col_idx, h in enumerate(stat_headers, start=1):
+        cell = ws2.cell(row=4, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    if stats_data:
+        curr_r = 5
+        for s in stats_data:
+            row_vals = [
+                s.get("name", ""),
+                s.get("source", ""),
+                s.get("ultimoValor"),
+                s.get("fechaUltimo", ""),
+                s.get("variacionPeriodo"),
+                s.get("minimo"),
+                s.get("maximo"),
+                s.get("desvioEstandar"),
+            ]
+            for col_idx, val in enumerate(row_vals, start=1):
+                cell = ws2.cell(row=curr_r, column=col_idx, value=val)
+                cell.font = regular_font
+                cell.border = cell_border
+                if col_idx in [1, 2, 4]:
+                    cell.alignment = Alignment(horizontal="left" if col_idx == 1 else "center")
+                else:
+                    cell.alignment = Alignment(horizontal="right")
+                    if isinstance(val, (int, float)):
+                        cell.number_format = "#,##0.00"
+            curr_r += 1
+
+        for col in ws2.columns:
+            max_len = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                if cell.row < 4:
+                    continue
+                if cell.value:
+                    max_len = max(max_len, len(str(cell.value)))
+            ws2.column_dimensions[col_letter].width = max(max_len + 4, 14)
+
+    output = io.BytesIO()
+    wb.save(output)
+    return output.getvalue()
+

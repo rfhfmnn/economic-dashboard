@@ -138,3 +138,31 @@ async def export_batch_excel(request: Request, db: Session = Depends(get_db)):
             "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
     )
+
+
+class WorkbenchExcelRequest(BaseModel):
+    aligned_data: List[Dict[str, Any]]
+    stats_data: Optional[List[Dict[str, Any]]] = None
+    series_headers: Optional[List[Dict[str, str]]] = None
+
+
+@router.post("/workbench-excel")
+async def export_workbench_excel_endpoint(payload: WorkbenchExcelRequest):
+    """Generate and download a multi-sheet Excel spreadsheet for the multi-variable workbench."""
+    from backend.app.services.export_service import generate_workbench_excel
+
+    excel_bytes = generate_workbench_excel(
+        aligned_data=payload.aligned_data,
+        stats_data=payload.stats_data,
+        series_headers=payload.series_headers,
+    )
+
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="banco_de_trabajo.xlsx"',
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+    )
+

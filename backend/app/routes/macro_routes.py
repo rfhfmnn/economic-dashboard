@@ -71,3 +71,14 @@ def get_macro_cpi(
     """Get historical monthly INDEC CPI inflation rates and cumulative price index."""
     return macro_service.get_cpi_history(db=db, refresh=refresh)
 
+
+@router.get("/workbench/catalog")
+def get_workbench_catalog(
+    q: Optional[str] = Query(None, description="Search query across BCRA, INDEC, FX, and REM catalogs"),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    """Get consolidated multi-variable catalog pool across BCRA, INDEC, FX, and REM."""
+    from backend.app.services.workbench_service import get_unified_catalog
+    return get_unified_catalog(db=db, q=q)
+
+
