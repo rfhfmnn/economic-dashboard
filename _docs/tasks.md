@@ -158,4 +158,96 @@ Provide a cross-variable analytical workbench with a universal catalog pool acro
 - Follow tabular numbers and design tokens defined in `_docs/design-system.md` and `AGENTS.md`.
 
 
+## 29. Catálogo universal abierto y buscador asíncrono para más de 1.100 series (BCRA, INDEC, FX y REM)
+GitHub issue: #32
+
+## Goal
+
+Expose the complete catalog of all available series (>1000 BCRA variables from database, 118 INDEC datasets, all FX quotes, and REM forecasts) via a performant backend search endpoint and an asynchronous debounced frontend search component.
+
+## Acceptance criteria
+
+- [ ] `backend/app/services/workbench_service.py` queries `MacroVariable` from database to expose all >1000 BCRA variables dynamically.
+- [ ] `workbench_service.py` includes all 118 datasets from INDEC `DATASET_REGISTRY` (IPI, IPC divisions/regions, EMAE branches, Canastas, etc.).
+- [ ] `workbench_service.py` includes all financial FX quotes (oficial mayorista, minorista, MEP, CCL, blue, tarjeta, cripto).
+- [ ] `workbench_service.py` includes REM forecast series (mediana y top 10).
+- [ ] `GET /api/macro/workbench/catalog` accepts `q`, `source`, `category`, and `limit` query parameters with accent-insensitive search and server-side filtering.
+- [ ] `UniversalSearchBar.tsx` implements debounced search (300ms) calling `api.getWorkbenchCatalog(q, source, limit)`.
+- [ ] Search results display source badge (`[BCRA]`, `[INDEC]`, `[FX]`, `[REM]`), canonical name, unit, frequency, and category.
+- [ ] Search input handles fast typing without race conditions or memory lag.
+- [ ] Active series limit of 5 is preserved.
+- [ ] Automated tests verify catalog retrieval with query filters, limit parameters, and search UI debounce.
+- [ ] Strict sentence case across all labels, placeholders, and tooltips.
+
+## Out of scope
+
+- Manual batch uploading of custom external CSV files inside the search bar.
+- Direct database mutation or variable creation from the frontend.
+
+## Constraints
+
+- Files: `backend/app/services/workbench_service.py`, `backend/app/routes/macro_routes.py`, `frontend/src/services/api.ts`, `frontend/src/components/workbench/UniversalSearchBar.tsx`.
+- Follow strict sentence case and tabular numbers.
+
+
+## 30. Modos de expresión multivariable (unidad original, base 100, MoM, YoY y conmutador real/nominal)
+GitHub issue: #33
+
+## Goal
+
+Provide rich analytical expression toggles allowing users to view series in their native unit, dynamic base 100, month-over-month (MoM %) change, year-over-year (YoY %) change, and real vs. nominal currency.
+
+## Acceptance criteria
+
+- [ ] `frontend/src/utils/transforms.ts` implements pure functions for original units, dynamic base 100 ($t_0=100$), MoM percentage change ($\Delta\%_{m} = (V_m - V_{m-1})/V_{m-1} \times 100$), and YoY percentage change ($\Delta\%_{a} = (V_t - V_{t-12})/V_{t-12} \times 100$ or 252 business days).
+- [ ] `WorkbenchToolbar.tsx` displays a segmented mode selector: `"Unidad original"`, `"Base 100 (t₀ = 100)"`, `"Variación intermensual (MoM %)"`, and `"Variación interanual (YoY %)"`.
+- [ ] The inflation switch `"Ajustar por inflación (términos reales)"` can be toggled on/off across all expression modes for eligible ARS monetary series using the official IPC deflator.
+- [ ] When in `"Unidad original"`, values display with their native unit formatting (e.g. `USD`, `ARS`, `%`, etc.).
+- [ ] When in `"Variación intermensual (MoM %)"` or `"Variación interanual (YoY %)"`, values display with signed percentage formatting (`+2.5%`, `-0.8%`) and neutral reference line at $Y=0$.
+- [ ] When in `"Base 100 (t₀ = 100)"`, values display rebased from the first visible point with neutral reference line at $Y=100$.
+- [ ] Tooltip and summary statistics table dynamically adapt column labels, units, and metrics to match the active expression mode.
+- [ ] Comprehensive unit tests cover all transformation functions in `transforms.test.ts` and UI mode switching.
+- [ ] Strict sentence case across all segmented buttons, labels, and tooltips.
+
+## Out of scope
+
+- Seasonal adjustment modeling (X-13ARIMA-SEATS) on the client side.
+- User-defined custom algebraic math formulas across series (e.g. `SerieA * 2 + SerieB`).
+
+## Constraints
+
+- Files: `frontend/src/utils/transforms.ts`, `frontend/src/components/workbench/WorkbenchToolbar.tsx`, `frontend/src/components/workbench/WorkbenchChart.tsx`, `frontend/src/components/workbench/WorkbenchStatsTable.tsx`, `frontend/src/components/workbench/WorkbenchView.tsx`.
+- Follow strict sentence case and tabular numbers.
+
+
+## 31. Ajuste dinámico de escala de eje Y, soporte de doble eje y control perceptual de zoom
+GitHub issue: #34
+
+## Goal
+
+Ensure time series variations are clearly perceptible by computing dynamic Y-axis domains with padding, providing a zero-origin toggle, and supporting dual Y-axes for heterogeneous original units.
+
+## Acceptance criteria
+
+- [ ] In `WorkbenchChart.tsx`, the Y-axis domain dynamically adjusts to visible data bounds (`[min - 5%, max + 5%]`) when in `"Ajuste automático (zoom a variación)"` mode so small movements are not flattened.
+- [ ] `WorkbenchToolbar.tsx` provides a scale mode toggle between `"Ajuste automático (zoom a variación)"` and `"Origen en cero (0)"`.
+- [ ] When in `"Origen en cero (0)"` mode, the Y-axis includes 0 as baseline (`domain={[0, 'auto']}`).
+- [ ] When viewing 2 series in `"Unidad original"` with different units (e.g. `Millones USD` vs. `%` or `ARS`), `WorkbenchChart.tsx` automatically renders dual Y-axes (left $Y_1$ and right $Y_2$) with matching series colors.
+- [ ] When viewing 3 or more series with heterogeneous units in `"Unidad original"`, an informative banner alerts the user and recommends switching to `"Base 100"` or percentage variation.
+- [ ] Chart tooltips and axes formatting respect precision and scale without label truncation.
+- [ ] Component tests verify dynamic domain calculation, zero-origin toggling, and dual-axis activation.
+- [ ] Strict sentence case across all scale options, labels, and tooltips.
+
+## Out of scope
+
+- Logarithmic scale toggle (moved to future enhancement).
+- 3+ separate Y-axes on a single chart canvas.
+
+## Constraints
+
+- Files: `frontend/src/components/workbench/WorkbenchChart.tsx`, `frontend/src/components/workbench/WorkbenchToolbar.tsx`, `frontend/src/components/workbench/WorkbenchView.tsx`.
+- Follow strict sentence case and tabular numbers.
+
+
+
 
