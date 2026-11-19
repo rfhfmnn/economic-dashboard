@@ -108,4 +108,54 @@ Description: Create `frontend/src/utils/resampler.ts` supporting dynamic aggrega
 Goal: Implement dynamic base 100 indexation and multi-series normalization in the macroeconomic chart.
 Description: Create `frontend/src/utils/indexer.ts` supporting dynamic rebase of time-series to base 100 on the first visible business day ($t_0$) of the selected timeframe, with support for custom base date input. Rebase existing INDEC and BCRA index series, and chain monthly percentage variations into cumulative indices. Combine seamlessly with the constant-price inflation deflator (real purchasing power index). Consolidate multiple series into a single unified left Y-axis with a neutral horizontal $Y=100$ reference line. Update tooltips with indexed values, cumulative percentage variations, and native units. Support dual-column CSV exports and high-resolution PNG downloads with methodological annotations. Include unit tests in `frontend/src/utils/indexer.test.ts` and component test updates in `MacroChart.test.tsx`.
 
+## 28. Banco de trabajo multivariable y motor de correlación cruzada
+GitHub issue: #31
+
+## Goal
+
+Provide a cross-variable analytical workbench with a universal catalog pool across BCRA, INDEC, FX, and REM data, featuring multi-series normalization, rolling correlation analysis, and consolidated exports.
+
+## Acceptance criteria
+
+- [ ] Clicking on the `'workbench'` tab in `Navbar.tsx` labelled `"Banco de trabajo"` navigates to `WorkbenchView` and highlights the tab.
+- [ ] Typing into `UniversalSearchBar` dynamically autocompletes matching series across BCRA, INDEC, FX, and REM catalogs.
+- [ ] Each search result item displays its source badge (`[BCRA]`, `[INDEC]`, `[FX]`, `[REM]`), canonical name, and category.
+- [ ] Selecting a search result adds the series to the active series tray and closes or clears the search dropdown.
+- [ ] Series already present in the active series tray are disabled in the search results dropdown to prevent duplicate additions.
+- [ ] The active series tray supports adding up to a maximum of 5 simultaneous series.
+- [ ] Attempting to add a 6th series is disabled and shows an informative tooltip or message that the 5-series limit has been reached.
+- [ ] Each active series chip displays its assigned distinctive color, source badge, name, individual loading status, and a removal button (`X`).
+- [ ] Clicking the removal button removes the series from the tray, chart, and statistics table.
+- [ ] If a series fails to load or experiences network timeout, its chip displays the resilient warning badge `"Dato demorado"` while the other active series continue to render normally.
+- [ ] Quick timeframe buttons (`1M`, `3M`, `6M`, `1Y`, `5Y`, `Max`) update the visible date range across all active series.
+- [ ] Custom date inputs (`desde` and `hasta`) allow manual date range filtering and validate chronological order.
+- [ ] Toggling the switch `"Ajustar por inflación (términos reales)"` deflates eligible ARS monetary series using the official IPC series into constant currency.
+- [ ] Non-ARS or ineligible series (percentages, indices, USD exchange rates) remain unaffected by the inflation switch and display an explanatory tooltip.
+- [ ] The visual mode toggle allows switching between `"Serie temporal normalizada"` and `"Correlación móvil"`.
+- [ ] In normalized time series mode, the user can toggle between `"Base 100 (t₀ = 100)"` and `"Variación porcentual (% Δ)"`.
+- [ ] Monthly or quarterly series projected on a daily time axis are displayed with visual stepped forward-fill (`stepAfter`) styling.
+- [ ] In rolling correlation mode, dropdown selectors allow picking `"Serie A"` and `"Serie B"` from the active series tray.
+- [ ] In rolling correlation mode, the window selector supports `30 días`, `90 días`, and `180 días`.
+- [ ] When mixing daily and monthly/quarterly series in rolling correlation mode, automatic monthly downsampling is applied and flagged to the user.
+- [ ] The rolling correlation chart Y-axis is strictly bounded between -1.00 and +1.00 with a neutral zero reference line ($Y=0$).
+- [ ] The bottom statistics table renders a row for each active series with columns for series name/source, latest value, latest date, period variation (%), minimum, maximum, and sample standard deviation.
+- [ ] Numeric values in the statistics table use monospace tabular alignment (`font-mono` and `tabular-nums`).
+- [ ] Clicking `"Exportar CSV"` generates and downloads a consolidated CSV file containing all active series aligned by date.
+- [ ] Clicking `"Exportar Excel"` triggers a download of a consolidated multi-sheet Excel spreadsheet (`.xlsx`) with aligned series, statistics, and correlation matrix.
+- [ ] All UI titles, section headers, tab labels, button copy, tooltips, and badges strictly follow sentence case (no Title Case).
+
+## Out of scope
+
+- Econometric cointegration tests (Engle-Granger, Johansen) and predictive Machine Learning models.
+- Manual editing or cell overwriting of historical observations.
+- 3D surface charts or scatter plot point clouds outside 2D time series and rolling correlation.
+
+## Constraints
+
+- Stay inside frontend components in `frontend/src/components/workbench/`, mathematical engines in `frontend/src/utils/alignment.ts` and `frontend/src/utils/correlation.ts`, navbar in `frontend/src/components/layout/Navbar.tsx`, backend routes in `backend/app/routes/` and services in `backend/app/services/`.
+- Libraries: React, TypeScript, Tailwind CSS, Recharts, Lucide React, FastAPI, HTTPX, SQLite, openpyxl / ReportLab. No new npm or pip dependencies without prior approval.
+- Follow strict sentence case for all titles, labels, badges, and documentation (no Title Case).
+- Follow tabular numbers and design tokens defined in `_docs/design-system.md` and `AGENTS.md`.
+
+
 
