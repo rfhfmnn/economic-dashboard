@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { UniversalSearchBar } from './UniversalSearchBar'
 import { ActiveSeriesTray } from './ActiveSeriesTray'
-import { WorkbenchToolbar, type WorkbenchViewMode, type TimeframeOption } from './WorkbenchToolbar'
+import { WorkbenchToolbar, type WorkbenchViewMode, type TimeframeOption, type ScaleMode } from './WorkbenchToolbar'
 import { WorkbenchChart } from './WorkbenchChart'
 import { WorkbenchStatsTable } from './WorkbenchStatsTable'
 import { api } from '../../services/api'
@@ -44,6 +44,7 @@ export const WorkbenchView: React.FC = () => {
   const [customStart, setCustomStart] = useState<string>('')
   const [customEnd, setCustomEnd] = useState<string>('')
   const [expressionMode, setExpressionMode] = useState<ExpressionMode>('base100')
+  const [scaleMode, setScaleMode] = useState<ScaleMode>('auto')
   const [adjustInflation, setAdjustInflation] = useState<boolean>(false)
 
   // Correlation controls
@@ -395,6 +396,8 @@ export const WorkbenchView: React.FC = () => {
         }}
         expressionMode={expressionMode}
         onChangeExpressionMode={setExpressionMode}
+        scaleMode={scaleMode}
+        onChangeScaleMode={setScaleMode}
         adjustInflation={adjustInflation}
         onToggleAdjustInflation={setAdjustInflation}
         hasArsSeries={hasArsSeries}
@@ -415,6 +418,7 @@ export const WorkbenchView: React.FC = () => {
       <WorkbenchChart
         viewMode={viewMode}
         expressionMode={expressionMode}
+        scaleMode={scaleMode}
         alignedData={alignedData}
         activeSeries={activeSeries}
         correlationPoints={correlationPoints}

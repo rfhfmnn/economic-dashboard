@@ -444,6 +444,8 @@ export type TimeSeriesPoint = IndecSeriesPoint
 
 export type WorkbenchSource = 'BCRA' | 'INDEC' | 'FX' | 'REM'
 
+export type WorkbenchScaleMode = 'auto' | 'zero'
+
 export interface WorkbenchCatalogItem {
   id: string
   source: WorkbenchSource

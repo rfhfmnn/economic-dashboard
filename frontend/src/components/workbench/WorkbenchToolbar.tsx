@@ -6,6 +6,7 @@ import type { ExpressionMode } from '../../utils/transforms'
 export type WorkbenchViewMode = 'normalized' | 'correlation'
 export type NormalizationType = 'base100' | 'percent' | ExpressionMode
 export type TimeframeOption = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max'
+export type ScaleMode = 'auto' | 'zero'
 export type { ExpressionMode }
 
 export interface WorkbenchToolbarProps {
@@ -18,6 +19,8 @@ export interface WorkbenchToolbarProps {
   onChangeCustomDates: (start: string, end: string) => void
   expressionMode?: ExpressionMode
   onChangeExpressionMode?: (mode: ExpressionMode) => void
+  scaleMode?: ScaleMode
+  onChangeScaleMode?: (mode: ScaleMode) => void
   normalization?: NormalizationType
   onChangeNormalization?: (norm: NormalizationType) => void
   adjustInflation: boolean
@@ -48,6 +51,8 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
   onChangeCustomDates,
   expressionMode,
   onChangeExpressionMode,
+  scaleMode = 'auto',
+  onChangeScaleMode,
   normalization,
   onChangeNormalization,
   adjustInflation,
@@ -224,6 +229,34 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
                 }`}
               >
                 Variación interanual (YoY %)
+              </button>
+            </div>
+
+            {/* Scale mode toggle */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md text-xs">
+              <button
+                type="button"
+                onClick={() => onChangeScaleMode?.('auto')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  scaleMode === 'auto'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Ajuste automático (zoom a variación)"
+              >
+                Ajuste automático (zoom a variación)
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeScaleMode?.('zero')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  scaleMode === 'zero'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Origen en cero (0)"
+              >
+                Origen en cero (0)
               </button>
             </div>
 

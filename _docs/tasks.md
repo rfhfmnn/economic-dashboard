@@ -229,14 +229,14 @@ Ensure time series variations are clearly perceptible by computing dynamic Y-axi
 
 ## Acceptance criteria
 
-- [ ] In `WorkbenchChart.tsx`, the Y-axis domain dynamically adjusts to visible data bounds (`[min - 5%, max + 5%]`) when in `"Ajuste automático (zoom a variación)"` mode so small movements are not flattened.
-- [ ] `WorkbenchToolbar.tsx` provides a scale mode toggle between `"Ajuste automático (zoom a variación)"` and `"Origen en cero (0)"`.
-- [ ] When in `"Origen en cero (0)"` mode, the Y-axis includes 0 as baseline (`domain={[0, 'auto']}`).
-- [ ] When viewing 2 series in `"Unidad original"` with different units (e.g. `Millones USD` vs. `%` or `ARS`), `WorkbenchChart.tsx` automatically renders dual Y-axes (left $Y_1$ and right $Y_2$) with matching series colors.
-- [ ] When viewing 3 or more series with heterogeneous units in `"Unidad original"`, an informative banner alerts the user and recommends switching to `"Base 100"` or percentage variation.
-- [ ] Chart tooltips and axes formatting respect precision and scale without label truncation.
-- [ ] Component tests verify dynamic domain calculation, zero-origin toggling, and dual-axis activation.
-- [ ] Strict sentence case across all scale options, labels, and tooltips.
+- [x] In `WorkbenchChart.tsx`, the Y-axis domain dynamically adjusts to visible data bounds (`[min - 5%, max + 5%]`) when in `"Ajuste automático (zoom a variación)"` mode so small movements are not flattened.
+- [x] `WorkbenchToolbar.tsx` provides a scale mode toggle between `"Ajuste automático (zoom a variación)"` and `"Origen en cero (0)"`.
+- [x] When in `"Origen en cero (0)"` mode, the Y-axis includes 0 as baseline (`domain={[0, 'auto']}`).
+- [x] When viewing 2 series in `"Unidad original"` with different units (e.g. `Millones USD` vs. `%` or `ARS`), `WorkbenchChart.tsx` automatically renders dual Y-axes (left $Y_1$ and right $Y_2$) with matching series colors.
+- [x] When viewing 3 or more series with heterogeneous units in `"Unidad original"`, an informative banner alerts the user and recommends switching to `"Base 100"` or percentage variation.
+- [x] Chart tooltips and axes formatting respect precision and scale without label truncation.
+- [x] Component tests verify dynamic domain calculation, zero-origin toggling, and dual-axis activation.
+- [x] Strict sentence case across all scale options, labels, and tooltips.
 
 ## Out of scope
 

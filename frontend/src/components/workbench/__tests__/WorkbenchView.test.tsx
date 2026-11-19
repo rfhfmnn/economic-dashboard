@@ -235,4 +235,22 @@ describe('WorkbenchView Component', () => {
     fireEvent.click(inflationCheckbox)
     expect(inflationCheckbox).toBeChecked()
   })
+
+  it('renders scale mode selector and allows toggling to zero origin mode', async () => {
+    render(<WorkbenchView />)
+
+    const autoBtn = screen.getByText('Ajuste automático (zoom a variación)')
+    const zeroBtn = screen.getByText('Origen en cero (0)')
+
+    expect(autoBtn).toBeInTheDocument()
+    expect(zeroBtn).toBeInTheDocument()
+
+    // Toggle to zero mode
+    fireEvent.click(zeroBtn)
+    expect(zeroBtn).toHaveClass('font-medium')
+
+    // Toggle back to auto zoom
+    fireEvent.click(autoBtn)
+    expect(autoBtn).toHaveClass('font-medium')
+  })
 })

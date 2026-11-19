@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { WorkbenchToolbar } from '../WorkbenchToolbar'
+import { WorkbenchToolbar, type ScaleMode } from '../WorkbenchToolbar'
 import type { ExpressionMode } from '../../../utils/transforms'
 
 describe('WorkbenchToolbar Component', () => {
@@ -14,6 +14,8 @@ describe('WorkbenchToolbar Component', () => {
     onChangeCustomDates: vi.fn(),
     expressionMode: 'base100' as ExpressionMode,
     onChangeExpressionMode: vi.fn(),
+    scaleMode: 'auto' as ScaleMode,
+    onChangeScaleMode: vi.fn(),
     adjustInflation: false,
     onToggleAdjustInflation: vi.fn(),
     hasArsSeries: true,
@@ -54,6 +56,40 @@ describe('WorkbenchToolbar Component', () => {
 
     fireEvent.click(screen.getByText('Base 100 (t₀ = 100)'))
     expect(onChangeExpressionMode).toHaveBeenCalledWith('base100')
+  })
+
+  it('renders scale mode toggle in strict sentence case and triggers onChangeScaleMode', () => {
+    const onChangeScaleMode = vi.fn()
+    const { rerender } = render(
+      <WorkbenchToolbar
+        {...defaultProps}
+        scaleMode="auto"
+        onChangeScaleMode={onChangeScaleMode}
+      />
+    )
+
+    const autoBtn = screen.getByText('Ajuste automático (zoom a variación)')
+    const zeroBtn = screen.getByText('Origen en cero (0)')
+
+    expect(autoBtn).toBeInTheDocument()
+    expect(zeroBtn).toBeInTheDocument()
+
+    // Click zero origin
+    fireEvent.click(zeroBtn)
+    expect(onChangeScaleMode).toHaveBeenCalledWith('zero')
+
+    // Rerender with zero mode active
+    rerender(
+      <WorkbenchToolbar
+        {...defaultProps}
+        scaleMode="zero"
+        onChangeScaleMode={onChangeScaleMode}
+      />
+    )
+
+    // Click auto zoom
+    fireEvent.click(autoBtn)
+    expect(onChangeScaleMode).toHaveBeenCalledWith('auto')
   })
 
   it('renders inflation switch and handles toggle', () => {
