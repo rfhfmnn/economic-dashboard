@@ -425,3 +425,116 @@ def test_indec_service_aggregation_and_scaling():
     assert series[1]["fecha"] == "2026-09-01"
     assert series[1]["valor"] == 3.0
     client.close()
+
+
+def test_comex_paginated_fetching_and_sqlite_caching(test_db):
+    """Verify offset pagination loop across pages for comex endpoints and unified SQLite caching."""
+    page_0 = [
+        {"Periodo": "202609", "rubro_cod": "1", "pais_cod": "IT", "valor_FOB": 1000000.0},
+        {"Periodo": "202609", "rubro_cod": "1", "pais_cod": "US", "valor_FOB": 2000000.0},
+    ]
+    page_1 = [
+        {"Periodo": "202608", "rubro_cod": "1", "pais_cod": "BR", "valor_FOB": 1500000.0},
+        {"Periodo": "202608", "rubro_cod": "1", "pais_cod": "CN", "valor_FOB": 2500000.0},
+    ]
+    page_2 = [
+        {"Periodo": "202607", "rubro_cod": "1", "pais_cod": "DE", "valor_FOB": 800000.0},
+    ]
+
+    captured_requests = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_requests.append(str(request.url))
+        offset = request.url.params.get("offset")
+        if offset == "0":
+            return httpx.Response(200, json=page_0)
+        elif offset == "2":
+            return httpx.Response(200, json=page_1)
+        elif offset == "4":
+            return httpx.Response(200, json=page_2)
+        return httpx.Response(200, json=[])
+
+    mock_transport = httpx.MockTransport(handler)
+    client = IndecClient(
+        token="valid_token",
+        transport=mock_transport,
+        comex_page_size=2,
+        comex_max_pages=10,
+    )
+
+    # 1. Fetch series with pagination
+    results = client.fetch_series("comex_exportaciones_primarios", db=test_db)
+    assert len(results) == 5
+    assert len(captured_requests) == 3
+    assert "offset=0" in captured_requests[0]
+    assert "offset=2" in captured_requests[1]
+    assert "offset=4" in captured_requests[2]
+
+    # 2. Verify unified payload persisted in SQLite cache
+    cached_entry = (
+        test_db.query(IndecCache)
+        .filter(
+            IndecCache.variable_id == "comex_exportaciones_primarios",
+            IndecCache.period == "all",
+        )
+        .first()
+    )
+    assert cached_entry is not None
+    assert len(cached_entry.raw_payload) == 5
+
+    # 3. Second call should be a cache hit with 0 additional HTTP requests
+    cached_results = client.fetch_series("comex_exportaciones_primarios", db=test_db)
+    assert len(cached_results) == 5
+    assert len(captured_requests) == 3  # No new requests!
+
+    client.close()
+
+
+def test_comex_multiyear_aggregation_and_max_timeframe():
+    """Verify comex historical extraction and monthly aggregation with wide timeframes."""
+    from backend.app.services.indec_service import IndecService
+
+    # 6 years of comex data (2021 to 2026), 2 records per year with different countries
+    multiyear_records = []
+    for y in range(2021, 2027):
+        multiyear_records.append({
+            "Periodo": f"{y}05",
+            "rubro_cod": "1",
+            "pais_cod": "US",
+            "valor_FOB": 1000000000.0,
+        })
+        multiyear_records.append({
+            "Periodo": f"{y}05",
+            "rubro_cod": "1",
+            "pais_cod": "BR",
+            "valor_FOB": 500000000.0,
+        })
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=multiyear_records)
+
+    mock_transport = httpx.MockTransport(handler)
+    client = IndecClient(token="valid_token", transport=mock_transport)
+    service = IndecService(client=client)
+
+    # Timeframe 'Max' must return all 6 years of aggregated monthly points
+    max_series = service.get_series("comex_exportaciones_primarios", timeframe="Max")
+    assert len(max_series) == 6
+    for pt in max_series:
+        # (1,000,000,000 + 500,000,000) * 1e-6 = 1500.0 Millones USD
+        assert pt["valor"] == 1500.0
+    assert max_series[0]["fecha"] == "2021-05-01"
+    assert max_series[-1]["fecha"] == "2026-05-01"
+
+    # Timeframe '1Y' must only return observations within the 1-year cutoff (2025-05-01 to 2026-05-01)
+    one_year_series = service.get_series("comex_exportaciones_primarios", timeframe="1Y")
+    assert len(one_year_series) == 2
+    assert one_year_series[0]["fecha"] == "2025-05-01"
+    assert one_year_series[-1]["fecha"] == "2026-05-01"
+
+    # Timeframe '6M' must only return the latest observation
+    six_month_series = service.get_series("comex_exportaciones_primarios", timeframe="6M")
+    assert len(six_month_series) == 1
+    assert six_month_series[0]["fecha"] == "2026-05-01"
+
+    client.close()

@@ -122,14 +122,25 @@ def extract_indec_value(
     record: dict[str, Any], target_field: str | None = None
 ) -> float | None:
     """Extract and cast numeric observation value from raw record dictionary."""
-    if target_field and target_field in record and record[target_field] is not None:
-        raw = record[target_field]
-        if isinstance(raw, str):
-            raw = raw.replace(",", ".").strip()
-        try:
-            return float(raw)
-        except (ValueError, TypeError):
-            pass
+    if target_field:
+        if target_field in record and record[target_field] is not None:
+            raw = record[target_field]
+            if isinstance(raw, str):
+                raw = raw.replace(",", ".").strip()
+            try:
+                return float(raw)
+            except (ValueError, TypeError):
+                pass
+        tf_lower = target_field.lower()
+        for k, v in record.items():
+            if k.lower() == tf_lower and v is not None:
+                raw = v
+                if isinstance(raw, str):
+                    raw = raw.replace(",", ".").strip()
+                try:
+                    return float(raw)
+                except (ValueError, TypeError):
+                    pass
 
     candidate_keys = (
         "valor",
@@ -147,7 +158,9 @@ def extract_indec_value(
         "tot_6a12",
         "poblacion",
         "valor_FOB",
+        "valor_fob",
         "valor_CIF",
+        "valor_cif",
         "indice",
         "tasa",
         "saldo",
@@ -198,9 +211,21 @@ def extract_indec_value(
 
 def extract_indec_date(record: dict[str, Any]) -> str | None:
     """Extract raw date/period field from record and normalize to YYYY-MM-DD."""
-    for key in ("periodo", "Periodo", "fecha", "date", "Fecha"):
+    for key in ("periodo", "Periodo", "PERIODO", "fecha", "Fecha", "date", "Date"):
         if key in record and record[key] is not None:
             return normalize_indec_date(str(record[key]))
+    for k, v in record.items():
+        if k.lower() in ("periodo", "fecha", "date") and v is not None:
+            return normalize_indec_date(str(v))
+    anio = record.get("anio") or record.get("Anio") or record.get("año") or record.get("Año")
+    mes = record.get("mes") or record.get("Mes")
+    if anio is not None and mes is not None:
+        try:
+            y = int(str(anio).strip())
+            m = int(str(mes).strip())
+            return f"{y:04d}-{m:02d}-01"
+        except (ValueError, TypeError):
+            pass
     return None
 
 

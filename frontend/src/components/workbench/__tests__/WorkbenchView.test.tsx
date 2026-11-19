@@ -46,6 +46,15 @@ const mockCatalog: WorkbenchCatalogItem[] = [
     isArs: false,
   },
   {
+    id: 'indec_comex_exportaciones_primarios',
+    source: 'INDEC',
+    name: 'Exportaciones de bienes - productos primarios',
+    category: 'Sector externo',
+    unit: 'Millones USD',
+    frequency: 'mensual',
+    isArs: false,
+  },
+  {
     id: 'rem_tipo_cambio',
     source: 'REM',
     name: 'REM - tipo de cambio nominal esperado',
@@ -85,6 +94,22 @@ describe('WorkbenchView Component', () => {
       },
       last_updated: '2026-02-01T00:00:00Z',
       source: 'api',
+    })
+    vi.mocked(api.getIndecSeries).mockImplementation(async (_varId: string, tf: string = '1Y') => {
+      if (tf === 'Max') {
+        return [
+          { fecha: '2021-05-01', valor: 1200 },
+          { fecha: '2022-05-01', valor: 1300 },
+          { fecha: '2023-05-01', valor: 1400 },
+          { fecha: '2024-05-01', valor: 1500 },
+          { fecha: '2025-05-01', valor: 1600 },
+          { fecha: '2026-05-01', valor: 1700 },
+        ]
+      }
+      return [
+        { fecha: '2025-05-01', valor: 1600 },
+        { fecha: '2026-05-01', valor: 1700 },
+      ]
     })
   })
 
@@ -308,5 +333,35 @@ describe('WorkbenchView Component', () => {
     // Switch back to continuous
     fireEvent.click(continuousBtn)
     expect(continuousBtn).toHaveClass('font-medium')
+  })
+
+  it('passes active timeframe dynamically to getIndecSeries and reloads full history when switching to Max', async () => {
+    render(<WorkbenchView />)
+
+    // Add INDEC comex series
+    const searchInput = screen.getByPlaceholderText('Buscar serie en BCRA, INDEC, FX y REM...')
+    fireEvent.focus(searchInput)
+    fireEvent.change(searchInput, { target: { value: 'Exportaciones' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Exportaciones de bienes - productos primarios')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Exportaciones de bienes - productos primarios').closest('button')!)
+
+    await waitFor(() => {
+      // Default timeframe in toolbar is 1Y
+      expect(api.getIndecSeries).toHaveBeenCalledWith('comex_exportaciones_primarios', '1Y')
+      expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
+    })
+
+    // Switch timeframe to Max
+    const maxBtn = screen.getByRole('button', { name: 'Max' })
+    fireEvent.click(maxBtn)
+
+    await waitFor(() => {
+      // Must be called with 'Max' to retrieve full historical points
+      expect(api.getIndecSeries).toHaveBeenCalledWith('comex_exportaciones_primarios', 'Max')
+    })
   })
 })

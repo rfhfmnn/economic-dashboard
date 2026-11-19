@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { UniversalSearchBar } from './UniversalSearchBar'
 import { ActiveSeriesTray } from './ActiveSeriesTray'
 import {
@@ -110,34 +110,38 @@ export const WorkbenchView: React.FC = () => {
   }, [timeframe])
 
   // 2. Fetch series data function
-  const fetchSeriesData = useCallback(async (item: WorkbenchCatalogItem): Promise<MacroSeriesPoint[]> => {
-    if (item.source === 'BCRA') {
-      const varId = Number(item.id.replace('bcra_', ''))
-      const res = await api.getMacroSeries(varId)
-      return res.data.map((p: MacroSeriesPoint) => ({ fecha: p.fecha, valor: p.valor }))
-    } else if (item.source === 'FX') {
-      const fxType = item.id.replace('fx_', '') as 'oficial' | 'mep' | 'ccl' | 'blue'
-      const history = await api.getFxHistory()
-      const pts = history.rates[fxType] || []
-      return pts.map((p: MacroSeriesPoint) => ({ fecha: p.fecha, valor: p.valor }))
-    } else if (item.source === 'INDEC') {
-      const varId = item.id.replace('indec_', '')
-      const pts = await api.getIndecSeries(varId, '5Y')
-      return pts.map((p: { fecha: string; valor: number }) => ({ fecha: p.fecha, valor: p.valor }))
-    } else if (item.source === 'REM') {
-      if (item.id === 'rem_ipc_general') {
-        const cone = await api.getRemForecastCone('ipc_nivel_general')
-        return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
-      } else if (item.id === 'rem_tipo_cambio') {
-        const cone = await api.getRemForecastCone('tipo_de_cambio')
-        return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
-      } else {
-        const cone = await api.getRemForecastCone('tasa_politica')
-        return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
+  const fetchSeriesData = useCallback(
+    async (item: WorkbenchCatalogItem, tf?: string): Promise<MacroSeriesPoint[]> => {
+      const activeTf = tf || timeframe || 'Max'
+      if (item.source === 'BCRA') {
+        const varId = Number(item.id.replace('bcra_', ''))
+        const res = await api.getMacroSeries(varId)
+        return res.data.map((p: MacroSeriesPoint) => ({ fecha: p.fecha, valor: p.valor }))
+      } else if (item.source === 'FX') {
+        const fxType = item.id.replace('fx_', '') as 'oficial' | 'mep' | 'ccl' | 'blue'
+        const history = await api.getFxHistory()
+        const pts = history.rates[fxType] || []
+        return pts.map((p: MacroSeriesPoint) => ({ fecha: p.fecha, valor: p.valor }))
+      } else if (item.source === 'INDEC') {
+        const varId = item.id.replace('indec_', '')
+        const pts = await api.getIndecSeries(varId, activeTf)
+        return pts.map((p: { fecha: string; valor: number }) => ({ fecha: p.fecha, valor: p.valor }))
+      } else if (item.source === 'REM') {
+        if (item.id === 'rem_ipc_general') {
+          const cone = await api.getRemForecastCone('ipc_nivel_general')
+          return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
+        } else if (item.id === 'rem_tipo_cambio') {
+          const cone = await api.getRemForecastCone('tipo_de_cambio')
+          return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
+        } else {
+          const cone = await api.getRemForecastCone('tasa_politica')
+          return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
+        }
       }
-    }
-    return []
-  }, [])
+      return []
+    },
+    [timeframe]
+  )
 
   // 3. Add series handler
   const handleSelectSeries = useCallback(
@@ -162,7 +166,7 @@ export const WorkbenchView: React.FC = () => {
       setActiveSeries((prev) => [...prev, newSeries])
 
       try {
-        const pts = await fetchSeriesData(item)
+        const pts = await fetchSeriesData(item, timeframe)
         setActiveSeries((prev) =>
           prev.map((s) =>
             s.id === item.id ? { ...s, points: pts, status: 'success' } : s
@@ -177,8 +181,58 @@ export const WorkbenchView: React.FC = () => {
         )
       }
     },
-    [activeSeries, fetchSeriesData]
+    [activeSeries, fetchSeriesData, timeframe]
   )
+
+  // Keep track of active series in ref so timeframe effect can reload INDEC series without stale closures or infinite loops
+  const activeSeriesRef = useRef(activeSeries)
+  useEffect(() => {
+    activeSeriesRef.current = activeSeries
+  }, [activeSeries])
+
+  // Track previous timeframe to avoid reloading on initial mount when timeframe hasn't changed
+  const prevTimeframeRef = useRef(timeframe)
+
+  // Reload active INDEC series when timeframe changes to fetch the updated date range
+  useEffect(() => {
+    if (prevTimeframeRef.current === timeframe) return
+    prevTimeframeRef.current = timeframe
+
+    const indecSeries = activeSeriesRef.current.filter((s) => s.source === 'INDEC')
+    if (indecSeries.length === 0) return
+
+    let isMounted = true
+
+    const reloadIndecSeries = async () => {
+      try {
+        const results = await Promise.all(
+          indecSeries.map(async (s) => {
+            const varId = s.id.replace('indec_', '')
+            const pts = await api.getIndecSeries(varId, timeframe || 'Max')
+            return {
+              id: s.id,
+              points: pts.map((p: { fecha: string; valor: number }) => ({ fecha: p.fecha, valor: p.valor })),
+            }
+          })
+        )
+        if (!isMounted) return
+        setActiveSeries((prev) =>
+          prev.map((item) => {
+            const updated = results.find((r) => r.id === item.id)
+            return updated ? { ...item, points: updated.points, status: 'success' } : item
+          })
+        )
+      } catch (err) {
+        console.error('Failed to refresh INDEC series on timeframe change:', err)
+      }
+    }
+
+    reloadIndecSeries()
+
+    return () => {
+      isMounted = false
+    }
+  }, [timeframe])
 
   // 4. Remove series handler
   const handleRemoveSeries = useCallback((id: string) => {

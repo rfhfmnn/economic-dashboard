@@ -41,6 +41,14 @@ class IndecResponseError(IndecClientError):
     """Raised when INDEC API returns an unexpected response structure or 4xx error."""
 
 
+PAGINATED_COMEX_ENDPOINTS: set[str] = {
+    "/comercio_exterior_exportacion_bienes",
+    "/comercio_exterior_importacion_bienes",
+}
+COMEX_PAGE_SIZE: int = 1000
+COMEX_MAX_PAGES: int = 30  # Cap at 30,000 records (approx. 25-30 pages)
+
+
 DATASET_REGISTRY: dict[str, dict[str, Any]] = {
     # 1. Precios y costos
     "ipc_general": {
@@ -1718,6 +1726,8 @@ class IndecClient:
         timeout: float = 10.0,
         cache_ttl_seconds: int = 86400,  # 24 hours
         transport: httpx.BaseTransport | None = None,
+        comex_page_size: int = COMEX_PAGE_SIZE,
+        comex_max_pages: int = COMEX_MAX_PAGES,
     ) -> None:
         clean_base = base_url.rstrip("/")
         if not clean_base.endswith("/v1"):
@@ -1729,6 +1739,8 @@ class IndecClient:
         self.timeout = timeout
         self.cache_ttl_seconds = cache_ttl_seconds
         self._transport = transport
+        self.comex_page_size = comex_page_size
+        self.comex_max_pages = comex_max_pages
 
         self.client = httpx.Client(
             timeout=self.timeout,
@@ -1848,7 +1860,10 @@ class IndecClient:
 
         params = dict(registry_entry.get("params", {}))
         if period and period != "all":
-            params["periodo"] = f"eq.{period}"
+            if "Periodo.desc" in params.get("order", "") or endpoint in PAGINATED_COMEX_ENDPOINTS:
+                params["Periodo"] = f"eq.{period}"
+            else:
+                params["periodo"] = f"eq.{period}"
         if custom_params:
             params.update(custom_params)
 
@@ -1858,40 +1873,113 @@ class IndecClient:
             "User-Agent": "EconomicRiskDashboard/1.0",
         }
 
-        # 3. Execute HTTP request
-        try:
-            response = self.client.get(url, params=params, headers=headers)
-        except httpx.TimeoutException as exc:
-            raise IndecNetworkError(
-                f"Tiempo de espera agotado al conectar con INDEC ({url}): {exc}"
-            ) from exc
-        except (httpx.ConnectError, httpx.NetworkError, httpx.RequestError) as exc:
-            raise IndecNetworkError(
-                f"Error de conexión con la API del INDEC ({url}): {exc}"
-            ) from exc
+        is_comex = (
+            endpoint in PAGINATED_COMEX_ENDPOINTS
+            or endpoint.rstrip("/").startswith("/comercio_exterior")
+        )
 
-        # 4. Handle HTTP status codes
-        if response.status_code in (401, 403):
-            raise IndecAuthError(
-                f"Error de autenticación INDEC (HTTP {response.status_code}): "
-                "Token inválido o expirado. Verifique INDEC_API_TOKEN."
-            )
-        if response.status_code >= 500:
-            raise IndecNetworkError(
-                f"Error en servidor INDEC (HTTP {response.status_code}): {response.text}"
-            )
-        if response.status_code >= 400:
-            raise IndecResponseError(
-                f"Error en consulta a INDEC (HTTP {response.status_code}): {response.text}"
-            )
+        # 3. Execute HTTP request (with pagination loop for comex series)
+        if is_comex:
+            all_records: list[dict[str, Any]] = []
+            page_size = self.comex_page_size
+            max_pages = self.comex_max_pages
 
-        # 5. Parse JSON payload
-        try:
-            payload = response.json()
-        except Exception as exc:
-            raise IndecResponseError(
-                f"Respuesta inválida de INDEC (no es JSON válido): {exc}"
-            ) from exc
+            for page in range(max_pages):
+                page_params = dict(params)
+                page_params["limit"] = str(page_size)
+                page_params["offset"] = str(page * page_size)
+
+                try:
+                    response = self.client.get(url, params=page_params, headers=headers)
+                except httpx.TimeoutException as exc:
+                    raise IndecNetworkError(
+                        f"Tiempo de espera agotado al conectar con INDEC ({url}): {exc}"
+                    ) from exc
+                except (httpx.ConnectError, httpx.NetworkError, httpx.RequestError) as exc:
+                    raise IndecNetworkError(
+                        f"Error de conexión con la API del INDEC ({url}): {exc}"
+                    ) from exc
+
+                if response.status_code in (401, 403):
+                    raise IndecAuthError(
+                        f"Error de autenticación INDEC (HTTP {response.status_code}): "
+                        "Token inválido o expirado. Verifique INDEC_API_TOKEN."
+                    )
+                if response.status_code >= 500:
+                    raise IndecNetworkError(
+                        f"Error en servidor INDEC (HTTP {response.status_code}): {response.text}"
+                    )
+                if response.status_code >= 400:
+                    raise IndecResponseError(
+                        f"Error en consulta a INDEC (HTTP {response.status_code}): {response.text}"
+                    )
+
+                try:
+                    page_payload = response.json()
+                except Exception as exc:
+                    raise IndecResponseError(
+                        f"Respuesta inválida de INDEC (no es JSON válido): {exc}"
+                    ) from exc
+
+                if isinstance(page_payload, list):
+                    if not page_payload:
+                        break
+                    all_records.extend(page_payload)
+                    if len(page_payload) < page_size:
+                        break
+                elif isinstance(page_payload, dict):
+                    extracted_list = None
+                    for k in ("data", "series", "valores", "records"):
+                        if isinstance(page_payload.get(k), list):
+                            extracted_list = page_payload[k]
+                            break
+                    if extracted_list is not None:
+                        if not extracted_list:
+                            break
+                        all_records.extend(extracted_list)
+                        if len(extracted_list) < page_size:
+                            break
+                    else:
+                        all_records.append(page_payload)
+                        break
+                else:
+                    break
+
+            payload = all_records
+        else:
+            try:
+                response = self.client.get(url, params=params, headers=headers)
+            except httpx.TimeoutException as exc:
+                raise IndecNetworkError(
+                    f"Tiempo de espera agotado al conectar con INDEC ({url}): {exc}"
+                ) from exc
+            except (httpx.ConnectError, httpx.NetworkError, httpx.RequestError) as exc:
+                raise IndecNetworkError(
+                    f"Error de conexión con la API del INDEC ({url}): {exc}"
+                ) from exc
+
+            # 4. Handle HTTP status codes
+            if response.status_code in (401, 403):
+                raise IndecAuthError(
+                    f"Error de autenticación INDEC (HTTP {response.status_code}): "
+                    "Token inválido o expirado. Verifique INDEC_API_TOKEN."
+                )
+            if response.status_code >= 500:
+                raise IndecNetworkError(
+                    f"Error en servidor INDEC (HTTP {response.status_code}): {response.text}"
+                )
+            if response.status_code >= 400:
+                raise IndecResponseError(
+                    f"Error en consulta a INDEC (HTTP {response.status_code}): {response.text}"
+                )
+
+            # 5. Parse JSON payload
+            try:
+                payload = response.json()
+            except Exception as exc:
+                raise IndecResponseError(
+                    f"Respuesta inválida de INDEC (no es JSON válido): {exc}"
+                ) from exc
 
         # 6. Persist to SQLite cache (if db provided)
         if db is not None:
