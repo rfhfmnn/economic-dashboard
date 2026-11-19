@@ -11,10 +11,12 @@ import {
 } from 'recharts'
 import type { WorkbenchSeriesData, RollingCorrelationPoint } from '../../types'
 import type { AlignedPoint } from '../../utils/alignment'
+import type { ExpressionMode } from '../../utils/transforms'
 
 export interface WorkbenchChartProps {
   viewMode: 'normalized' | 'correlation'
-  normalization: 'base100' | 'percent'
+  expressionMode?: ExpressionMode
+  normalization?: 'base100' | 'percent' | ExpressionMode
   alignedData: AlignedPoint[]
   activeSeries: WorkbenchSeriesData[]
   // Correlation mode data
@@ -25,6 +27,7 @@ export interface WorkbenchChartProps {
 
 export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
   viewMode,
+  expressionMode,
   normalization,
   alignedData,
   activeSeries,
@@ -32,6 +35,16 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
   seriesAName,
   seriesBName,
 }) => {
+  const mode: ExpressionMode =
+    expressionMode ??
+    (normalization === 'percent'
+      ? 'mom'
+      : normalization === 'original' ||
+        normalization === 'base100' ||
+        normalization === 'mom' ||
+        normalization === 'yoy'
+      ? normalization
+      : 'base100')
   if (activeSeries.length === 0) {
     return (
       <div className="flex items-center justify-center h-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 text-sm">
@@ -111,15 +124,24 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
     )
   }
 
-  // Normalized time-series mode
+  // Normalized / analytical expression time-series mode
+  const getModeTitle = () => {
+    switch (mode) {
+      case 'original':
+        return 'Valores en unidad original'
+      case 'base100':
+        return 'Índice de base 100 dinámico (t₀ = 100)'
+      case 'mom':
+        return 'Variación intermensual (MoM %)'
+      case 'yoy':
+        return 'Variación interanual (YoY %)'
+    }
+  }
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
       <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          {normalization === 'base100'
-            ? 'Índice de base 100 dinámico (t₀ = 100)'
-            : 'Variación porcentual acumulada (% Δ)'}
-        </span>
+        <span>{getModeTitle()}</span>
         <span className="font-mono text-[11px]">
           {alignedData.length} observaciones cronológicas
         </span>
@@ -137,9 +159,15 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
             />
             <YAxis
               tick={{ fontSize: 11, fill: '#64748b' }}
-              tickFormatter={(val) =>
-                normalization === 'percent' ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : val.toFixed(1)
-              }
+              tickFormatter={(val) => {
+                if (mode === 'mom' || mode === 'yoy') {
+                  return `${val > 0 ? '+' : ''}${Number(val).toFixed(1)}%`
+                }
+                if (mode === 'base100') {
+                  return Number(val).toFixed(1)
+                }
+                return Number(val).toLocaleString('es-AR', { maximumFractionDigits: 1 })
+              }}
               tickLine={false}
               axisLine={{ stroke: '#cbd5e1' }}
             />
@@ -154,18 +182,29 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
               formatter={(value: any, name: any) => {
                 const s = activeSeries.find((x) => x.id === name)
                 const label = s ? `[${s.source}] ${s.name}` : name
-                const formatted =
-                  value !== null && value !== undefined
-                    ? normalization === 'percent'
-                      ? `${value > 0 ? '+' : ''}${Number(value).toFixed(2)}%`
-                      : Number(value).toFixed(2)
-                    : 'N/A'
+                if (value === null || value === undefined || isNaN(value)) {
+                  return ['N/A', label]
+                }
+                const num = Number(value)
+                let formatted = ''
+                if (mode === 'mom' || mode === 'yoy') {
+                  formatted = `${num > 0 ? '+' : ''}${num.toFixed(2)}%`
+                } else if (mode === 'base100') {
+                  formatted = num.toFixed(2)
+                } else {
+                  const unitStr = s?.unit ? ` ${s.unit}` : ''
+                  formatted = `${num.toLocaleString('es-AR', { maximumFractionDigits: 2 })}${unitStr}`
+                }
                 return [formatted, label]
               }}
               labelFormatter={(label) => `Fecha: ${label}`}
             />
-            {normalization === 'percent' && <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />}
-            {normalization === 'base100' && <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="3 3" />}
+            {(mode === 'mom' || mode === 'yoy') && (
+              <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+            )}
+            {mode === 'base100' && (
+              <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="3 3" />
+            )}
             {activeSeries.map((s) => (
               <Line
                 key={s.id}

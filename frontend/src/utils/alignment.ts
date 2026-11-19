@@ -3,6 +3,8 @@
  */
 
 import type { MacroSeriesPoint } from '../types'
+import type { ExpressionMode } from './transforms'
+import { transformOriginal, transformBase100, transformMoM, transformYoY } from './transforms'
 
 export interface AlignedPoint {
   fecha: string
@@ -140,27 +142,40 @@ export function alignTimeSeries(
   }>,
   options: {
     normalization?: 'none' | 'base100' | 'percent'
+    expressionMode?: ExpressionMode
     startDate?: string
     endDate?: string
   } = {}
 ): AlignedPoint[] {
   if (!seriesEntries || seriesEntries.length === 0) return []
 
-  // 1. Filter points by date range if provided
+  const mode = options.expressionMode
+
+  // 1. Filter and transform points based on expression mode
   const filteredSeries = seriesEntries.map((s) => {
-    let pts = s.points
+    let pts = [...s.points].sort((a, b) => a.fecha.localeCompare(b.fecha))
+
+    if (mode === 'mom') {
+      // For rolling MoM, calculate first so historical points prior to startDate provide bases
+      pts = transformMoM(pts, s.frequency)
+    } else if (mode === 'yoy') {
+      // For rolling YoY, calculate first so historical points prior to startDate provide bases
+      pts = transformYoY(pts, s.frequency)
+    }
+
     if (options.startDate) {
       pts = pts.filter((p) => p.fecha >= options.startDate!)
     }
     if (options.endDate) {
       pts = pts.filter((p) => p.fecha <= options.endDate!)
     }
-    pts.sort((a, b) => a.fecha.localeCompare(b.fecha))
 
-    // Apply normalization if requested
-    if (options.normalization === 'base100') {
-      pts = rebaseToBase100(pts)
-    } else if (options.normalization === 'percent') {
+    // Apply base100 or original or legacy normalization to the filtered visible range
+    if (mode === 'base100' || (!mode && options.normalization === 'base100')) {
+      pts = transformBase100(pts)
+    } else if (mode === 'original') {
+      pts = transformOriginal(pts)
+    } else if (!mode && options.normalization === 'percent') {
       pts = rebaseToPercentChange(pts)
     }
 

@@ -1,11 +1,12 @@
 import React from 'react'
 import { Download, ArrowRightLeft } from 'lucide-react'
 import type { WorkbenchSeriesData } from '../../types'
-
+import type { ExpressionMode } from '../../utils/transforms'
 
 export type WorkbenchViewMode = 'normalized' | 'correlation'
-export type NormalizationType = 'base100' | 'percent'
+export type NormalizationType = 'base100' | 'percent' | ExpressionMode
 export type TimeframeOption = '1M' | '3M' | '6M' | '1Y' | '5Y' | 'Max'
+export type { ExpressionMode }
 
 export interface WorkbenchToolbarProps {
   viewMode: WorkbenchViewMode
@@ -15,8 +16,10 @@ export interface WorkbenchToolbarProps {
   customStart: string
   customEnd: string
   onChangeCustomDates: (start: string, end: string) => void
-  normalization: NormalizationType
-  onChangeNormalization: (norm: NormalizationType) => void
+  expressionMode?: ExpressionMode
+  onChangeExpressionMode?: (mode: ExpressionMode) => void
+  normalization?: NormalizationType
+  onChangeNormalization?: (norm: NormalizationType) => void
   adjustInflation: boolean
   onToggleAdjustInflation: (adjust: boolean) => void
   hasArsSeries: boolean
@@ -43,6 +46,8 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
   customStart,
   customEnd,
   onChangeCustomDates,
+  expressionMode,
+  onChangeExpressionMode,
   normalization,
   onChangeNormalization,
   adjustInflation,
@@ -60,6 +65,25 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
   onExportExcel,
   isExportingExcel,
 }) => {
+  const activeMode: ExpressionMode =
+    expressionMode ??
+    (normalization === 'percent'
+      ? 'mom'
+      : normalization === 'original' ||
+        normalization === 'base100' ||
+        normalization === 'mom' ||
+        normalization === 'yoy'
+      ? normalization
+      : 'base100')
+
+  const handleModeChange = (newMode: ExpressionMode) => {
+    if (onChangeExpressionMode) {
+      onChangeExpressionMode(newMode)
+    }
+    if (onChangeNormalization) {
+      onChangeNormalization(newMode === 'mom' ? 'percent' : newMode === 'base100' ? 'base100' : (newMode as any))
+    }
+  }
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 space-y-4">
       {/* Top row: Mode selector + Exports */}
@@ -152,16 +176,27 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
           </div>
         </div>
 
-        {/* Right side: Normalization or Correlation params */}
+        {/* Right side: Expression mode or Correlation params */}
         {viewMode === 'normalized' ? (
           <div className="flex flex-wrap items-center gap-3">
-            {/* Rebase toggle */}
+            {/* Expression mode segmented selector */}
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md text-xs">
               <button
                 type="button"
-                onClick={() => onChangeNormalization('base100')}
+                onClick={() => handleModeChange('original')}
                 className={`px-2.5 py-1 rounded transition-colors ${
-                  normalization === 'base100'
+                  activeMode === 'original'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Unidad original
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange('base100')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  activeMode === 'base100'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
@@ -170,14 +205,25 @@ export const WorkbenchToolbar: React.FC<WorkbenchToolbarProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => onChangeNormalization('percent')}
+                onClick={() => handleModeChange('mom')}
                 className={`px-2.5 py-1 rounded transition-colors ${
-                  normalization === 'percent'
+                  activeMode === 'mom'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                Variación porcentual (% Δ)
+                Variación intermensual (MoM %)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange('yoy')}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  activeMode === 'yoy'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Variación interanual (YoY %)
               </button>
             </div>
 

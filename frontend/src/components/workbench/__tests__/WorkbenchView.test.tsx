@@ -164,7 +164,75 @@ describe('WorkbenchView Component', () => {
     const normalizedTab = screen.getByText('Serie temporal normalizada')
     fireEvent.click(normalizedTab)
 
+    expect(screen.getByText('Unidad original')).toBeInTheDocument()
     expect(screen.getByText('Base 100 (t₀ = 100)')).toBeInTheDocument()
-    expect(screen.getByText('Variación porcentual (% Δ)')).toBeInTheDocument()
+    expect(screen.getByText('Variación intermensual (MoM %)')).toBeInTheDocument()
+    expect(screen.getByText('Variación interanual (YoY %)')).toBeInTheDocument()
+  })
+
+  it('switches between expression modes and updates chart and table metrics', async () => {
+    render(<WorkbenchView />)
+
+    // Add a series first
+    const searchInput = screen.getByPlaceholderText('Buscar serie en BCRA, INDEC, FX y REM...')
+    fireEvent.focus(searchInput)
+    fireEvent.change(searchInput, { target: { value: 'base' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Base monetaria')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Base monetaria').closest('button')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
+    })
+
+    // By default, base 100 mode is active
+    expect(screen.getByText('Índice de base 100 dinámico (t₀ = 100)')).toBeInTheDocument()
+    expect(screen.getByText('Último valor (base 100)')).toBeInTheDocument()
+
+    // Switch to Unidad original
+    fireEvent.click(screen.getByText('Unidad original'))
+    expect(screen.getByText('Valores en unidad original')).toBeInTheDocument()
+    expect(screen.getByText('Último valor')).toBeInTheDocument()
+
+    // Switch to MoM %
+    fireEvent.click(screen.getByText('Variación intermensual (MoM %)'))
+    expect(screen.getAllByText('Variación intermensual (MoM %)')).toHaveLength(2) // in toolbar button and chart subtitle
+    expect(screen.getByText('Última var. MoM')).toBeInTheDocument()
+    expect(screen.getByText('Promedio MoM')).toBeInTheDocument()
+
+    // Switch to YoY %
+    fireEvent.click(screen.getByText('Variación interanual (YoY %)'))
+    expect(screen.getAllByText('Variación interanual (YoY %)')).toHaveLength(2)
+    expect(screen.getByText('Última var. YoY')).toBeInTheDocument()
+    expect(screen.getByText('Promedio YoY')).toBeInTheDocument()
+  })
+
+  it('coordinates inflation adjustment toggle with active ARS series', async () => {
+    render(<WorkbenchView />)
+
+    // Add ARS series
+    const searchInput = screen.getByPlaceholderText('Buscar serie en BCRA, INDEC, FX y REM...')
+    fireEvent.focus(searchInput)
+    fireEvent.change(searchInput, { target: { value: 'base' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Base monetaria')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Base monetaria').closest('button')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
+    })
+
+    const inflationCheckbox = screen.getByRole('checkbox', {
+      name: /Ajustar por inflación \(términos reales\)/i,
+    })
+    expect(inflationCheckbox).not.toBeDisabled()
+    expect(inflationCheckbox).not.toBeChecked()
+
+    fireEvent.click(inflationCheckbox)
+    expect(inflationCheckbox).toBeChecked()
   })
 })

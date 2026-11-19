@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { UniversalSearchBar } from './UniversalSearchBar'
 import { ActiveSeriesTray } from './ActiveSeriesTray'
-import { WorkbenchToolbar, type WorkbenchViewMode, type NormalizationType, type TimeframeOption } from './WorkbenchToolbar'
+import { WorkbenchToolbar, type WorkbenchViewMode, type TimeframeOption } from './WorkbenchToolbar'
 import { WorkbenchChart } from './WorkbenchChart'
 import { WorkbenchStatsTable } from './WorkbenchStatsTable'
 import { api } from '../../services/api'
@@ -15,6 +15,13 @@ import type {
 import { alignTimeSeries } from '../../utils/alignment'
 import { calculateRollingCorrelation, calculateSeriesStats } from '../../utils/correlation'
 import { buildDeflatorModel, deflateSeries } from '../../utils/deflator'
+import {
+  type ExpressionMode,
+  transformOriginal,
+  transformBase100,
+  transformMoM,
+  transformYoY,
+} from '../../utils/transforms'
 
 const SERIES_COLORS = [
   '#2563eb', // Blue
@@ -36,7 +43,7 @@ export const WorkbenchView: React.FC = () => {
   const [timeframe, setTimeframe] = useState<TimeframeOption>('1Y')
   const [customStart, setCustomStart] = useState<string>('')
   const [customEnd, setCustomEnd] = useState<string>('')
-  const [normalization, setNormalization] = useState<NormalizationType>('base100')
+  const [expressionMode, setExpressionMode] = useState<ExpressionMode>('base100')
   const [adjustInflation, setAdjustInflation] = useState<boolean>(false)
 
   // Correlation controls
@@ -219,11 +226,11 @@ export const WorkbenchView: React.FC = () => {
     }))
 
     return alignTimeSeries(entries, {
-      normalization,
+      expressionMode,
       startDate: customStart || undefined,
       endDate: customEnd || undefined,
     })
-  }, [effectiveSeries, normalization, customStart, customEnd])
+  }, [effectiveSeries, expressionMode, customStart, customEnd])
 
   // 7. Rolling correlation computation
   const { correlationPoints, isDownsampled } = useMemo(() => {
@@ -261,11 +268,25 @@ export const WorkbenchView: React.FC = () => {
   const statsList = useMemo<WorkbenchSeriesStats[]>(() => {
     return effectiveSeries.map((s) => {
       let pts = s.points
+
+      if (expressionMode === 'mom') {
+        pts = transformMoM(pts, s.frequency)
+      } else if (expressionMode === 'yoy') {
+        pts = transformYoY(pts, s.frequency)
+      }
+
       if (customStart) pts = pts.filter((p) => p.fecha >= customStart)
       if (customEnd) pts = pts.filter((p) => p.fecha <= customEnd)
+
+      if (expressionMode === 'base100') {
+        pts = transformBase100(pts)
+      } else if (expressionMode === 'original') {
+        pts = transformOriginal(pts)
+      }
+
       return calculateSeriesStats(s.id, s.name, s.source, pts, s.unit)
     })
-  }, [effectiveSeries, customStart, customEnd])
+  }, [effectiveSeries, expressionMode, customStart, customEnd])
 
   // 9. Export to CSV handler
   const handleExportCsv = useCallback(() => {
@@ -372,8 +393,8 @@ export const WorkbenchView: React.FC = () => {
           setCustomStart(s)
           setCustomEnd(e)
         }}
-        normalization={normalization}
-        onChangeNormalization={setNormalization}
+        expressionMode={expressionMode}
+        onChangeExpressionMode={setExpressionMode}
         adjustInflation={adjustInflation}
         onToggleAdjustInflation={setAdjustInflation}
         hasArsSeries={hasArsSeries}
@@ -393,7 +414,7 @@ export const WorkbenchView: React.FC = () => {
       {/* Main Chart Area */}
       <WorkbenchChart
         viewMode={viewMode}
-        normalization={normalization}
+        expressionMode={expressionMode}
         alignedData={alignedData}
         activeSeries={activeSeries}
         correlationPoints={correlationPoints}
@@ -402,7 +423,7 @@ export const WorkbenchView: React.FC = () => {
       />
 
       {/* Summary Statistics Table */}
-      <WorkbenchStatsTable stats={statsList} />
+      <WorkbenchStatsTable stats={statsList} expressionMode={expressionMode} />
     </div>
   )
 }

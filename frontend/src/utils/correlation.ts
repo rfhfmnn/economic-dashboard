@@ -200,6 +200,7 @@ export function calculateSeriesStats(
 
   const minimo = Math.min(...values)
   const maximo = Math.max(...values)
+  const promedio = values.length > 0 ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2)) : null
 
   // Sample standard deviation (s with Bessel's correction N-1)
   let desvioEstandar: number | null = null
@@ -221,6 +222,7 @@ export function calculateSeriesStats(
     minimo,
     maximo,
     desvioEstandar,
+    promedio,
     unit,
   }
 }

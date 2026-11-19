@@ -482,6 +482,7 @@ export interface WorkbenchSeriesStats {
   minimo: number | null
   maximo: number | null
   desvioEstandar: number | null
+  promedio?: number | null
   unit?: string
 }
 

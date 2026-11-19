@@ -199,15 +199,15 @@ Provide rich analytical expression toggles allowing users to view series in thei
 
 ## Acceptance criteria
 
-- [ ] `frontend/src/utils/transforms.ts` implements pure functions for original units, dynamic base 100 ($t_0=100$), MoM percentage change ($\Delta\%_{m} = (V_m - V_{m-1})/V_{m-1} \times 100$), and YoY percentage change ($\Delta\%_{a} = (V_t - V_{t-12})/V_{t-12} \times 100$ or 252 business days).
-- [ ] `WorkbenchToolbar.tsx` displays a segmented mode selector: `"Unidad original"`, `"Base 100 (t₀ = 100)"`, `"Variación intermensual (MoM %)"`, and `"Variación interanual (YoY %)"`.
-- [ ] The inflation switch `"Ajustar por inflación (términos reales)"` can be toggled on/off across all expression modes for eligible ARS monetary series using the official IPC deflator.
-- [ ] When in `"Unidad original"`, values display with their native unit formatting (e.g. `USD`, `ARS`, `%`, etc.).
-- [ ] When in `"Variación intermensual (MoM %)"` or `"Variación interanual (YoY %)"`, values display with signed percentage formatting (`+2.5%`, `-0.8%`) and neutral reference line at $Y=0$.
-- [ ] When in `"Base 100 (t₀ = 100)"`, values display rebased from the first visible point with neutral reference line at $Y=100$.
-- [ ] Tooltip and summary statistics table dynamically adapt column labels, units, and metrics to match the active expression mode.
-- [ ] Comprehensive unit tests cover all transformation functions in `transforms.test.ts` and UI mode switching.
-- [ ] Strict sentence case across all segmented buttons, labels, and tooltips.
+- [x] `frontend/src/utils/transforms.ts` implements pure functions for original units, dynamic base 100 ($t_0=100$), MoM percentage change ($\Delta\%_{m} = (V_m - V_{m-1})/V_{m-1} \times 100$), and YoY percentage change ($\Delta\%_{a} = (V_t - V_{t-12})/V_{t-12} \times 100$ or 252 business days).
+- [x] `WorkbenchToolbar.tsx` displays a segmented mode selector: `"Unidad original"`, `"Base 100 (t₀ = 100)"`, `"Variación intermensual (MoM %)"`, and `"Variación interanual (YoY %)"`.
+- [x] The inflation switch `"Ajustar por inflación (términos reales)"` can be toggled on/off across all expression modes for eligible ARS monetary series using the official IPC deflator.
+- [x] When in `"Unidad original"`, values display with their native unit formatting (e.g. `USD`, `ARS`, `%`, etc.).
+- [x] When in `"Variación intermensual (MoM %)"` or `"Variación interanual (YoY %)"`, values display with signed percentage formatting (`+2.5%`, `-0.8%`) and neutral reference line at $Y=0$.
+- [x] When in `"Base 100 (t₀ = 100)"`, values display rebased from the first visible point with neutral reference line at $Y=100$.
+- [x] Tooltip and summary statistics table dynamically adapt column labels, units, and metrics to match the active expression mode.
+- [x] Comprehensive unit tests cover all transformation functions in `transforms.test.ts` and UI mode switching.
+- [x] Strict sentence case across all segmented buttons, labels, and tooltips.
 
 ## Out of scope
 
