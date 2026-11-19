@@ -1,5 +1,5 @@
 import React from 'react'
-import { TrendingUp, ShieldAlert } from 'lucide-react'
+import { TrendingUp, ShieldAlert, SlidersHorizontal } from 'lucide-react'
 import type { TabType } from '../../types'
 
 export interface NavbarProps {
@@ -20,6 +20,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
       id: 'macro',
       label: 'Monitor macroeconómico',
       icon: TrendingUp,
+    },
+    {
+      id: 'workbench',
+      label: 'Banco de trabajo',
+      icon: SlidersHorizontal,
     },
     {
       id: 'screener',

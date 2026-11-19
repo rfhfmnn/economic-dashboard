@@ -3,6 +3,7 @@ import { Header } from './components/layout/Header'
 import { Navbar } from './components/layout/Navbar'
 import { MacroView } from './components/macro/MacroView'
 import { ScreenerView } from './components/risk/ScreenerView'
+import { WorkbenchView } from './components/workbench/WorkbenchView'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 import { ThemeProvider } from './context/ThemeContext'
 import type { TabType } from './types'
@@ -23,6 +24,8 @@ export function App() {
         <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
           <ErrorBoundary>
             {activeTab === 'macro' && <MacroView />}
+
+            {activeTab === 'workbench' && <WorkbenchView />}
 
             {(activeTab === 'screener' || activeTab === 'batch') && (
               <ScreenerView initialSubTab={activeTab === 'batch' ? 'batch' : 'individual'} />

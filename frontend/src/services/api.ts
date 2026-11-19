@@ -327,4 +327,29 @@ export const api = {
       `/macro/indec/series/${encodeURIComponent(variableId)}${qs}`
     )
   },
+
+  // -------------------------------------------------------------
+  // Universal Multi-Variable Workbench Endpoints
+  // -------------------------------------------------------------
+  getWorkbenchCatalog: (q?: string): Promise<any[]> => {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : ''
+    return request<any[]>(`/macro/workbench/catalog${qs}`)
+  },
+
+  downloadWorkbenchExcel: async (payload: {
+    aligned_data: any[]
+    stats_data?: any[]
+    series_headers?: Array<{ key: string; name: string }>
+  }): Promise<Blob> => {
+    const url = `${BASE_URL}/export/workbench-excel`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      throw new Error(`Failed to generate Workbench Excel export: ${response.statusText}`)
+    }
+    return response.blob()
+  },
 }

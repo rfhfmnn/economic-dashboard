@@ -2,7 +2,7 @@
  * TypeScript domain type definitions for Economic & Credit Risk Dashboard (BCRA).
  */
 
-export type TabType = 'macro' | 'screener' | 'batch'
+export type TabType = 'macro' | 'screener' | 'batch' | 'workbench'
 
 export interface SystemStatusResponse {
   status: string
@@ -437,4 +437,52 @@ export interface IndecSeriesPoint {
 }
 
 export type TimeSeriesPoint = IndecSeriesPoint
+
+// -------------------------------------------------------------
+// Universal Workbench Interfaces
+// -------------------------------------------------------------
+
+export type WorkbenchSource = 'BCRA' | 'INDEC' | 'FX' | 'REM'
+
+export interface WorkbenchCatalogItem {
+  id: string
+  source: WorkbenchSource
+  name: string
+  category: string
+  unit: string
+  frequency: 'diaria' | 'mensual' | 'trimestral'
+  isArs: boolean
+  description?: string
+}
+
+export interface WorkbenchSeriesData {
+  id: string
+  source: WorkbenchSource
+  name: string
+  color: string
+  unit: string
+  frequency: 'diaria' | 'mensual' | 'trimestral'
+  isArs: boolean
+  status: 'loading' | 'success' | 'delayed' | 'error'
+  points: MacroSeriesPoint[]
+}
+
+export interface RollingCorrelationPoint {
+  fecha: string
+  r: number | null
+}
+
+export interface WorkbenchSeriesStats {
+  id: string
+  name: string
+  source: WorkbenchSource
+  ultimoValor: number | null
+  fechaUltimo: string | null
+  variacionPeriodo: number | null
+  minimo: number | null
+  maximo: number | null
+  desvioEstandar: number | null
+  unit?: string
+}
+
 
