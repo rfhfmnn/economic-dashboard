@@ -210,3 +210,97 @@ def test_rem_modular_kpis_all_variables_and_sparklines(rem_service):
     pib_horizons = [h["id"] for h in pib["available_horizons"]]
     assert "next_quarter" in pib_horizons
     assert "year_end_current" in pib_horizons
+
+
+def test_parse_rem_period_to_iso():
+    from backend.app.services.rem_service import parse_rem_period_to_iso
+    assert parse_rem_period_to_iso("Oct-26") == "2026-10-01"
+    assert parse_rem_period_to_iso("Oct-2026") == "2026-10-01"
+    assert parse_rem_period_to_iso("2026-10") == "2026-10-01"
+    assert parse_rem_period_to_iso("2026-10-01") == "2026-10-01"
+    assert parse_rem_period_to_iso("2026-09-30") == "2026-09-01"
+    assert parse_rem_period_to_iso("Ene-25") == "2025-01-01"
+    assert parse_rem_period_to_iso("Abr-26") == "2026-04-01"
+    assert parse_rem_period_to_iso("Ago-26") == "2026-08-01"
+    assert parse_rem_period_to_iso("Jan-27") == "2027-01-01"
+    assert parse_rem_period_to_iso("Oct-26-01") == "2026-10-01"
+    assert parse_rem_period_to_iso("") is None
+
+
+def test_get_rem_series_ipc_general(rem_service):
+    """Verify unified continuous series for IPC general pairing historical observed data with REM projections."""
+    import re
+    series = rem_service.get_rem_series("ipc_general")
+    assert isinstance(series, list)
+    assert len(series) >= 18
+
+    # All points must have valid ISO format YYYY-MM-01
+    iso_regex = re.compile(r"^\d{4}-\d{2}-01$")
+    for pt in series:
+        assert iso_regex.match(pt["fecha"]), f"Invalid ISO date: {pt['fecha']}"
+        assert "valor" in pt
+        assert "is_forecast" in pt
+        assert "mediana" in pt
+        assert "p25" in pt
+        assert "p75" in pt
+
+    # Verify chronological sorting
+    fechas = [pt["fecha"] for pt in series]
+    assert fechas == sorted(fechas)
+
+    # Must contain both historical and forecast points
+    hist_points = [p for p in series if not p["is_forecast"]]
+    fc_points = [p for p in series if p["is_forecast"]]
+
+    assert len(hist_points) >= 12, "Should contain at least 12 historical observed months"
+    assert len(fc_points) >= 6, "Should contain forward-looking forecast months"
+
+    # All historical points precede forecast points
+    assert max(p["fecha"] for p in hist_points) <= min(p["fecha"] for p in fc_points)
+
+
+def test_get_rem_series_other_variables_and_cohort(rem_service):
+    """Verify REM series for tipo_cambio, badlar, tasa_politica, and cohort selection."""
+    for var_key in ("tipo_cambio", "badlar", "tasa_politica"):
+        series = rem_service.get_rem_series(var_key, cohort="todos")
+        assert len(series) >= 18
+        hist_pts = [p for p in series if not p["is_forecast"]]
+        fc_pts = [p for p in series if p["is_forecast"]]
+        assert len(hist_pts) > 0
+        assert len(fc_pts) > 0
+        for pt in series:
+            assert pt["fecha"].endswith("-01")
+            assert pt["valor"] > 0
+
+    # Test top 10 cohort
+    series_top10 = rem_service.get_rem_series("rem_tipo_cambio_top10")
+    assert len(series_top10) >= 18
+    assert all(pt["fecha"].endswith("-01") for pt in series_top10)
+
+
+def test_fastapi_rem_series_endpoint(client: TestClient):
+    """Verify GET /api/macro/rem/series/{variable_key} REST endpoint."""
+    resp = client.get("/api/macro/rem/series/ipc_general")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) >= 18
+
+    # Inspect first and last point
+    first_pt = data[0]
+    assert first_pt["fecha"].endswith("-01")
+    assert first_pt["is_forecast"] is False
+
+    last_pt = data[-1]
+    assert last_pt["fecha"].endswith("-01")
+    assert last_pt["is_forecast"] is True
+    assert "mediana" in last_pt
+    assert "p25" in last_pt
+    assert "p75" in last_pt
+
+    # Endpoint with cohort=top_10
+    resp_top10 = client.get("/api/macro/rem/series/tipo_cambio?cohort=top_10")
+    assert resp_top10.status_code == 200
+    data_top10 = resp_top10.json()
+    assert len(data_top10) >= 18
+

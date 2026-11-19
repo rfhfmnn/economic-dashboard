@@ -13,6 +13,7 @@ vi.mock('../../../services/api', () => ({
     getFxHistory: vi.fn(),
     getIndecSeries: vi.fn(),
     getRemForecastCone: vi.fn(),
+    getRemSeries: vi.fn(),
     downloadWorkbenchExcel: vi.fn(),
   },
 }))
@@ -111,6 +112,14 @@ describe('WorkbenchView Component', () => {
         { fecha: '2026-05-01', valor: 1700 },
       ]
     })
+    vi.mocked(api.getRemSeries).mockResolvedValue([
+      { fecha: '2025-06-01', valor: 1000, is_forecast: false, mediana: 1000, p25: 1000, p75: 1000 },
+      { fecha: '2025-07-01', valor: 1020, is_forecast: false, mediana: 1020, p25: 1020, p75: 1020 },
+      { fecha: '2025-08-01', valor: 1040, is_forecast: false, mediana: 1040, p25: 1040, p75: 1040 },
+      { fecha: '2025-09-01', valor: 1060, is_forecast: true, mediana: 1060, p25: 1040, p75: 1080 },
+      { fecha: '2025-10-01', valor: 1080, is_forecast: true, mediana: 1080, p25: 1060, p75: 1100 },
+      { fecha: '2025-11-01', valor: 1100, is_forecast: true, mediana: 1100, p25: 1080, p75: 1120 },
+    ])
   })
 
   it('renders workbench title, search bar, and empty tray state', async () => {
@@ -362,6 +371,25 @@ describe('WorkbenchView Component', () => {
     await waitFor(() => {
       // Must be called with 'Max' to retrieve full historical points
       expect(api.getIndecSeries).toHaveBeenCalledWith('comex_exportaciones_primarios', 'Max')
+    })
+  })
+
+  it('fetches complete historical and forecast series via getRemSeries without date parsing errors', async () => {
+    render(<WorkbenchView />)
+
+    const searchInput = screen.getByPlaceholderText('Buscar serie en BCRA, INDEC, FX y REM...')
+    fireEvent.focus(searchInput)
+    fireEvent.change(searchInput, { target: { value: 'tipo de cambio nominal esperado' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('REM - tipo de cambio nominal esperado')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('REM - tipo de cambio nominal esperado').closest('button')!)
+
+    await waitFor(() => {
+      expect(api.getRemSeries).toHaveBeenCalledWith('tipo_cambio', 'todos')
+      expect(screen.getByText('Series activas (1/5)')).toBeInTheDocument()
     })
   })
 })

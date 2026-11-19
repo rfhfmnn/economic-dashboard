@@ -33,6 +33,23 @@ export interface MacroIndicator {
 export interface MacroSeriesPoint {
   fecha: string
   valor: number
+  is_forecast?: boolean
+  mediana?: number
+  p25?: number | null
+  p75?: number | null
+  periodo?: string
+  variable?: string
+}
+
+export interface RemSeriesPoint {
+  fecha: string
+  valor: number
+  is_forecast: boolean
+  mediana: number
+  p25?: number | null
+  p75?: number | null
+  periodo?: string
+  variable?: string
 }
 
 export type Periodicity = 'original' | 'mensual' | 'trimestral'

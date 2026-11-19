@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { WorkbenchChart, calculateDomain, formatPeriodDate } from '../WorkbenchChart'
+import { WorkbenchChart, calculateDomain, formatPeriodDate, WorkbenchChartTooltip } from '../WorkbenchChart'
 import type { WorkbenchSeriesData } from '../../../types'
 
 describe('calculateDomain helper', () => {
@@ -292,6 +292,80 @@ describe('WorkbenchChart Component', () => {
       )
 
       expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument()
+    })
+  })
+
+  describe('REM series projection rendering and tooltip badges', () => {
+    const remSeries: WorkbenchSeriesData = {
+      id: 'rem_tipo_cambio',
+      source: 'REM',
+      name: 'Tipo de cambio esperado',
+      color: '#f59e0b',
+      unit: 'ARS/USD',
+      frequency: 'mensual',
+      isArs: false,
+      status: 'success',
+      points: [
+        { fecha: '2026-08-01', valor: 1040, is_forecast: false, mediana: 1040 },
+        { fecha: '2026-09-01', valor: 1060, is_forecast: true, mediana: 1060, p25: 1040, p75: 1080 },
+        { fecha: '2026-10-01', valor: 1080, is_forecast: true, mediana: 1080, p25: 1060, p75: 1100 },
+      ],
+    }
+
+    const alignedRemData = [
+      { fecha: '2026-08-01', rem_tipo_cambio: 1040 },
+      { fecha: '2026-09-01', rem_tipo_cambio: 1060 },
+      { fecha: '2026-10-01', rem_tipo_cambio: 1080 },
+    ]
+
+    it('renders REM series across past history and future projection dates', () => {
+      const { container } = render(
+        <WorkbenchChart
+          viewMode="normalized"
+          expressionMode="original"
+          alignedData={alignedRemData}
+          activeSeries={[remSeries]}
+          correlationPoints={[]}
+        />
+      )
+
+      expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument()
+      expect(screen.getByText('Valores en unidad original')).toBeInTheDocument()
+      expect(screen.getByText('3 observaciones cronológicas')).toBeInTheDocument()
+    })
+
+    it('renders WorkbenchChartTooltip with Proyección REM badge for forecast points in strict sentence case', () => {
+      render(
+        <WorkbenchChartTooltip
+          active={true}
+          label="2026-09-01"
+          payload={[{ dataKey: 'rem_tipo_cambio_forecast', value: 1060 }]}
+          activeSeries={[remSeries]}
+          mode="original"
+          periodicity="mensual"
+        />
+      )
+
+      expect(screen.getByText('Fecha: 2026-09')).toBeInTheDocument()
+      expect(screen.getByText('[REM] Tipo de cambio esperado')).toBeInTheDocument()
+      expect(screen.getByTestId('forecast-badge')).toHaveTextContent('Proyección REM')
+    })
+
+    it('does not render Proyección REM badge for historical points', () => {
+      render(
+        <WorkbenchChartTooltip
+          active={true}
+          label="2026-08-01"
+          payload={[{ dataKey: 'rem_tipo_cambio_hist', value: 1040 }]}
+          activeSeries={[remSeries]}
+          mode="original"
+          periodicity="mensual"
+        />
+      )
+
+      expect(screen.getByText('Fecha: 2026-08')).toBeInTheDocument()
+      expect(screen.getByText('[REM] Tipo de cambio esperado')).toBeInTheDocument()
+      expect(screen.queryByTestId('forecast-badge')).not.toBeInTheDocument()
     })
   })
 })

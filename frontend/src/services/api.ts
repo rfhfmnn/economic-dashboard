@@ -17,6 +17,7 @@ import type {
   RemCpiComparisonResponse,
   RemForecastConeResponse,
   RemModularKpisResponse,
+  RemSeriesPoint,
   RemSummaryResponse,
   RemTableResponse,
   SystemStatusResponse,
@@ -301,6 +302,18 @@ export const api = {
 
   getRemModularKpis: (period: string = 'ultimo', cohort: RemCohort = 'todos') =>
     request<RemModularKpisResponse>(`/macro/rem/modular-kpis?period=${encodeURIComponent(period)}&cohort=${encodeURIComponent(cohort)}`),
+
+  getRemSeries: (
+    variableKey: string,
+    cohort: RemCohort = 'todos'
+  ): Promise<RemSeriesPoint[]> => {
+    const params = new URLSearchParams()
+    if (cohort) params.append('cohort', cohort)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request<RemSeriesPoint[]>(
+      `/macro/rem/series/${encodeURIComponent(variableKey)}${qs}`
+    )
+  },
 
   // -------------------------------------------------------------
   // INDEC (Economía Real) Endpoints

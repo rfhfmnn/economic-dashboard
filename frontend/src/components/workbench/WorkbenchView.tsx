@@ -127,16 +127,18 @@ export const WorkbenchView: React.FC = () => {
         const pts = await api.getIndecSeries(varId, activeTf)
         return pts.map((p: { fecha: string; valor: number }) => ({ fecha: p.fecha, valor: p.valor }))
       } else if (item.source === 'REM') {
-        if (item.id === 'rem_ipc_general') {
-          const cone = await api.getRemForecastCone('ipc_nivel_general')
-          return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
-        } else if (item.id === 'rem_tipo_cambio') {
-          const cone = await api.getRemForecastCone('tipo_de_cambio')
-          return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
-        } else {
-          const cone = await api.getRemForecastCone('tasa_politica')
-          return cone.points.map((p) => ({ fecha: `${p.period}-01`, valor: p.mediana }))
-        }
+        const isTop10 = item.id.includes('top10')
+        const cohort = isTop10 ? 'top_10' : 'todos'
+        const varKey = item.id.replace('rem_', '').replace('_top10', '')
+        const pts = await api.getRemSeries(varKey, cohort)
+        return pts.map((p) => ({
+          fecha: p.fecha,
+          valor: p.valor,
+          is_forecast: p.is_forecast,
+          mediana: p.mediana,
+          p25: p.p25,
+          p75: p.p75,
+        }))
       }
       return []
     },
@@ -310,24 +312,44 @@ export const WorkbenchView: React.FC = () => {
     })
   }, [effectiveSeries, periodicity])
 
-  // Compute effective end date expanding to period boundary to avoid clipping current period
+  // Compute effective end date expanding to period boundary to avoid clipping current period,
+  // and allowing the horizon to extend up to the last projected month if REM series are active.
   const effectiveEndDate = useMemo(() => {
-    if (!customEnd) return undefined
-    if (periodicity === 'mensual') {
-      const year = parseInt(customEnd.slice(0, 4), 10)
-      const month = parseInt(customEnd.slice(5, 7), 10)
-      if (!isNaN(year) && !isNaN(month)) {
-        return getMonthEndDate(year, month)
-      }
-    } else if (periodicity === 'trimestral') {
-      const year = parseInt(customEnd.slice(0, 4), 10)
-      const month = parseInt(customEnd.slice(5, 7), 10)
-      if (!isNaN(year) && !isNaN(month)) {
-        return getQuarterEndDate(year, Math.ceil(month / 3))
+    let end = customEnd || undefined
+    if (end) {
+      if (periodicity === 'mensual') {
+        const year = parseInt(end.slice(0, 4), 10)
+        const month = parseInt(end.slice(5, 7), 10)
+        if (!isNaN(year) && !isNaN(month)) {
+          end = getMonthEndDate(year, month)
+        }
+      } else if (periodicity === 'trimestral') {
+        const year = parseInt(end.slice(0, 4), 10)
+        const month = parseInt(end.slice(5, 7), 10)
+        if (!isNaN(year) && !isNaN(month)) {
+          end = getQuarterEndDate(year, Math.ceil(month / 3))
+        }
       }
     }
-    return customEnd
-  }, [customEnd, periodicity])
+
+    // If there are active REM series, allow horizon to extend up to the last projected month
+    const remSeries = activeSeries.filter((s) => s.source === 'REM')
+    if (remSeries.length > 0) {
+      let maxRemDate = ''
+      for (const s of remSeries) {
+        for (const p of s.points) {
+          if (p.fecha && p.fecha > maxRemDate) {
+            maxRemDate = p.fecha
+          }
+        }
+      }
+      if (maxRemDate && (!end || maxRemDate > end)) {
+        return maxRemDate
+      }
+    }
+
+    return end
+  }, [customEnd, periodicity, activeSeries])
 
   // 6. Aligned data for normalized time-series chart
   const alignedData = useMemo(() => {

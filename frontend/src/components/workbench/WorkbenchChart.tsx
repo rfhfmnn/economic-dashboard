@@ -100,6 +100,93 @@ export function calculateDomain(
   return [min - pad, max + pad]
 }
 
+export interface WorkbenchChartTooltipProps {
+  active?: boolean
+  payload?: any[]
+  label?: string
+  activeSeries: WorkbenchSeriesData[]
+  mode: ExpressionMode
+  periodicity?: Periodicity
+}
+
+export const WorkbenchChartTooltip: React.FC<WorkbenchChartTooltipProps> = ({
+  active,
+  payload,
+  label,
+  activeSeries,
+  mode,
+  periodicity,
+}) => {
+  if (!active || !payload || payload.length === 0) return null
+
+  const seenSeries = new Set<string>()
+  const items: any[] = []
+  for (const item of payload) {
+    const sId = String(item.dataKey || item.name || '').replace('_hist', '').replace('_forecast', '')
+    if (!seenSeries.has(sId)) {
+      seenSeries.add(sId)
+      items.push({ ...item, cleanSeriesId: sId })
+    }
+  }
+
+  return (
+    <div
+      data-testid="workbench-chart-tooltip"
+      className="bg-slate-900/95 border border-slate-700 rounded-md p-2.5 text-xs text-slate-100 shadow-lg min-w-[200px]"
+    >
+      <div className="font-medium text-slate-400 mb-1.5 pb-1 border-b border-slate-800">
+        Fecha: {formatPeriodDate(String(label), periodicity)}
+      </div>
+      <div className="space-y-1.5">
+        {items.map((item) => {
+          const s = activeSeries.find((x) => x.id === item.cleanSeriesId)
+          const isForecastPoint =
+            s?.source === 'REM' &&
+            s?.points?.some((p) => p.fecha === label && p.is_forecast)
+          const num = Number(item.value)
+          let formattedVal = ''
+          if (item.value === null || item.value === undefined || isNaN(num)) {
+            formattedVal = 'N/A'
+          } else if (mode === 'mom' || mode === 'yoy') {
+            formattedVal = `${num > 0 ? '+' : ''}${num.toFixed(2)}%`
+          } else if (mode === 'base100') {
+            formattedVal = num.toFixed(2)
+          } else {
+            const unitStr = s?.unit ? ` ${s.unit}` : ''
+            formattedVal = `${num.toLocaleString('es-AR', { maximumFractionDigits: 2 })}${unitStr}`
+          }
+
+          return (
+            <div key={item.cleanSeriesId} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: s?.color || item.color }}
+                />
+                <span className="font-medium">
+                  [{s?.source || 'Serie'}] {s?.name || item.cleanSeriesId}
+                </span>
+                {isForecastPoint && (
+                  <span
+                    data-testid="forecast-badge"
+                    className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-300 rounded border border-amber-500/30 shrink-0"
+                  >
+                    Proyección REM
+                  </span>
+                )}
+              </div>
+              <span className="font-mono font-semibold tabular-nums text-slate-200">
+                {formattedVal}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+
 export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
   viewMode,
   expressionMode,
@@ -161,6 +248,43 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
     if (isDualAxis) return undefined
     return calculateDomain(alignedData, activeSeries.map((s) => s.id), scaleMode)
   }, [isDualAxis, alignedData, activeSeries, scaleMode])
+
+  // Split REM series with forecast points into historical and forecast keys for dashed projection styling
+  const chartData = useMemo(() => {
+    const hasRemForecast = activeSeries.some(
+      (s) => s.source === 'REM' && s.points.some((p) => p.is_forecast)
+    )
+    if (!hasRemForecast) return alignedData
+
+    return alignedData.map((row) => {
+      const newRow: AlignedPoint = { ...row }
+      for (const s of activeSeries) {
+        if (s.source === 'REM') {
+          const forecastDates = new Set(
+            s.points.filter((p) => p.is_forecast).map((p) => p.fecha)
+          )
+          const lastHistorical = [...s.points]
+            .reverse()
+            .find((p) => !p.is_forecast)?.fecha
+
+          const date = row.fecha
+          const val = row[s.id]
+
+          if (val !== null && val !== undefined) {
+            // Historical segment: include all historical dates plus bridge at last historical date
+            if (!forecastDates.has(date)) {
+              newRow[`${s.id}_hist`] = val
+            }
+            // Forecast segment: include all forecast dates plus bridge at last historical date
+            if (forecastDates.has(date) || (lastHistorical && date === lastHistorical)) {
+              newRow[`${s.id}_forecast`] = val
+            }
+          }
+        }
+      }
+      return newRow
+    })
+  }, [alignedData, activeSeries])
 
   if (activeSeries.length === 0) {
     return (
@@ -305,7 +429,7 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={alignedData}
+            data={chartData}
             margin={{ top: 10, right: isDualAxis ? 30 : 20, left: 10, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
@@ -390,16 +514,22 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
             )}
 
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                borderColor: '#334155',
-                borderRadius: '0.375rem',
-                fontSize: '12px',
-                color: '#f8fafc',
-              }}
-              formatter={(value: any, name: any) => {
-                const s = activeSeries.find((x) => x.id === name)
-                const label = s ? `[${s.source}] ${s.name}` : name
+              content={
+                <WorkbenchChartTooltip
+                  activeSeries={activeSeries}
+                  mode={mode}
+                  periodicity={periodicity}
+                />
+              }
+              formatter={(value: any, name: any, entry: any) => {
+                const sId = String(name || '').replace('_hist', '').replace('_forecast', '')
+                const s = activeSeries.find((x) => x.id === sId)
+                const pointDate = entry?.payload?.fecha
+                const isRemForecast =
+                  s?.source === 'REM' &&
+                  s?.points?.some((p) => p.fecha === pointDate && p.is_forecast)
+                const badge = isRemForecast ? ' (Proyección REM)' : ''
+                const label = s ? `[${s.source}] ${s.name}${badge}` : name
                 if (value === null || value === undefined || isNaN(value)) {
                   return ['N/A', label]
                 }
@@ -425,6 +555,41 @@ export const WorkbenchChart: React.FC<WorkbenchChartProps> = ({
             )}
             {activeSeries.map((s, idx) => {
               const yAxisId = isDualAxis ? (idx === 0 ? 'left' : 'right') : 'left'
+              const isRem = s.source === 'REM'
+              const hasForecast = isRem && s.points.some((p) => p.is_forecast)
+
+              if (isRem && hasForecast) {
+                return (
+                  <React.Fragment key={s.id}>
+                    {/* Historical observed segment (solid line) */}
+                    <Line
+                      yAxisId={yAxisId}
+                      type={lineStyle === 'step' ? 'stepAfter' : 'monotone'}
+                      dataKey={`${s.id}_hist`}
+                      name={`${s.id}_hist`}
+                      stroke={s.color}
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
+                      connectNulls={false}
+                    />
+                    {/* Forecast projection trajectory (dashed stroke) */}
+                    <Line
+                      yAxisId={yAxisId}
+                      type={lineStyle === 'step' ? 'stepAfter' : 'monotone'}
+                      dataKey={`${s.id}_forecast`}
+                      name={`${s.id}_forecast`}
+                      stroke={s.color}
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={false}
+                      isAnimationActive={false}
+                      connectNulls={false}
+                    />
+                  </React.Fragment>
+                )
+              }
+
               return (
                 <Line
                   key={s.id}

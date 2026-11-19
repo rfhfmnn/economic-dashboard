@@ -17,6 +17,17 @@ def get_available_reports() -> List[str]:
     return rem_service.get_available_reports()
 
 
+@router.get("/series/{variable_key}")
+def get_rem_series(
+    variable_key: str,
+    cohort: str = Query("todos", description="Cohort ('todos' or 'top_10')"),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    """Get continuous time series for a REM variable pairing historical observed months with forward-looking forecast trajectory."""
+    return rem_service.get_rem_series(variable_key=variable_key, cohort=cohort, db=db)
+
+
+
 @router.get("/summary")
 def get_rem_summary(
     period: str = Query("ultimo", description="Report period ('ultimo' or 'YYYY-MM')"),
